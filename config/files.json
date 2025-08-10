@@ -1,0 +1,22 @@
+{
+  "file_operations": {
+    "results_directory": "results",
+    "file_extensions": {
+      "json": ".json",
+      "csv": ".csv"
+    },
+    "file_prefixes": {
+      "backtest_summary": "backtest_summary_",
+      "trades_detail": "trades_detail_",
+      "signals": "signals_",
+      "config": "config_"
+    },
+    "timestamp_format": "%Y%m%d_%H%M%S",
+    "csv_index_flag": false
+  },
+  "error_handling": {
+    "backtest_failed_message": "Backtest failed. Please check the logs for errors.",
+    "missing_config_template": "Missing required backtesting config values: {missing_values}",
+    "error_log_template": "Error running hybrid strategy backtest: {error}"
+  }
+}

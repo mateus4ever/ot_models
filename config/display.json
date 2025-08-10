@@ -1,0 +1,78 @@
+{
+  "numeric_formatting": {
+    "decimal_precision": {
+      "price": 6,
+      "threshold": 4,
+      "percentage": 1
+    },
+    "percentage_conversion": {
+      "multiplier": 100,
+      "full_percentage": 100
+    },
+    "rsi_multiplier": 100,
+    "json_indent": 2
+  },
+  "output_formatting": {
+    "decimal_places": {
+      "price_display": 5,
+      "return_display": 4,
+      "percentage_display": 2,
+      "position_size_display": 3,
+      "capital_display": 2,
+      "pnl_display": 2
+    },
+    "separator_length": 80,
+    "percentage_multiplier": 100
+  },
+  "display_configuration": {
+    "section_headers": {
+      "main_title": "HYBRID STRATEGY BACKTEST RESULTS",
+      "configuration": "Configuration:",
+      "ml_training": "ML Training Results:",
+      "signal_generation": "Signal Generation Summary:",
+      "regime_distribution": "Market Regime Distribution:",
+      "backtest_performance": "Backtest Performance:",
+      "risk_metrics": "Risk Metrics:",
+      "exit_reasons": "Trade Exit Reasons:",
+      "completion_title": "BACKTEST COMPLETED SUCCESSFULLY!"
+    },
+    "default_values": {
+      "strategy_type": "Hybrid ML-Technical",
+      "numeric_default": 0,
+      "float_default": 0.0,
+      "string_default": "Unknown"
+    },
+    "status_messages": {
+      "backtest_running": "Running backtest...",
+      "data_loaded": "Data loaded:",
+      "records_unit": "records",
+      "time_range": "Time range:"
+    }
+  },
+  "trade_debug": {
+    "position_types": {
+      "long": "LONG",
+      "short": "SHORT"
+    },
+    "debug_labels": {
+      "trade_debug": "TRADE DEBUG #",
+      "position": "Position:",
+      "entry": "Entry:",
+      "exit": "Exit:",
+      "raw_return": "Raw Return:",
+      "position_size": "Position Size:",
+      "sized_return": "Sized Return:",
+      "after_costs": "After Costs:",
+      "transaction_cost": "Transaction Cost:",
+      "slippage": "Slippage:",
+      "capital": "Capital:",
+      "pnl": "P&L:",
+      "arrow": " -> "
+    }
+  },
+  "debug_configuration": {
+    "trade_debug_count": 10,
+    "enable_fee_debug": true,
+    "enable_trade_debug": true
+  }
+}

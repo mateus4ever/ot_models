@@ -1,0 +1,47 @@
+{
+  "risk_management": {
+    "max_position_size": 1.0,
+    "min_position_size": 0.01,
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": 0.04,
+    "max_holding_periods": 480,
+    "max_daily_trades": 10,
+    "max_daily_loss_pct": 0.05,
+    "max_drawdown_pct": 0.2,
+    "max_portfolio_risk_pct": 0.02,
+    "position_sizing": {
+      "base_size": 0.95,
+      "regime_adjustments": {
+        "trending": 1.0,
+        "ranging": 0.85,
+        "high_volatility": 0.75
+      },
+      "confidence_scaling": true
+    },
+    "calculations": {
+      "risk_per_trade_pct": 0.01,
+      "volatility_multiplier": 1.0,
+      "correlation_adjustment": 1.0
+    }
+  },
+  "backtesting": {
+    "initial_capital": 10000,
+    "transaction_cost": 0.00001,
+    "slippage": 0.000005,
+    "risk_free_rate": 0.02,
+    "calculations": {
+      "min_trades_for_metrics": 2,
+      "days_per_year": 252,
+      "loop_start_index": 1,
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0,
+      "signal_threshold": 0,
+      "size_threshold": 0,
+      "min_performance_samples": 2
+    }
+  },
+  "statistical_analysis": {
+    "var_percentile": 0.05
+  }
+}

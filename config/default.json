@@ -1,0 +1,452 @@
+{
+  "general": {
+    "verbose": true,
+    "random_state": 42,
+    "train_test_split": 0.7,
+    "save_signals": false
+  },
+  "data_loading": {
+    "data_source": "data/eurusd",
+    "max_records": 500000,
+    "file_pattern": "*.csv"
+  },
+  "regime_detection": {
+    "method": "rule_based",
+    "use_regime_ml": false,
+    "min_data_periods": 240,
+    "atr_period": 14,
+    "rule_based_thresholds": {
+      "price_vs_ma_threshold": 0.002,
+      "momentum_threshold": 0.005,
+      "ma_alignment_threshold": 0.001,
+      "volatility_ratio_threshold": 1.5,
+      "range_extreme_threshold": 0.1,
+      "high_volatility_threshold": 2.0,
+      "high_vol_multiplier": 1.5,
+      "price_factor_medium": 0.5,
+      "ma_alignment_factor_long": 0.5,
+      "momentum_scaling": {
+        "short_factor": 0.3,
+        "long_factor": 0.5
+      }
+    },
+    "confidence_requirements": {
+      "minimum_confidence": 0.5,
+      "high_confidence_threshold": 0.7,
+      "direction_bonus": 0.1
+    },
+    "confidence_calculation": {
+      "price_strength_multiplier": 200,
+      "momentum_strength_multiplier": 100,
+      "ma_alignment_multiplier": 500,
+      "vol_clarity_base": 2.0,
+      "vol_spike_divisor": 2,
+      "range_momentum_multiplier": 50,
+      "range_ma_multiplier": 1000,
+      "range_position_multiplier": 4,
+      "range_position_center": 0.5
+    },
+    "confidence_skip_periods": 240,
+    "moving_average_periods": {
+      "short": 20,
+      "medium": 60,
+      "long": 240
+    },
+    "rule_feature_counts": {
+      "strength_features": 12,
+      "direction_features": 8
+    },
+    "feature_importance_weights": {
+      "price_vs_sma_short": 0.25,
+      "momentum_medium": 0.20,
+      "ma_alignment_short": 0.15,
+      "vol_ratio_long": 0.12,
+      "price_vs_sma_medium": 0.10,
+      "ma_alignment_long": 0.08,
+      "momentum_long": 0.05,
+      "range_position": 0.03,
+      "trend_strength": 0.02
+    }
+  },
+  "trend_duration_prediction": {
+    "enabled": false,
+    "model_params": {
+      "n_estimators": 100,
+      "max_depth": 10,
+      "random_state": 42
+    },
+    "feature_generation": {
+      "momentum_periods": [5, 20, 60, 240],
+      "volatility_periods": [5, 20, 60],
+      "moving_average_periods": [20, 60, 240],
+      "buffer_periods": 240,
+      "rsi_period": 14,
+      "rsi_divergence_periods": [5, 10],
+      "volume_ma_period": 20,
+      "volume_exhaustion_threshold": 0.8,
+      "momentum_exhaustion_period": 10,
+      "momentum_exhaustion_threshold": 0.001,
+      "volatility_regime_period": 60,
+      "trend_age_normalization_window": 240,
+      "bollinger_period": 20,
+      "bollinger_std_multiplier": 2.0
+    },
+    "label_generation": {
+      "trend_detection_period": 20,
+      "forward_window": 240,
+      "duration_categories": {
+        "very_short": {"min_periods": 0, "max_periods": 15, "label": 0},
+        "short": {"min_periods": 15, "max_periods": 60, "label": 1},
+        "medium": {"min_periods": 60, "max_periods": 180, "label": 2},
+        "long": {"min_periods": 180, "max_periods": 999999, "label": 3}
+      }
+    },
+    "training": {
+      "verbose": true,
+      "min_samples": 1000,
+      "train_test_split": 0.7,
+      "random_state": 42,
+      "stratify": true
+    }
+  },
+  "volatility_prediction": {
+    "use_volatility_ml": true,
+    "model_params": {
+      "n_estimators": 100,
+      "max_depth": 10,
+      "random_state": 42
+    },
+    "forward_window": 240,
+    "feature_periods": [5, 20, 60, 240],
+    "high_vol_percentile": 0.8,
+    "feature_generation": {
+      "vol_window": 240,
+      "threshold_multiplier": 1.5,
+      "min_samples": 1000,
+      "momentum_period": 5,
+      "volume_ma_period": 20,
+      "return_ma_period": 10,
+      "skip_initial_rows": 25,
+      "default_volume": 1000,
+      "nan_replacement_value": 0,
+      "gap_shift_periods": 1,
+      "default_close_position": 0.5,
+      "zero_threshold": 0,
+      "default_consecutive_value": 1,
+      "consecutive_reset_value": 0,
+      "volume_default_ratio": 1.0,
+      "default_fill_value": 0,
+      "consecutive_window": 5,
+      "consecutive_loop_start": 1,
+      "min_periods_for_ratio": 2,
+      "min_periods_for_long_ratio": 3,
+      "mid_period_index": 1,
+      "percentage_multiplier": 100,
+      "astype_conversion_value": "int",
+      "last_element_index": 1,
+      "axis_parameter": 1,
+      "reverse_sort_flag": true
+    }
+  },
+  "technical_analysis": {
+    "kama": {
+      "period": 14,
+      "fast_sc": 2,
+      "slow_sc": 30
+    },
+    "kalman": {
+      "process_noise": 0.001,
+      "measurement_noise": 0.1
+    },
+    "indicators": {
+      "rsi_period": 14,
+      "rsi_oversold_threshold": 30,
+      "rsi_overbought_threshold": 70,
+      "atr_period": 14,
+      "bb_period": 20,
+      "bb_std_multiplier": 2.0,
+      "macd_fast": 12,
+      "macd_slow": 26,
+      "macd_signal": 9,
+      "stoch_k_period": 14,
+      "stoch_d_period": 3,
+      "sma_periods": [5, 10, 20, 50],
+      "ema_periods": [5, 10, 20, 50]
+    },
+    "signal_generation": {
+      "kama_signal_threshold": 0.0001,
+      "kalman_threshold_multiplier": 1.5,
+      "kalman_volatility_window": 20,
+      "trend_alignment_required": true,
+      "zero_threshold": 0,
+      "positive_signal_value": 1,
+      "negative_signal_value": -1,
+      "neutral_signal_value": 0,
+      "percentage_multiplier": 100,
+      "unity_value": 1,
+      "array_shift_periods": 1,
+      "first_array_index": 0,
+      "second_array_index": 1
+    },
+    "signal_combination": {
+      "method": "weighted_average",
+      "weights": {
+        "kama": 0.6,
+        "kalman": 0.4
+      }
+    },
+    "signal_processing": {
+      "high_vol_position_multiplier": 0.6,
+      "high_vol_confidence_threshold": 0.5,
+      "ranging_signal_multiplier": 0.7,
+      "high_vol_signal_multiplier": 0.3,
+      "confidence_divisor": 3,
+      "signal_clip_min": -1,
+      "signal_clip_max": 1
+    },
+    "duration_multipliers": {
+      "category_multipliers": {
+        "0": 0.3,
+        "1": 0.6,
+        "2": 0.9,
+        "3": 1.0
+      },
+      "confidence_blend_factor": 0.5
+    }
+  },
+  "risk_management": {
+    "max_position_size": 1.0,
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": 0.04,
+    "max_holding_periods": 480,
+    "max_daily_trades": 10,
+    "max_daily_loss_pct": 0.05,
+    "max_drawdown_pct": 0.2,
+    "position_sizing": {
+      "base_size": 0.95,
+      "regime_adjustments": {
+        "trending": 1.0,
+        "ranging": 0.85,
+        "high_volatility": 0.75
+      },
+      "confidence_scaling": true
+    }
+  },
+  "backtesting": {
+    "initial_capital": 10000,
+    "transaction_cost": 0.00001,
+    "slippage": 0.000005,
+    "risk_free_rate": 0.02,
+    "calculations": {
+      "min_trades_for_metrics": 2,
+      "days_per_year": 252,
+      "loop_start_index": 1,
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0,
+      "signal_threshold": 0,
+      "size_threshold": 0,
+      "min_performance_samples": 2
+    }
+  },
+  "presets": {
+    "forex_swing": {
+      "regime_detection": {
+        "rule_based_thresholds": {
+          "price_vs_ma_threshold": 0.002,
+          "momentum_threshold": 0.005,
+          "ma_alignment_threshold": 0.001,
+          "volatility_ratio_threshold": 1.5,
+          "range_extreme_threshold": 0.1
+        }
+      },
+      "risk_management": {
+        "stop_loss_pct": 0.02,
+        "take_profit_pct": 0.04,
+        "max_position_size": 1.0
+      },
+      "technical_analysis": {
+        "signal_combination": {
+          "weights": {
+            "kama": 0.6,
+            "kalman": 0.4
+          }
+        }
+      }
+    },
+    "forex_scalping": {
+      "regime_detection": {
+        "rule_based_thresholds": {
+          "price_vs_ma_threshold": 0.001,
+          "momentum_threshold": 0.003,
+          "ma_alignment_threshold": 0.0005,
+          "volatility_ratio_threshold": 2.0,
+          "range_extreme_threshold": 0.05
+        }
+      },
+      "risk_management": {
+        "stop_loss_pct": 0.01,
+        "take_profit_pct": 0.02,
+        "max_position_size": 0.85,
+        "position_sizing": {
+          "base_size": 0.95,
+          "regime_adjustments": {
+            "trending": 1.0,
+            "ranging": 0.9,
+            "high_volatility": 0.8
+          }
+        }
+      }
+    },
+    "conservative": {
+      "regime_detection": {
+        "rule_based_thresholds": {
+          "price_vs_ma_threshold": 0.003,
+          "momentum_threshold": 0.008,
+          "ma_alignment_threshold": 0.002,
+          "volatility_ratio_threshold": 1.2,
+          "range_extreme_threshold": 0.15
+        }
+      },
+      "risk_management": {
+        "stop_loss_pct": 0.015,
+        "take_profit_pct": 0.03,
+        "max_position_size": 0.6
+      }
+    },
+    "aggressive": {
+      "regime_detection": {
+        "rule_based_thresholds": {
+          "price_vs_ma_threshold": 0.0015,
+          "momentum_threshold": 0.004,
+          "ma_alignment_threshold": 0.0008,
+          "volatility_ratio_threshold": 1.8,
+          "range_extreme_threshold": 0.08
+        }
+      },
+      "risk_management": {
+        "stop_loss_pct": 0.025,
+        "take_profit_pct": 0.05,
+        "max_position_size": 1.2
+      }
+    }
+  },
+  "constants": {
+    "percentile": 0.05,
+    "forward_window": 240
+  },
+  "numeric_formatting": {
+    "decimal_precision": {
+      "price": 6,
+      "threshold": 4,
+      "percentage": 1
+    },
+    "percentage_conversion": {
+      "multiplier": 100,
+      "full_percentage": 100
+    },
+    "rsi_multiplier": 100,
+    "json_indent": 2
+  },
+  "array_indexing": {
+    "first_index": 0,
+    "second_index": 1,
+    "third_index": 2
+  },
+  "mathematical_operations": {
+    "zero": 0,
+    "unity": 1
+  },
+  "system_configuration": {
+    "windows_compatibility": {
+      "max_cores": 16
+    },
+    "logging": {
+      "level": "INFO",
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    }
+  },
+  "debug_configuration": {
+    "trade_debug_count": 10,
+    "enable_fee_debug": true,
+    "enable_trade_debug": true
+  },
+  "output_formatting": {
+    "decimal_places": {
+      "price_display": 5,
+      "return_display": 4,
+      "percentage_display": 2,
+      "position_size_display": 3,
+      "capital_display": 2,
+      "pnl_display": 2
+    },
+    "separator_length": 80,
+    "percentage_multiplier": 100
+  },
+  "file_operations": {
+    "results_directory": "results",
+    "file_extensions": {
+      "json": ".json",
+      "csv": ".csv"
+    },
+    "file_prefixes": {
+      "backtest_summary": "backtest_summary_",
+      "trades_detail": "trades_detail_",
+      "signals": "signals_",
+      "config": "config_"
+    },
+    "timestamp_format": "%Y%m%d_%H%M%S",
+    "csv_index_flag": false
+  },
+  "display_configuration": {
+    "section_headers": {
+      "main_title": "HYBRID STRATEGY BACKTEST RESULTS",
+      "configuration": "Configuration:",
+      "ml_training": "ML Training Results:",
+      "signal_generation": "Signal Generation Summary:",
+      "regime_distribution": "Market Regime Distribution:",
+      "backtest_performance": "Backtest Performance:",
+      "risk_metrics": "Risk Metrics:",
+      "exit_reasons": "Trade Exit Reasons:",
+      "completion_title": "BACKTEST COMPLETED SUCCESSFULLY!"
+    },
+    "default_values": {
+      "strategy_type": "Hybrid ML-Technical",
+      "numeric_default": 0,
+      "float_default": 0.0,
+      "string_default": "Unknown"
+    },
+    "status_messages": {
+      "backtest_running": "Running backtest...",
+      "data_loaded": "Data loaded:",
+      "records_unit": "records",
+      "time_range": "Time range:"
+    }
+  },
+  "trade_debug": {
+    "position_types": {
+      "long": "LONG",
+      "short": "SHORT"
+    },
+    "debug_labels": {
+      "trade_debug": "TRADE DEBUG #",
+      "position": "Position:",
+      "entry": "Entry:",
+      "exit": "Exit:",
+      "raw_return": "Raw Return:",
+      "position_size": "Position Size:",
+      "sized_return": "Sized Return:",
+      "after_costs": "After Costs:",
+      "transaction_cost": "Transaction Cost:",
+      "slippage": "Slippage:",
+      "capital": "Capital:",
+      "pnl": "P&L:",
+      "arrow": " -> "
+    }
+  },
+  "error_handling": {
+    "backtest_failed_message": "Backtest failed. Please check the logs for errors.",
+    "missing_config_template": "Missing required backtesting config values: {missing_values}",
+    "error_log_template": "Error running hybrid strategy backtest: {error}"
+  }
+}

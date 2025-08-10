@@ -1,0 +1,23 @@
+{
+  "general": {
+    "verbose": false,
+    "save_signals": false
+  },
+  "debug_configuration": {
+    "trade_debug_count": 0,
+    "enable_fee_debug": false,
+    "enable_trade_debug": false
+  },
+  "system_configuration": {
+    "logging": {
+      "level": "INFO"
+    }
+  },
+  "optimization": {
+    "defaults": {
+      "n_combinations": 100,
+      "max_workers": 4,
+      "quiet_mode": true
+    }
+  }
+}
