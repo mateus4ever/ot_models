@@ -1,0 +1,36 @@
+pairs:
+  USDJPY:
+    institution: "Bank of Japan"
+    inflation_series: "JPNCPIALLMINMEI"      # Japanese CPI YoY (OECD via FRED)
+    rate_series: "IRSTCI01JPM156N"           # BoJ policy rate (via FRED)
+    rss: "https://www.boj.or.jp/en/announcements/release_1.xml"
+    infl_threshold: 3.0                      # trigger if inflation > 3%
+    rate_threshold: 0.5                      # trigger if rate < 0.5%
+    bias: "Long USD/JPY"
+    incentive_summary: "BOJ trapped by debt and global inflation divergence"
+    price_series: "DEXJPUS"   # Yen per USD (invert if needed)
+
+  EURCHF:
+    institution: "Swiss National Bank"
+    inflation_series: "CHECPIALLMINMEI"      # Swiss CPI YoY
+    rate_series: "IR3TIB01CHM156N"           # SNB 3M interbank rate proxy
+    rss: "https://www.snb.ch/public/en/rss/pressrel"
+    infl_threshold: 2.0
+    rate_threshold: 1.0
+    bias: "Short CHF (Conditional)"
+    incentive_summary: "SNB reluctant to tighten despite imported inflation"
+
+  GBPUSD:
+    institution: "Bank of England"
+    inflation_series: "GBRCPIALLMINMEI"      # UK CPI
+    rate_series: "IR3TIB01GBM156N"           # UK interbank rate (proxy for BoE base rate)
+    rss: "https://www.bankofengland.co.uk/rss/news"
+    infl_threshold: 3.5
+    rate_threshold: 1.5
+    bias: "Long GBP (Conditional)"
+    incentive_summary: "Inflation high; BoE under political pressure not to hike"
+
+# Optional global settings
+defaults:
+  start_date: "2020-01-01"     # minimum data fetch range
+  max_rss_items: 3             # how many headlines to pull
