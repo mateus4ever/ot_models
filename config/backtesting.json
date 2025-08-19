@@ -1,0 +1,35 @@
+{
+  "// backtesting.json - Walk-Forward Backtesting Configuration": "",
+  "// ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE": "",
+
+  "method": "walk_forward",
+  "initial_capital": 10000,
+  "transaction_cost": 0.001,
+  "slippage": 0.0005,
+
+  "// Walk-Forward Specific Parameters": "",
+  "pretrain_rows": 50000,
+  "retrain_frequency": 100,
+  "progress_report_frequency": 1000,
+  "validation_frequency": 500,
+  "min_training_rows": 10000,
+  "training_lookback_limit": null,
+  "signal_buffer_size": 1,
+
+  "// Retraining Strategy": "",
+  "retraining_strategy": {
+    "adaptive_retraining": false,
+    "performance_threshold": -0.05,
+    "lookback_window": 50
+  },
+
+  "// Calculation Parameters": "",
+  "calculations": {
+    "loop_start_index": 1,
+    "position_long_value": 1,
+    "position_short_value": -1,
+    "position_neutral_value": 0,
+    "signal_threshold": 0,
+    "size_threshold": 0.001
+  }
+}

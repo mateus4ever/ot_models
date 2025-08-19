@@ -124,6 +124,7 @@ class UnifiedConfig:
             "base.json",
             "risk.json",
             "technical.json",
+            "optimization.json",
             "display.json",
             "files.json",
             "presets.json"

@@ -59,6 +59,7 @@ class HybridStrategy:
         # Risk management parameters - ALL configurable
         position_config = self.risk_config.get('position_sizing', {})
         self.base_size = position_config.get('base_size')
+
         self.regime_adjustments = position_config.get('regime_adjustments', {})
         self.confidence_scaling = position_config.get('confidence_scaling')
         self.max_position_size = self.risk_config.get('max_position_size')
@@ -70,6 +71,11 @@ class HybridStrategy:
         constants_config = self.config.get_section('mathematical_operations', {})
         self.zero_value = constants_config.get('zero')
         self.unity_value = constants_config.get('unity')
+
+        # Boolean constants - ALL configurable
+        boolean_config = self.config.get_section('boolean_values', {})
+        self.true_value = boolean_config.get('true')
+        self.false_value = boolean_config.get('false')
 
         # Signal processing parameters - ALL configurable
         signal_processing_config = self.technical_config.get('signal_processing', {})
@@ -175,23 +181,65 @@ class HybridStrategy:
     def _combine_all_signals(self, df: pd.DataFrame, ml_predictions: Dict,
                              technical_signals_df: pd.DataFrame) -> Dict[str, pd.Series]:
         """
-        Intelligently combine ML predictions with technical signals
-        VECTORIZED IMPLEMENTATION - NO LOOPS, NO .iloc
-        Uses ALL configurable parameters - NO hardcoded values
-        """
+        Intelligently combine rule-based regime detection and ML predictions with technical signals
 
-        # Extract ML predictions as arrays for vectorized operations
+        Process Steps:
+        1. Extract rule-based regime detection, ML volatility prediction, and ML duration prediction data with None handling
+        2. Extract and combine technical signals (KAMA, Kalman)
+        3. Calculate regime-based signal strength (trending/ranging/high-vol from rule-based detector)
+        4. Apply confidence scaling and ML volatility scaling multipliers
+        5. Calculate final trading signals and position sizes
+        6. Return formatted results as pandas Series
+        """
+        # Step 1: Extract rule-based regime detection and ML prediction data
+        regime_pred, regime_conf, vol_pred_array, vol_conf_array, duration_pred_array, duration_conf_array = \
+            self._prepare_ml_predictions(df, ml_predictions)
+
+        # Step 2: Extract and combine technical signals
+        tech_signal_array = self._extract_technical_signals(df, technical_signals_df)
+
+        # Step 3: Calculate regime-based signal strength
+        signal_strength_array, regime_multiplier_array, source_array = \
+            self._calculate_regime_signals(regime_pred, tech_signal_array)
+
+        # Step 4: Apply confidence and volatility scaling
+        confidence_multiplier_array = self._calculate_confidence_scaling(df, regime_conf)
+        volatility_multiplier_array = self._calculate_volatility_scaling(vol_pred_array, vol_conf_array)
+        duration_multiplier_array = self._get_duration_multiplier_vectorized(duration_pred_array, duration_conf_array)
+
+        # Step 5: Calculate final signals and position sizes
+        final_signal_array, position_size_array = self._calculate_final_signals(
+            signal_strength_array, confidence_multiplier_array,
+            volatility_multiplier_array, duration_multiplier_array, regime_multiplier_array
+        )
+
+        # Step 6: Calculate confidence scores and return results
+        confidence_scores_array = self._calculate_confidence_scores(
+            df, regime_conf, vol_conf_array, duration_conf_array
+        )
+
+        return self._format_signal_results(df, final_signal_array, position_size_array,
+                                           source_array, confidence_scores_array)
+
+    def _prepare_ml_predictions(self, df: pd.DataFrame, ml_predictions: Dict) -> tuple:
+        """
+        Step 1: Extract and sanitize ML predictions with comprehensive None handling
+
+        Goal: Convert ML predictions to clean numpy arrays, replacing None values with defaults
+        """
+        # Extract ML predictions with defaults
         regime_pred, regime_conf = ml_predictions.get('regime', (np.zeros(len(df)), np.zeros(len(df))))
         vol_pred, vol_conf = ml_predictions.get('volatility',
-                                                (pd.Series(False, index=df.index),
+                                                (pd.Series(self.false_value, index=df.index),
                                                  pd.Series(self.zero_value, index=df.index)))
         duration_pred, duration_conf = ml_predictions.get('duration', (
-        np.ones(len(df)), np.full(len(df), self.high_vol_confidence_threshold)))
+            np.ones(len(df)), np.full(len(df), self.high_vol_confidence_threshold)))
 
-        # Convert to numpy arrays for vectorized operations
+        # Sanitize regime predictions
         regime_pred = np.array(regime_pred) if not isinstance(regime_pred, np.ndarray) else regime_pred
-        regime_conf = np.array(regime_conf) if not isinstance(regime_conf, np.ndarray) else regime_conf
+        regime_conf = self._sanitize_confidence_array(regime_conf, len(df), self.zero_value)
 
+        # Sanitize volatility predictions
         if isinstance(vol_pred, pd.Series):
             vol_pred_array = vol_pred.values
             vol_conf_array = vol_conf.values
@@ -199,21 +247,51 @@ class HybridStrategy:
             vol_pred_array = np.array(vol_pred)
             vol_conf_array = np.array(vol_conf)
 
-        duration_pred_array = np.array(duration_pred)
-        duration_conf_array = np.array(duration_conf)
+        vol_conf_array = self._sanitize_confidence_array(vol_conf_array, len(df), self.zero_value)
 
-        # Extract combined technical signal
+        # Sanitize duration predictions
+        duration_pred_array = np.array(duration_pred)
+        duration_conf_array = self._sanitize_confidence_array(duration_conf, len(df),
+                                                              self.high_vol_confidence_threshold)
+
+        return regime_pred, regime_conf, vol_pred_array, vol_conf_array, duration_pred_array, duration_conf_array
+
+    def _sanitize_confidence_array(self, confidence_array, array_length: int, default_value: float) -> np.ndarray:
+        """
+        Utility: Convert confidence array to clean numpy array with None handling
+
+        Goal: Ensure confidence arrays are numeric numpy arrays without None values
+        """
+        if confidence_array is None:
+            return np.full(array_length, default_value)
+
+        if not isinstance(confidence_array, np.ndarray):
+            confidence_array = np.array(confidence_array)
+
+        confidence_array = np.where(confidence_array == None, default_value, confidence_array)
+        return confidence_array.astype(float)
+
+    def _extract_technical_signals(self, df: pd.DataFrame, technical_signals_df: pd.DataFrame) -> np.ndarray:
+        """
+        Step 2: Extract and combine technical analysis signals
+
+        Goal: Get unified technical signal array from KAMA and Kalman signals
+        """
         kama_signal = technical_signals_df.get('kama_signal', pd.Series(self.zero_value, index=df.index))
         kalman_signal = technical_signals_df.get('kalman_signal', pd.Series(self.zero_value, index=df.index))
 
-        # Combine technical signals vectorized
         tech_signal = self._combine_technical_signals_weighted(kama_signal, kalman_signal)
-        tech_signal_array = tech_signal.values
+        return tech_signal.values
 
-        # Vectorized regime-based signal calculations
-        signal_strength_array = np.zeros(len(df))
-        regime_multiplier_array = np.ones(len(df))
-        source_array = np.full(len(df), 'ranging', dtype='object')
+    def _calculate_regime_signals(self, regime_pred: np.ndarray, tech_signal_array: np.ndarray) -> tuple:
+        """
+        Step 3: Calculate signal strength based on market regime
+
+        Goal: Apply regime-specific signal processing (trending up/down, high vol, ranging)
+        """
+        signal_strength_array = np.zeros(len(regime_pred))
+        regime_multiplier_array = np.ones(len(regime_pred))
+        source_array = np.full(len(regime_pred), 'ranging', dtype='object')
 
         # Trending Up (regime == 1)
         trending_up_mask = regime_pred == self.unity_value
@@ -240,41 +318,78 @@ class HybridStrategy:
         regime_multiplier_array[ranging_mask] = self.regime_adjustments.get('ranging',
                                                                             self.high_vol_confidence_threshold)
 
-        # Vectorized confidence scaling
+        return signal_strength_array, regime_multiplier_array, source_array
+
+    def _calculate_confidence_scaling(self, df: pd.DataFrame, regime_conf: np.ndarray) -> np.ndarray:
+        """
+        Step 4a: Calculate confidence-based signal scaling
+
+        Goal: Scale signals based on regime detection confidence
+        """
         if self.confidence_scaling:
-            confidence_multiplier_array = regime_conf
+            confidence_multiplier_array = self._sanitize_confidence_array(regime_conf, len(df), self.unity_value)
         else:
             confidence_multiplier_array = np.full(len(df), self.unity_value)
 
-        # Vectorized volatility adjustment - FIX TYPE COERCION
-        # Ensure vol_pred_array is boolean
+        return confidence_multiplier_array
+
+    def _calculate_volatility_scaling(self, vol_pred_array: np.ndarray, vol_conf_array: np.ndarray) -> np.ndarray:
+        """
+        Step 4b: Calculate volatility-based position scaling
+
+        Goal: Adjust position sizes based on predicted volatility
+        """
         vol_pred_boolean = np.asarray(vol_pred_array, dtype=bool)
         vol_conf_boolean = vol_conf_array > self.high_vol_confidence_threshold
 
-        volatility_multiplier_array = np.where(
+        return np.where(
             vol_pred_boolean & vol_conf_boolean,
             self.high_vol_position_multiplier,
             self.unity_value
         )
 
-        # Vectorized duration multiplier calculation
-        duration_multiplier_array = self._get_duration_multiplier_vectorized(duration_pred_array, duration_conf_array)
+    def _calculate_final_signals(self, signal_strength_array: np.ndarray, confidence_multiplier_array: np.ndarray,
+                                 volatility_multiplier_array: np.ndarray, duration_multiplier_array: np.ndarray,
+                                 regime_multiplier_array: np.ndarray) -> tuple:
+        """
+        Step 5: Calculate final trading signals and position sizes
 
-        # Vectorized final calculations
+        Goal: Combine all multipliers to get final signals with position sizing
+        """
+        # Calculate final signal strength
         final_signal_array = signal_strength_array * confidence_multiplier_array * volatility_multiplier_array
+
+        # Calculate position sizes with all multipliers
         position_size_array = (self.base_size * regime_multiplier_array * confidence_multiplier_array *
                                volatility_multiplier_array * duration_multiplier_array * np.abs(final_signal_array))
 
-        # Apply maximum position size limit vectorized
+        # Apply constraints
         position_size_array = np.minimum(position_size_array, self.max_position_size)
-
-        # Clip final signals vectorized
         final_signal_array = np.clip(final_signal_array, self.signal_clip_min, self.signal_clip_max)
 
-        # Calculate confidence scores vectorized
-        confidence_scores_array = (regime_conf + vol_conf_array + duration_conf_array) / self.confidence_divisor
+        return final_signal_array, position_size_array
 
-        # Return as Series with proper dtypes
+    def _calculate_confidence_scores(self, df: pd.DataFrame, regime_conf: np.ndarray,
+                                     vol_conf_array: np.ndarray, duration_conf_array: np.ndarray) -> np.ndarray:
+        """
+        Step 6a: Calculate combined confidence scores from all ML components
+
+        Goal: Create unified confidence metric from all ML predictions
+        """
+        regime_conf_safe = self._sanitize_confidence_array(regime_conf, len(df), self.zero_value)
+        vol_conf_array_safe = self._sanitize_confidence_array(vol_conf_array, len(df), self.zero_value)
+        duration_conf_array_safe = self._sanitize_confidence_array(duration_conf_array, len(df), self.zero_value)
+
+        return (regime_conf_safe + vol_conf_array_safe + duration_conf_array_safe) / self.confidence_divisor
+
+    def _format_signal_results(self, df: pd.DataFrame, final_signal_array: np.ndarray,
+                               position_size_array: np.ndarray, source_array: np.ndarray,
+                               confidence_scores_array: np.ndarray) -> Dict[str, pd.Series]:
+        """
+        Step 6b: Format results as pandas Series for return
+
+        Goal: Convert numpy arrays to properly typed pandas Series
+        """
         return {
             'final_signal': pd.Series(final_signal_array, index=df.index, dtype='float64'),
             'position_size': pd.Series(position_size_array, index=df.index, dtype='float64'),
@@ -286,7 +401,22 @@ class HybridStrategy:
                                             confidence_array: np.ndarray) -> np.ndarray:
         """
         Vectorized duration multiplier calculation - NO LOOPS
+        ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
         """
+        # Handle None values in confidence_array
+        if confidence_array is None:
+            confidence_array = np.full(len(predicted_duration_array), self.high_vol_confidence_threshold)
+
+        # Ensure confidence_array is numpy array and handle None elements
+        if not isinstance(confidence_array, np.ndarray):
+            confidence_array = np.array(confidence_array)
+
+        # Replace any None values with default confidence
+        confidence_array = np.where(confidence_array == None, self.high_vol_confidence_threshold, confidence_array)
+
+        # Ensure confidence_array is numeric
+        confidence_array = confidence_array.astype(float)
+
         # Create base multiplier array
         base_multiplier_array = np.full(len(predicted_duration_array), self.high_vol_confidence_threshold)
 
@@ -296,7 +426,7 @@ class HybridStrategy:
             mask = predicted_duration_array == duration_int
             base_multiplier_array[mask] = multiplier
 
-        # Scale by confidence vectorized
+        # Scale by confidence vectorized - now safe from None values
         confidence_scaled_multiplier = (base_multiplier_array * confidence_array +
                                         self.duration_confidence_blend * (self.unity_value - confidence_array))
 

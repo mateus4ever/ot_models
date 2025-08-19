@@ -63,9 +63,11 @@ class TradeExecutor:
         if current_position > self.position_neutral_value:  # Long position
             # Stop loss: price drops below entry by stop_loss_pct
             if pct_change <= -self.stop_loss_pct:
+                print(f"DEBUG: Stop loss triggered - Change: {pct_change:.4f}, Limit: {-self.stop_loss_pct:.4f}")
                 return True, "stop_loss"
             # Take profit: price rises above entry by take_profit_pct
             if pct_change >= self.take_profit_pct:
+                print(f"DEBUG: Take profit triggered - Change: {pct_change:.4f}, Limit: {self.take_profit_pct:.4f}")
                 return True, "take_profit"
         else:  # Short position (current_position < 0)
             # Stop loss: price rises above entry by stop_loss_pct (bad for short)

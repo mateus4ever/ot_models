@@ -135,8 +135,10 @@ class BacktestEngine:
                     signal != self.signal_threshold and
                     size > self.size_threshold and
                     not self._check_risk_limits(capital, peak_capital, daily_loss, daily_trades)):
+                # DEBUG: Check if position sizes changed
+
                 current_position = self.position_long_value if signal > self.zero_value else self.position_short_value
-                current_size = size
+                current_size = min(size, self.risk_config.get('max_position_size'))
                 entry_price = price
                 entry_time = i
                 daily_trades += self.unity_value

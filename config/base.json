@@ -4,22 +4,241 @@
     "random_state": 42,
     "train_test_split": 0.7,
     "save_signals": false,
-    "debug_mode": false
+    "debug_mode": false,
+    "enable_validation_checks": true
   },
   "data_loading": {
     "data_source": "data/eurusd",
-    "max_records": 500000,
+    "skip_initial_rows": 150000,
+    "max_records": 55000,
     "file_pattern": "*.csv"
   },
   "mathematical_operations": {
     "zero": 0,
+    "two": 2,
+    "three": 3,
     "unity": 1,
-    "random_seed": null
+    "max_cache_size": 50000,
+    "random_seed": null,
+    "default_trees": 100,
+    "default_depth": 10,
+    "default_seed": 42,
+    "very_short_default": 15,
+    "short_min_default": 15,
+    "short_max_default": 60,
+    "medium_min_default": 60,
+    "medium_max_default": 180,
+    "long_min_default": 180,
+    "long_max_default": 999999,
+    "default_rsi_period": 14,
+    "default_bollinger_period": 20,
+    "default_normalization_window": 240,
+    "default_buffer_periods": 240,
+    "momentum_short": 5,
+    "momentum_medium_short": 20,
+    "momentum_medium": 60,
+    "momentum_long": 240,
+    "volatility_short": 5,
+    "volatility_medium": 20,
+    "volatility_long": 60,
+    "ma_short": 20,
+    "ma_medium": 60,
+    "ma_long": 240,
+    "default_regime_period": 60,
+    "divergence_short": 5,
+    "divergence_medium": 10,
+    "default_volume_ma_period": 20,
+    "default_volume_threshold": 0.8,
+    "default_momentum_exhaustion_period": 10,
+    "default_momentum_threshold": 0.001,
+    "default_bb_multiplier": 2.0,
+    "default_trend_detection_period": 20,
+    "default_forward_window": 240,
+    "percentage_multiplier": 100
+  },
+"walk_forward": {
+  "pretrain_rows": 50000,
+  "retrain_frequency": 1000,
+  "progress_report_frequency": 1000,
+  "validation_frequency": 500,
+  "min_training_rows": 10000,
+  "step_sampling_frequency": 100,
+  "batch_size": 1000,
+  "training_lookback_limit": null,
+  "signal_buffer_size": 1,
+  "retraining_strategy": {
+    "adaptive_retraining": false,
+    "performance_threshold": -0.05,
+    "lookback_window": 50
+    },
+  "train_window_size": 50000,
+  "test_window_size": 50000
   },
   "array_indexing": {
     "first_index": 0,
     "second_index": 1,
     "third_index": 2
+  },
+  "boolean_values": {
+    "true": true,
+    "false": false
+  },
+  "dataframe_operations": {
+    "column_axis": 1,
+    "row_axis": 0,
+    "deep_memory_usage": true
+  },
+  "ml_confidence": {
+    "default_volatility_confidence": 0.7,
+    "default_duration_confidence": 0.5,
+    "base_confidence": 0.5
+  },
+  "string_constants": {
+    "none_string": "none",
+    "unknown_string": "unknown",
+    "cache_invalidated_message": "Cache invalidated, recomputing all features",
+    "computing_new_rows_template": "Computing features for {new_count} new rows (total: {total_count})",
+    "incremental_fallback_message": "Incremental computation failed, falling back to full recomputation",
+    "feature_generation_message": "Generating trend duration features with {count} momentum periods...",
+    "feature_shape_message": "Trend duration features: {shape}",
+    "cache_cleared_message": "Feature cache cleared",
+    "momentum_column_template": "momentum_{period}",
+    "momentum_acceleration_column": "momentum_acceleration",
+    "momentum_decay_column": "momentum_decay",
+    "volatility_column_template": "volatility_{period}",
+    "volatility_expansion_column": "volatility_expansion",
+    "volatility_regime_column": "volatility_regime",
+    "trend_age_column": "trend_age",
+    "trend_age_normalized_column": "trend_age_normalized",
+    "trend_strength_short_column": "trend_strength_short",
+    "trend_strength_medium_column": "trend_strength_medium",
+    "trend_consistency_column": "trend_consistency",
+    "rsi_column": "rsi",
+    "rsi_divergence_column_template": "rsi_divergence_{period}",
+    "volume_column": "volume",
+    "volume_exhaustion_column": "volume_exhaustion",
+    "momentum_exhaustion_column": "momentum_exhaustion",
+    "ma_distance_column_template": "ma_distance_{period}",
+    "overextension_column_template": "overextension_{period}",
+    "bb_position_column": "bb_position",
+    "bb_overextension_column": "bb_overextension",
+    "duration_labels_message": "Duration labels: {count} samples"
+  },
+  "window_sizes": {
+    "default_window": 10
+  },
+  "volatility_thresholds": {
+    "high_vol_threshold": 0.5
+  },
+  "regime_methods": {
+    "rule_based": "rule_based"
+  },
+  "regime_detection": {
+    "method": "rule_based"
+  },
+  "trend_duration_prediction": {
+    "enabled": true,
+    "confidence_window": 10,
+    "default_duration_category": 1,
+    "default_n_estimators": 100,
+    "default_max_depth": 10,
+    "very_short_max": 15,
+    "short_min": 15,
+    "short_max": 60,
+    "medium_min": 60,
+    "medium_max": 180,
+    "long_min": 180,
+    "long_max": 999999,
+    "model_params": {
+      "n_estimators": 100,
+      "max_depth": 10,
+      "random_state": 42
+    },
+    "feature_generation": {
+      "momentum_periods": [5, 20, 60, 240],
+      "volatility_periods": [5, 20, 60],
+      "moving_average_periods": [20, 60, 240],
+      "buffer_periods": 240,
+      "rsi_period": 14,
+      "rsi_divergence_periods": [5, 10],
+      "volume_ma_period": 20,
+      "volume_exhaustion_threshold": 0.8,
+      "momentum_exhaustion_period": 10,
+      "momentum_exhaustion_threshold": 0.001,
+      "trend_age_normalization_window": 240,
+      "volatility_regime_period": 60,
+      "bollinger_period": 20,
+      "bollinger_std_multiplier": 2.0,
+      "lookback_safety_multiplier": 2,
+      "momentum_period_1": 5,
+      "momentum_period_2": 20,
+      "momentum_period_3": 60,
+      "momentum_period_4": 240,
+      "volatility_period_1": 5,
+      "volatility_period_2": 20,
+      "volatility_period_3": 60,
+      "ma_period_1": 20,
+      "ma_period_2": 60,
+      "ma_period_3": 240,
+      "divergence_period_1": 5,
+      "divergence_period_2": 10
+    },
+    "label_generation": {
+      "trend_detection_period": 20,
+      "forward_window": 240,
+      "duration_categories": {
+        "very_short": {"min_periods": 0, "max_periods": 15, "label": 0},
+        "short": {"min_periods": 15, "max_periods": 60, "label": 1},
+        "medium": {"min_periods": 60, "max_periods": 180, "label": 2},
+        "long": {"min_periods": 180, "max_periods": 999999, "label": 3}
+      }
+    },
+    "training": {
+      "verbose": true,
+      "min_samples": 1000,
+      "train_test_split": 0.7,
+      "random_state": 42,
+      "stratify": true
+    }
+  },
+  "volatility_prediction": {
+    "use_volatility_ml": true,
+    "forward_window": 20,
+    "high_vol_percentile": 75,
+    "feature_periods": [5, 10, 20, 50],
+    "model_params": {
+      "n_estimators": 100,
+      "max_depth": 8,
+      "random_state": 42
+    },
+    "feature_generation": {
+      "vol_window": 50,
+      "threshold_multiplier": 1.5,
+      "min_samples": 1000,
+      "momentum_period": 10,
+      "volume_ma_period": 20,
+      "return_ma_period": 10,
+      "skip_initial_rows": 50,
+      "default_volume": 1.0,
+      "nan_replacement_value": 0.0,
+      "gap_shift_periods": 1,
+      "default_close_position": 0.5,
+      "zero_threshold": 0.0001,
+      "default_consecutive_value": 1,
+      "consecutive_reset_value": 0,
+      "volume_default_ratio": 1.0,
+      "default_fill_value": 0.0,
+      "consecutive_window": 5,
+      "consecutive_loop_start": 1,
+      "min_periods_for_ratio": 2,
+      "min_periods_for_long_ratio": 3,
+      "mid_period_index": 1,
+      "percentage_multiplier": 100,
+      "astype_conversion_value": 1,
+      "last_element_index": 1,
+      "axis_parameter": 1,
+      "reverse_sort_flag": true
+    }
   },
   "constants": {
     "percentile": 0.05,
@@ -45,148 +264,27 @@
     "enable_fee_debug": false
   },
   "backtesting": {
+    "method": "walk_forward",
+    "initial_capital": 10000,
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
     "print_trades": false,
-    "verbose_output": false
-  },
-  "optimization": {
-    "defaults": {
-      "n_combinations": 50,
-      "data_sample_size": 50000,
-      "max_workers": 2,
-      "quiet_mode": true
-    },
-    "bayesian_defaults": {
-      "n_calls": 50,
-      "initial_points_divisor": 5,
-      "acquisition_function": "LCB"
-    },
-    "bayesian": {
-      "n_calls": 50,
-      "n_initial_points": 10,
-      "acquisition_function": "LCB",
-      "acq_optimizer": "auto"
-    },
-    "parameter_ranges": {
-      "stop_loss_min": 0.005,
-      "stop_loss_max": 0.050,
-      "take_profit_min": 0.015,
-      "take_profit_max": 0.080,
-      "max_position_min": 0.2,
-      "max_position_max": 1.0,
-      "price_vs_ma_min": 0.0005,
-      "price_vs_ma_max": 0.005,
-      "momentum_min": 0.001,
-      "momentum_max": 0.01,
-      "volatility_ratio_min": 1.2,
-      "volatility_ratio_max": 2.5,
-      "kama_period_min": 10,
-      "kama_period_max": 30,
-      "kalman_noise_min": 0.0001,
-      "kalman_noise_max": 0.01,
-      "signal_weight_min": 0.3,
-      "signal_weight_max": 0.8
-    },
-    "quiet_overrides": {
-      "general": {
-        "verbose": false
-      },
-      "debug_configuration": {
-        "trade_debug_count": 0,
-        "enable_fee_debug": false,
-        "enable_trade_debug": false,
-        "enable_position_debug": false,
-        "enable_metrics_debug": false,
-        "print_trade_details": false,
-        "log_trades": false
-      },
-      "backtesting": {
-        "print_trades": false,
-        "verbose_output": false
-      }
-    },
-    "progress": {
-      "report_interval": 5
-    },
-    "fitness": {
-      "penalties": {
-        "severe_penalty_value": -999.0
-      },
-      "requirements": {
-        "min_trades": 10,
-        "max_drawdown_limit": 0.5
-      },
-      "weights": {
-        "return_component": 100.0,
-        "sharpe_component": 10.0,
-        "drawdown_component": 50.0
-      }
-    },
-    "analysis": {
-      "top_performers_percentile": 0.1
-    },
-    "error_messages": {
-      "no_valid_results": "No valid optimization results found"
-    },
-    "display": {
-      "separator_char": "=",
-      "separator_length": 120,
-      "dash_char": "-",
-      "top_display_count": 10,
-      "error_template": "ERROR: {error}",
-      "no_results_message": "No valid results to display",
-      "results_title": "OPTIMIZATION RESULTS - TOP PARAMETER COMBINATIONS",
-      "header_format": "{rank:<4} {stop_loss:<10} {take_profit:<12} {max_pos:<8} {sharpe:<8} {trades:<7} {return:<8} {fitness:<8}",
-      "column_labels": {
-        "rank": "Rank",
-        "stop_loss": "Stop Loss",
-        "take_profit": "Take Profit",
-        "max_pos": "Max Pos",
-        "sharpe": "Sharpe",
-        "trades": "Trades",
-        "return": "Return",
-        "fitness": "Fitness"
-      },
-      "row_format": "{rank:<4} {stop_loss:.1f}% {take_profit:.1f}% {max_pos:.0f}% {sharpe:.2f} {trades:<7} {return:.1f}% {fitness:.1f}",
-      "summary_title": "BEST COMBINATION SUMMARY:",
-      "summary_format": "Return: {return:.2f}% | Sharpe: {sharpe:.2f} | Trades: {trades}\nStop Loss: {stop_loss:.1f}% | Take Profit: {take_profit:.1f}%\nMax Position: {max_position:.0f}% | Fitness Score: {fitness:.1f}"
-    },
-    "messages": {
-      "optimization_title": "FAST PARAMETER OPTIMIZATION",
-      "testing_combinations": "Testing {n_combinations} random parameter combinations",
-      "quiet_mode": "Quiet mode: {quiet}",
-      "parallel_workers": "Parallel workers: {max_workers}",
-      "setup_message": "Loading data and training strategy (one-time setup)...",
-      "data_loaded": "✓ Data loaded: {records} records",
-      "strategy_trained": "✓ Strategy trained in {time:.1f} seconds",
-      "optimization_running": "Running parameter optimization...",
-      "optimization_failed": "Optimization failed: {error}",
-      "optimization_completed": "\nOptimization completed in {duration:.1f} seconds\nValid results: {valid}/{total}"
-    },
-    "robustness": {
-      "cv_threshold_robust": 0.3,
-      "cv_threshold_sensitive": 0.6,
-      "top_performers_percentile": 0.2,
-      "stability_window_size": 10,
-      "moderate_std_multiplier": 1.5,
-      "fitness_percentiles": [
-        0.25,
-        0.5,
-        0.75,
-        0.9,
-        0.95
-      ],
-      "plateau_threshold": 0.1,
-      "strong_correlation_threshold": 0.7,
-      "moderate_correlation_threshold": 0.4,
-      "high_robustness_threshold": 0.7,
-      "moderate_robustness_threshold": 0.5
+    "verbose_output": false,
+    "calculations": {
+      "loop_start_index": 1,
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0,
+      "signal_threshold": 0,
+      "size_threshold": 0.001
     }
   },
   "hybrid_strategy": {
     "ml_components": {
       "regime_detection": "rule_based",
       "volatility_prediction": "enabled",
-      "trend_duration": "disabled"
+      "trend_duration": "enabled",
+      "enabled_string": "enabled"
     },
     "technical_indicators": {
       "ma_period": 20,
@@ -252,13 +350,6 @@
       ]
     }
   },
-  "risk_management": {
-    "stop_loss_pct": 0.02,
-    "take_profit_pct": 0.04,
-    "max_position_size": 0.5,
-    "max_daily_trades": 10,
-    "risk_per_trade": 0.02
-  },
   "transaction_costs": {
     "commission_pct": 0.0001,
     "slippage_pct": 0.00005,
@@ -268,5 +359,47 @@
     "benchmark": "buy_and_hold",
     "risk_free_rate": 0.02,
     "confidence_level": 0.95
+  },
+  "result_keys": {
+    "total_return": "total_return",
+    "sharpe_ratio": "sharpe_ratio",
+    "num_trades": "num_trades"
+  },
+  "output_formatting": {
+    "percentage_multiplier": 100,
+    "decimal_places": {
+      "price_display": 4,
+      "return_display": 4,
+      "percentage_display": 2,
+      "position_size_display": 3,
+      "capital_display": 0,
+      "pnl_display": 2
+    }
+  },
+  "display_configuration": {
+    "status_messages": {
+      "backtest_running": "Running backtest..."
+    }
+  },
+  "trade_debug": {
+    "debug_labels": {
+      "trade_debug": "Trade ",
+      "position": "Position:",
+      "entry": "Entry:",
+      "exit": "Exit:",
+      "raw_return": "Raw Return:",
+      "position_size": "Position Size:",
+      "sized_return": "Sized Return:",
+      "after_costs": "After Costs:",
+      "transaction_cost": "Transaction Cost:",
+      "slippage": "Slippage:",
+      "capital": "Capital:",
+      "pnl": "P&L:",
+      "arrow": " → "
+    },
+    "position_types": {
+      "long": "Long",
+      "short": "Short"
+    }
   }
 }

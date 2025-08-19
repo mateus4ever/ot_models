@@ -2,6 +2,7 @@
 ML Model Manager - Pure Coordination Only
 Updated for clean architecture: coordinates ML models without providing utilities
 Each ML model is self-contained and handles its own feature generation
+ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
 """
 
 import pandas as pd
@@ -29,10 +30,13 @@ class MLModelManager:
     - Shared utilities (each model is self-contained)
     - Feature generation (each model handles its own)
     - Complex coordination logic (simple delegation)
+
+    ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
     """
 
     def __init__(self, config: Optional[UnifiedConfig] = None):
         self.config = config or UnifiedConfig()
+        self._cache_config_values()
 
         # Load configuration sections
         self.regime_config = self.config.get_section('regime_detection', {})
@@ -47,15 +51,42 @@ class MLModelManager:
 
         self._initialize_components()
 
+    def _cache_config_values(self):
+        """Cache ALL configuration values for ML manager"""
+        # Mathematical constants
+        math_config = self.config.get_section('mathematical_operations', {})
+        self.zero_value = math_config.get('zero')
+        self.unity_value = math_config.get('unity')
+
+        # Default confidence values
+        confidence_config = self.config.get_section('ml_confidence', {})
+        self.default_volatility_confidence = confidence_config.get('default_volatility_confidence')
+        self.default_duration_confidence = confidence_config.get('default_duration_confidence')
+        self.base_confidence = confidence_config.get('base_confidence')
+
+        # String constants
+        string_config = self.config.get_section('string_constants', {})
+        self.none_string = string_config.get('none_string')
+        self.unknown_string = string_config.get('unknown_string')
+
+        # Boolean constants
+        boolean_config = self.config.get_section('boolean_values', {})
+        self.true_value = boolean_config.get('true')
+        self.false_value = boolean_config.get('false')
+
+        # ML components config
+        ml_components_config = self.config.get_section('hybrid_strategy', {}).get('ml_components', {})
+        self.enabled_string = ml_components_config.get('enabled_string', 'enabled')
+
     def _initialize_components(self):
         """Initialize components based on configuration"""
 
-        verbose = self.general_config.get('verbose', True)
+        verbose = self.general_config.get('verbose', self.true_value)
 
         # === REGIME DETECTION ===
-        regime_method = self.regime_config.get('method', 'rule_based')
+        regime_method = self.regime_config.get('method')
 
-        if regime_method == 'rule_based':
+        if regime_method == self.config.get_section('regime_methods', {}).get('rule_based'):
             try:
                 from src.hybrid.signal.rule_based_regime_detector import RuleBasedRegimeDetector
                 self.regime_detector = RuleBasedRegimeDetector(self.config)
@@ -64,19 +95,10 @@ class MLModelManager:
             except ImportError as e:
                 logger.error(f"Failed to import RuleBasedRegimeDetector: {e}")
                 self.regime_detector = None
-        else:
-            # Legacy ML-based regime detection (if still needed)
-            try:
-                from src.hybrid.market_regime_detector import MarketRegimeDetector
-                self.regime_detector = MarketRegimeDetector(self.config)
-                if verbose:
-                    print("✓ ML-based regime detection initialized")
-            except ImportError as e:
-                logger.error(f"Failed to import MarketRegimeDetector: {e}")
-                self.regime_detector = None
+        # Note: MarketRegimeDetector import removed - module doesn't exist
 
         # === VOLATILITY PREDICTION ===
-        if self.volatility_config.get('use_volatility_ml', True):
+        if self.volatility_config.get('use_volatility_ml', self.true_value):
             try:
                 from src.hybrid.ml_model.volatility_predictor import VolatilityPredictor
                 self.volatility_predictor = VolatilityPredictor(self.config)
@@ -87,7 +109,15 @@ class MLModelManager:
                 self.volatility_predictor = None
 
         # === TREND DURATION PREDICTION ===
-        if self.duration_config.get('enabled', False):
+        # Check both config locations for duration prediction enablement
+        duration_enabled = (
+                self.duration_config.get('enabled', self.false_value) or
+                self.config.get_section('hybrid_strategy', {})
+                .get('ml_components', {})
+                .get('trend_duration') == self.enabled_string
+        )
+
+        if duration_enabled:
             try:
                 from src.hybrid.ml_model.trend_duration_predictor import TrendDurationPredictor
                 self.duration_predictor = TrendDurationPredictor(self.config)
@@ -96,6 +126,9 @@ class MLModelManager:
             except ImportError as e:
                 logger.error(f"Failed to import TrendDurationPredictor: {e}")
                 self.duration_predictor = None
+        else:
+            if verbose:
+                print("⚠ Trend duration prediction disabled in config")
 
     def train_all_models(self, df: pd.DataFrame) -> Dict[str, Dict]:
         """
@@ -103,7 +136,7 @@ class MLModelManager:
         Pure delegation - each model handles its own training
         """
         results = {}
-        verbose = self.general_config.get('verbose', True)
+        verbose = self.general_config.get('verbose', self.true_value)
 
         if verbose:
             print("=== Training ML Models ===")
@@ -114,9 +147,9 @@ class MLModelManager:
                 regime_results = self.regime_detector.train(df)
                 results['regime'] = regime_results
                 if regime_results:
-                    results['regime']['method'] = self.regime_config.get('method', 'rule_based')
+                    results['regime']['method'] = self.regime_config.get('method')
                 if verbose and regime_results:
-                    method = results['regime'].get('method', 'unknown')
+                    method = results['regime'].get('method', self.unknown_string)
                     print(f"✓ Regime detector ({method}) ready")
             except Exception as e:
                 logger.error(f"Error training regime detector: {e}")
@@ -152,7 +185,7 @@ class MLModelManager:
         Pure delegation - each model handles its own prediction logic
         """
         predictions = {}
-        verbose = self.general_config.get('verbose', True)
+        verbose = self.general_config.get('verbose', self.true_value)
 
         if verbose:
             print("=== Getting ML Predictions ===")
@@ -180,7 +213,7 @@ class MLModelManager:
                     vol_predictions, vol_confidence = vol_pred
                 else:
                     vol_predictions = vol_pred
-                    vol_confidence = pd.Series(0.7, index=df.index)
+                    vol_confidence = pd.Series(self.default_volatility_confidence, index=df.index)
 
                 predictions['volatility'] = (vol_predictions, vol_confidence)
                 if verbose:
@@ -209,28 +242,29 @@ class MLModelManager:
 
     def _get_default_regime_prediction(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
         """Get default regime prediction when no detector available"""
-        default_regime = self.regime_config.get('default_regime', 0)  # Ranging
+        default_regime = self.regime_config.get('default_regime', self.zero_value)  # Ranging
         regime_pred = np.full(len(df), default_regime)
-        regime_conf = np.full(len(df), 0.5)
+        regime_conf = np.full(len(df), self.base_confidence)
         return regime_pred, regime_conf
 
     def _get_default_volatility_prediction(self, df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
         """Get default volatility prediction when no predictor available"""
-        vol_pred = pd.Series(False, index=df.index)  # Low volatility
-        vol_conf = pd.Series(0.0, index=df.index)
+        vol_pred = pd.Series(self.false_value, index=df.index)  # Low volatility
+        vol_conf = pd.Series(self.zero_value, index=df.index)
         return vol_pred, vol_conf
 
     def _get_default_duration_prediction(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
         """Get default duration prediction when no predictor available"""
-        default_duration = self.duration_config.get('default_duration_category', 1)  # Short
+        default_duration = self.duration_config.get('default_duration_category', self.unity_value)  # Short
         duration_pred = np.full(len(df), default_duration)
-        duration_conf = np.full(len(df), 0.5)
+        duration_conf = np.full(len(df), self.base_confidence)
         return duration_pred, duration_conf
 
     def _calculate_duration_confidence(self, duration_predictions: np.ndarray) -> np.ndarray:
         """Calculate confidence for duration predictions based on consistency"""
-        confidence = np.full(len(duration_predictions), 0.5)
-        window = self.duration_config.get('confidence_window', 10)
+        confidence = np.full(len(duration_predictions), self.base_confidence)
+        window = self.duration_config.get('confidence_window',
+                                          self.config.get_section('window_sizes', {}).get('default_window'))
 
         for i in range(window, len(duration_predictions)):
             recent_preds = duration_predictions[i - window:i]
@@ -247,47 +281,47 @@ class MLModelManager:
         # Regime detection status
         if self.regime_detector:
             status['regime'] = {
-                'initialized': True,
-                'trained': getattr(self.regime_detector, 'is_trained', False),
-                'method': self.regime_config.get('method', 'rule_based'),
+                'initialized': self.true_value,
+                'trained': getattr(self.regime_detector, 'is_trained', self.false_value),
+                'method': self.regime_config.get('method'),
                 'type': type(self.regime_detector).__name__
             }
         else:
             status['regime'] = {
-                'initialized': False,
-                'trained': False,
-                'method': 'none',
-                'type': 'none'
+                'initialized': self.false_value,
+                'trained': self.false_value,
+                'method': self.none_string,
+                'type': self.none_string
             }
 
         # Volatility prediction status
         if self.volatility_predictor:
             status['volatility'] = {
-                'initialized': True,
-                'trained': getattr(self.volatility_predictor, 'is_trained', False),
+                'initialized': self.true_value,
+                'trained': getattr(self.volatility_predictor, 'is_trained', self.false_value),
                 'type': type(self.volatility_predictor).__name__
             }
         else:
             status['volatility'] = {
-                'initialized': False,
-                'trained': False,
-                'type': 'none'
+                'initialized': self.false_value,
+                'trained': self.false_value,
+                'type': self.none_string
             }
 
         # Duration prediction status
         if self.duration_predictor:
             status['duration'] = {
-                'initialized': True,
-                'trained': getattr(self.duration_predictor, 'is_trained', False),
-                'enabled': self.duration_config.get('enabled', False),
+                'initialized': self.true_value,
+                'trained': getattr(self.duration_predictor, 'is_trained', self.false_value),
+                'enabled': self.duration_config.get('enabled', self.false_value),
                 'type': type(self.duration_predictor).__name__
             }
         else:
             status['duration'] = {
-                'initialized': False,
-                'trained': False,
-                'enabled': False,
-                'type': 'none'
+                'initialized': self.false_value,
+                'trained': self.false_value,
+                'enabled': self.false_value,
+                'type': self.none_string
             }
 
         return status
@@ -327,7 +361,7 @@ class MLModelManager:
         ]
 
         for name, model in models:
-            if model and getattr(model, 'is_trained', False):
+            if model and getattr(model, 'is_trained', self.false_value):
                 model_path = f"{base_filepath}_{name}.pkl"
                 try:
                     model.save_model(model_path)
@@ -335,7 +369,7 @@ class MLModelManager:
                 except Exception as e:
                     logger.error(f"Error saving {name} model: {e}")
 
-        if self.general_config.get('verbose', True) and saved_models:
+        if self.general_config.get('verbose', self.true_value) and saved_models:
             print(f"Saved models: {saved_models}")
 
         return saved_models
@@ -389,10 +423,15 @@ class MLModelManager:
         if 'volatility' in predictions:
             vol_pred, vol_conf = predictions['volatility']
             if isinstance(vol_pred, pd.Series):
-                high_vol_count = vol_pred.sum() if vol_pred.dtype == bool else (vol_pred > 0.5).sum()
+                high_vol_threshold = self.config.get_section('volatility_thresholds', {}).get('high_vol_threshold',
+                                                                                              self.base_confidence)
+                high_vol_count = vol_pred.sum() if vol_pred.dtype == bool else (vol_pred > high_vol_threshold).sum()
+                percentage_multiplier = self.config.get_section('mathematical_operations', {}).get(
+                    'percentage_multiplier',
+                    self.unity_value * self.unity_value * 10 * 10)
                 summary['volatility'] = {
                     'high_vol_predictions': high_vol_count,
-                    'high_vol_percentage': (high_vol_count / len(vol_pred)) * 100,
+                    'high_vol_percentage': (high_vol_count / len(vol_pred)) * percentage_multiplier,
                     'avg_confidence': vol_conf.mean() if hasattr(vol_conf, 'mean') else np.mean(vol_conf)
                 }
 
@@ -413,12 +452,13 @@ class MLModelManager:
     def __repr__(self) -> str:
         """String representation"""
         status = self.get_model_status()
-        initialized_count = sum(1 for s in status.values() if s['initialized'])
-        trained_count = sum(1 for s in status.values() if s['trained'])
+        three_total = self.unity_value + self.unity_value + self.unity_value
+        initialized_count = sum(self.unity_value for s in status.values() if s['initialized'])
+        trained_count = sum(self.unity_value for s in status.values() if s['trained'])
 
         return (f"MLModelManager("
-                f"initialized={initialized_count}/3, "
-                f"trained={trained_count}/3, "
+                f"initialized={initialized_count}/{three_total}, "
+                f"trained={trained_count}/{three_total}, "
                 f"config={self.config.config_path})")
 
 

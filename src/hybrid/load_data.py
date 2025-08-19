@@ -221,6 +221,12 @@ class DataLoader:
                     logger.info(f"Using last {max_records} records as configured")
                     df = df.tail(max_records)
 
+                # Skip initial rows if configured (for optimization holdout)
+                skip_initial = self.config.config.get('data_loading', {}).get('skip_initial_rows')
+                if skip_initial and len(df) > skip_initial:
+                    logger.info(f"Skipping first {skip_initial} rows as configured")
+                    df = df.iloc[skip_initial:]
+
                 return df
 
             except Exception as e:

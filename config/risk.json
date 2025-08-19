@@ -1,20 +1,20 @@
 {
   "risk_management": {
-    "max_position_size": 1.0,
+    "max_position_size": 0.88,
     "min_position_size": 0.01,
-    "stop_loss_pct": 0.02,
-    "take_profit_pct": 0.04,
+    "stop_loss_pct": 0.005,
+    "take_profit_pct": 0.048,
     "max_holding_periods": 480,
     "max_daily_trades": 10,
     "max_daily_loss_pct": 0.05,
     "max_drawdown_pct": 0.2,
     "max_portfolio_risk_pct": 0.02,
     "position_sizing": {
-      "base_size": 0.95,
+      "base_size": 3.5,
       "regime_adjustments": {
-        "trending": 1.0,
-        "ranging": 0.85,
-        "high_volatility": 0.75
+        "trending": 3.0,
+        "ranging": 2.5,
+        "high_volatility": 4.0
       },
       "confidence_scaling": true
     },

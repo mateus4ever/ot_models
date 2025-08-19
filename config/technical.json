@@ -131,7 +131,7 @@
       "min_periods_for_long_ratio": 3,
       "mid_period_index": 1,
       "percentage_multiplier": 100,
-      "astype_conversion_value": "int",
+      "astype_conversion_value": 1,
       "last_element_index": 1,
       "axis_parameter": 1,
       "reverse_sort_flag": true
@@ -180,27 +180,27 @@
     "signal_combination": {
       "method": "weighted_average",
       "weights": {
-        "kama": 0.6,
-        "kalman": 0.4
+        "kama": 0.7,
+        "kalman": 0.7
       }
     },
     "signal_processing": {
-      "high_vol_position_multiplier": 0.6,
-      "high_vol_confidence_threshold": 0.5,
-      "ranging_signal_multiplier": 0.7,
-      "high_vol_signal_multiplier": 0.3,
-      "confidence_divisor": 3,
-      "signal_clip_min": -1,
-      "signal_clip_max": 1
+      "high_vol_position_multiplier": 2.0,
+      "high_vol_confidence_threshold": 0.7,
+      "ranging_signal_multiplier": 1.5,
+      "high_vol_signal_multiplier": 2.5,
+      "confidence_divisor": 3.0,
+      "signal_clip_min": -1.0,
+      "signal_clip_max": 1.0
     },
     "duration_multipliers": {
       "category_multipliers": {
-        "0": 0.3,
-        "1": 0.6,
-        "2": 0.9,
-        "3": 1.0
+        "0": 1.0,
+        "1": 1.5,
+        "2": 2.0,
+        "3": 2.5
       },
-      "confidence_blend_factor": 0.5
+      "confidence_blend_factor": 0.3
     }
   }
 }
