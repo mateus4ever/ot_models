@@ -3,11 +3,14 @@
 # ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
 # DELEGATES to specialized components for complex logic
 from pip._internal.exceptions import ConfigurationError
+
 from src.hybrid.data.data_manager import DataManager
 from src.hybrid.money_management import MoneyManager
+from src.hybrid.results import Result
 from src.hybrid.strategies import StrategyFactory
 from src.hybrid.strategies import StrategyInterface
 import logging
+from pathlib import Path
 
 # Import and setup Windows compatibility FIRST
 from src.hybrid.utils.windows_compat import setup_windows_compatibility
@@ -28,8 +31,8 @@ from src.hybrid.backtesting import ResultsFormatter
 
 # Optimization
 from src.hybrid.optimization import (
-    OptimizationType,
-    run_optimization
+    OptimizerType,
+    run_optimization, OptimizerFactory
 )
 
 
@@ -115,24 +118,6 @@ class BacktestOrchestrator:
             self._handle_error(e, start_time)
             return {}
 
-    def _load_data(self, data_path: str = None) -> pd.DataFrame:
-        """Load and preprocess data"""
-        data_start = datetime.now()
-        print(f"\n1. Loading and preprocessing data...")
-
-        if data_path is None:
-            data_config = self.config.get_section('data_loading', {})
-            data_path = data_config.get('data_source', 'data/eurusd')
-
-        df = load_and_preprocess_data(data_path, self.config)
-        data_duration = (datetime.now() - data_start).total_seconds()
-
-        print(f"   Data loaded: {len(df)} records")
-        print(f"   Time range: {df.index[0]} to {df.index[-1]}")
-        print(f"   ✓ Data loading took: {data_duration:.1f} seconds")
-
-        return df
-
     def run_multi_strategy_backtest(self,
                                     strategies: List[Union[StrategyInterface, str]],
                                     markets: List[str] = None,
@@ -152,7 +137,7 @@ class BacktestOrchestrator:
         start_time = datetime.now()
 
         logger.info("Starting multi-strategy backtest orchestration")
-        logger.info(f"Strategies: {len(strategies)}, Markets: {markets or 'Default'}, Mode: {execution_mode}")
+        logger.info(f"Strategies: {len(strategies)}, Markets: {markets or 'Auto-discover'}, Mode: {execution_mode}")
 
         try:
             # 1. Initialize managers
@@ -163,37 +148,46 @@ class BacktestOrchestrator:
             # 2. Load market data
             if markets is None:
                 data_config = self.config.get_section('data_loading', {})
-                default_source = data_config.get('data_source', 'data/eurusd')
-                markets = [default_source]
+                data_directory = data_config.get('data_source')
 
+                if not data_directory:
+                    raise ConfigurationError("data_source not specified in data_loading configuration")
+
+                data_path = Path(data_directory)
+                if not data_path.exists():
+                    raise FileNotFoundError(f"Data directory not found: {data_directory}")
+
+                csv_files = list(data_path.glob('*.csv'))
+                if not csv_files:
+                    raise FileNotFoundError(f"No CSV files found in data directory: {data_directory}")
+
+                markets = [f.stem for f in csv_files]
+                logger.info(f"Auto-discovered {len(markets)} markets from {data_directory}: {markets}")
+
+            logger.debug(f"About to load market data for markets: {markets}")
             market_data = data_manager.load_market_data(markets)
             logger.info(f"Market data loaded for {len(markets)} markets")
 
-            # 3. Initialize strategies with dependency injection
-            strategy_instances = self._initialize_strategies(strategies, data_manager, money_manager)
-            logger.info(f"Initialized {len(strategy_instances)} strategies")
+            # 3. Initialize strategies with components and dependency injection
+            # todo: optimizer_type must be derived from config.
+            strategy_instances = self._initialize_strategies(strategies, data_manager, money_manager,
+                                                             OptimizerType.SIMPLE_RANDOM)
+            logger.info(f"Initialized {len(strategy_instances)} strategies with components")
 
-            # 4. Prepare training data
-            data_manager.prepare_training_data(strategy_instances, market_data)
-            logger.debug("Training data prepared for all strategies")
-
-            # 5. Allocate capital
-            money_manager.allocate_capital(strategy_instances)
-            logger.debug(f"Capital allocated across {len(strategy_instances)} strategies")
-
-            # 6. Execute strategies
+            # 4. Each strategy runs its own backtest
             if execution_mode.lower() == "parallel":
                 results = self._execute_strategies_parallel(strategy_instances, market_data)
             else:
                 results = self._execute_strategies_serial(strategy_instances, market_data)
 
-            # 7. Aggregate and analyze results
+            # 5. Aggregate and analyze results
             aggregated_results = self._aggregate_strategy_results(results, start_time)
 
             logger.info("Multi-strategy backtest completed successfully")
             return aggregated_results
 
         except Exception as e:
+            logger.debug(f"Exception caught in orchestrator: {type(e).__name__}: {e}")
             logger.error(f"Multi-strategy backtest failed: {str(e)}", exc_info=True)
             return {
                 'error': str(e),
@@ -202,26 +196,72 @@ class BacktestOrchestrator:
             }
 
     def _initialize_strategies(self, strategies: List[Union[StrategyInterface, str]],
-                               data_manager: DataManager, money_manager: MoneyManager) -> List[StrategyInterface]:
+                               data_manager: DataManager, money_manager: MoneyManager,
+                               optimizer_type: OptimizerType = None) -> List[StrategyInterface]:
         """Initialize strategy instances with dependency injection"""
         strategy_factory = StrategyFactory()
         strategy_instances = []
 
+        # Determine optimizer type (parameter overrides config)
+        if optimizer_type is None:
+            opt_config = self.config.get_section('optimization', {})
+            optimizer_type_str = opt_config.get('default_type', 'CACHED_RANDOM')
+            optimizer_type = OptimizerType[optimizer_type_str]
+
         for strategy in strategies:
             if isinstance(strategy, str):
-                # Create strategy instance from name using factory
                 created_strategy = strategy_factory.create_strategy(strategy, self.config)
             else:
-                # Already a strategy instance
                 created_strategy = strategy
 
-            # Inject dependencies
+            # Inject managers
             created_strategy.setMoneyManager(money_manager)
             created_strategy.setDataManager(data_manager)
+
+            # Add components
+            created_strategy.addSignal("placeholder_signal")
+            created_strategy.addPredictor("placeholder_predictor")
+            created_strategy.addOptimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
+            created_strategy.addRunner("placeholder_runner")
+            created_strategy.addMetric("placeholder_metric")
 
             strategy_instances.append(created_strategy)
 
         return strategy_instances
+
+    def _execute_strategies_serial(self, strategy_instances: List[StrategyInterface], market_data: Dict) -> List[
+        Result]:
+        """Execute strategies in serial mode"""
+        results = []
+
+        for strategy in strategy_instances:
+            # TODO: Call strategy.run_backtest(market_data)
+            result = Result(strategy.name, "placeholder_data")
+            results.append(result)
+
+        return results
+
+    def _execute_strategies_parallel(self, strategy_instances: List[StrategyInterface], market_data: Dict) -> List[
+        Result]:
+        """Execute strategies in parallel mode"""
+        results = []
+
+        # TODO: Implement parallel execution
+        for strategy in strategy_instances:
+            result = Result(strategy.name, "placeholder_data")
+            results.append(result)
+
+        return results
+
+    def _aggregate_strategy_results(self, strategy_results: List[Result], start_time: datetime) -> Dict:
+        """Aggregate results from multiple strategies"""
+
+        # TODO: Implement result aggregation logic
+        return {
+            'total_strategies': len(strategy_results),
+            'execution_time': (datetime.now() - start_time).total_seconds(),
+            'results': strategy_results
+        }
 
     def _run_walkforward_backtest(self, df: pd.DataFrame) -> Dict:
         """Run walk-forward backtest using specialized engine"""
@@ -362,14 +402,14 @@ def run_optimization_mode(config: UnifiedConfig) -> bool:
     if use_bayesian:
         print("Running BAYESIAN parameter optimization with walk-forward...")
         optimization_results = run_optimization(
-            optimizer_type=OptimizationType.BAYESIAN,
+            optimizer_type=OptimizerType.BAYESIAN,
             data_path=None,
             n_combinations=n_combinations
         )
     else:
         print("Running CACHED parameter optimization with walk-forward...")
         optimization_results = run_optimization(
-            optimizer_type=OptimizationType.CACHED_RANDOM,
+            optimizer_type=OptimizerType.CACHED_RANDOM,
             data_path=None,
             n_combinations=n_combinations
         )

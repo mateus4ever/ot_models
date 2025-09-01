@@ -1,0 +1,128 @@
+{
+  "general": {
+    "verbose": true,
+    "random_state": 42,
+    "debug_mode": false,
+    "enable_validation_checks": true
+  },
+  "data_loading": {
+    "data_source": "tests/data_not_found",
+    "skip_initial_rows": 0,
+    "max_records": 300,
+    "file_pattern": "*.csv"
+  },
+  "mathematical_operations": {
+    "zero": 0,
+    "unity": 1,
+    "two": 2,
+    "three": 3,
+    "default_seed": 42,
+    "momentum_short": 5,
+    "momentum_medium": 20,
+    "ma_short": 10,
+    "ma_medium": 20,
+    "default_rsi_period": 14,
+    "default_bollinger_period": 20
+  },
+  "walk_forward": {
+    "pretrain_rows": 50,
+    "retrain_frequency": 10,
+    "progress_report_frequency": 10,
+    "min_training_rows": 30,
+    "step_sampling_frequency": 5,
+    "batch_size": 10,
+    "train_window_size": 50,
+    "test_window_size": 50
+  },
+  "array_indexing": {
+    "first_index": 0,
+    "second_index": 1,
+    "third_index": 2
+  },
+  "boolean_values": {
+    "true": true,
+    "false": false
+  },
+  "regime_detection": {
+    "method": "rule_based"
+  },
+  "trend_duration_prediction": {
+    "enabled": false,
+    "confidence_window": 5,
+    "default_duration_category": 1,
+    "model_params": {
+      "n_estimators": 10,
+      "max_depth": 3,
+      "random_state": 42
+    }
+  },
+  "volatility_prediction": {
+    "use_volatility_ml": false,
+    "forward_window": 10,
+    "feature_periods": [5, 10],
+    "model_params": {
+      "n_estimators": 10,
+      "max_depth": 3,
+      "random_state": 42
+    }
+  },
+  "system_configuration": {
+    "windows_compatibility": {
+      "max_cores": 1
+    },
+    "logging": {
+      "level": "INFO",
+      "format": "%(asctime)s - %(levelname)s - %(message)s"
+    }
+  },
+  "debug_configuration": {
+    "enable_trade_debug": false,
+    "enable_position_debug": false,
+    "print_trade_details": false
+  },
+  "backtesting": {
+    "method": "walk_forward",
+    "initial_capital": 1000,
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
+    "print_trades": false,
+    "verbose_output": false,
+    "calculations": {
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0
+    }
+  },
+  "hybrid_strategy": {
+    "ml_components": {
+      "regime_detection": "rule_based",
+      "volatility_prediction": "disabled",
+      "trend_duration": "disabled"
+    },
+    "technical_indicators": {
+      "ma_period": 10,
+      "rsi_period": 14,
+      "bollinger_period": 20
+    },
+    "signal_generation": {
+      "ml_weight": 0.3,
+      "technical_weight": 0.7,
+      "confidence_threshold": 0.5
+    }
+  },
+  "transaction_costs": {
+    "commission_pct": 0.001,
+    "slippage_pct": 0.0005
+  },
+  "performance_metrics": {
+    "benchmark": "buy_and_hold",
+    "risk_free_rate": 0.0
+  },
+  "optimization": {
+    "defaults": {
+      "n_combinations": 3,
+      "max_workers": 1,
+      "quiet_mode": false
+    }
+  }
+}

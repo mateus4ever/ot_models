@@ -88,7 +88,7 @@ class MLModelManager:
 
         if regime_method == self.config.get_section('regime_methods', {}).get('rule_based'):
             try:
-                from src.hybrid.signal.rule_based_regime_detector import RuleBasedRegimeDetector
+                from src.hybrid.predictors.rule_based_regime_detector import RuleBasedRegimeDetector
                 self.regime_detector = RuleBasedRegimeDetector(self.config)
                 if verbose:
                     print("✓ Rule-based regime detection initialized")
@@ -477,7 +477,7 @@ def get_available_ml_models() -> Dict[str, bool]:
 
     # Check regime detectors
     try:
-        from src.hybrid.signal.rule_based_regime_detector import RuleBasedRegimeDetector
+        from src.hybrid.predictors.rule_based_regime_detector import RuleBasedRegimeDetector
         available['rule_based_regime'] = True
     except ImportError:
         available['rule_based_regime'] = False

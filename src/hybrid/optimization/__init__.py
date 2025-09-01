@@ -21,15 +21,15 @@ public static OptimizationResult runOptimization(OptimizationType type, ...);
 
 # Core interfaces and types
 from .optimization_interface import IOptimizer, IOptimizerBase
-from .optimization_types import OptimizationType
+from .optimizer_type import OptimizerType
 
 # Concrete implementations
-from .simple_optimizer import SimpleRandomOptimizer
-from .cached_optimizer import CachedRandomOptimizer
-from .bayesian_optimizer import BayesianOptimizer
+from src.hybrid.optimization.implementation.simple_optimizer import SimpleRandomOptimizer
+from src.hybrid.optimization.implementation.cached_optimizer import CachedRandomOptimizer
+from src.hybrid.optimization.implementation.bayesian_optimizer import BayesianOptimizer
 
 # Factory and main functions
-from .factory import (
+from .optimizer_factory import (
     OptimizerFactory,
     run_optimization,
     run_fast_optimization,  # Legacy
@@ -53,7 +53,7 @@ __all__ = [
     # Core interfaces and types
     'IOptimizer',
     'IOptimizerBase',
-    'OptimizationType',
+    'OptimizerType',
 
     # Concrete implementations
     'SimpleRandomOptimizer',

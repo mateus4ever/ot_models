@@ -4,7 +4,8 @@
 
 import logging
 from typing import Any, Dict
-from .strategy_interface import StrategyInterface
+
+from src.hybrid.strategies import StrategyInterface
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ class HybridStrategy(StrategyInterface):
         """Add signal generator to strategy"""
         self.signals.append(signal)
 
-    def addOptimization(self, optimization: Any) -> None:
+    def addOptimizer(self, optimization: Any) -> None:
         """Add optimization component to strategy"""
         self.optimizations.append(optimization)
 

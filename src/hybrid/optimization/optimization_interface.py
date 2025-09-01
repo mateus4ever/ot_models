@@ -3,7 +3,7 @@
 # Using Protocol instead of ABC because it's closer to Java interfaces
 
 from typing import Protocol, Dict
-from src.hybrid.optimization.optimization_types import OptimizationType
+from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
 
 
@@ -27,7 +27,7 @@ class IOptimizer(Protocol):
         """
         ...
 
-    def get_optimization_type(self) -> OptimizationType:
+    def get_optimization_type(self) -> OptimizerType:
         """
         Java equivalent: public OptimizationType getOptimizationType()
         """

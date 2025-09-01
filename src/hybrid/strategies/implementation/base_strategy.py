@@ -4,7 +4,7 @@
 
 import logging
 from typing import Any, Dict
-from .strategy_interface import StrategyInterface
+from ..strategy_interface import StrategyInterface
 
 logger = logging.getLogger(__name__)
 

@@ -30,7 +30,7 @@ class StrategyInterface(Protocol):
         """Add signal generator to strategy"""
         ...
 
-    def addOptimization(self, optimization: Any) -> None:
+    def addOptimizer(self, optimization: Any) -> None:
         """Add optimization component to strategy"""
         ...
 

@@ -2,12 +2,16 @@
 # Factory for creating trading strategy instances
 # ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
 
+# strategy_factory.py
+import sys
+from pathlib import Path
+
 import logging
 from typing import Dict, Any
-from .strategy_interface import StrategyInterface
+from src.hybrid.strategies.strategy_interface import StrategyInterface  # Changed from relative
+from src.hybrid.strategies.implementation import BaseStrategy, HybridStrategy
 
 logger = logging.getLogger(__name__)
-
 
 class StrategyFactory:
     """Factory for creating trading strategy instances"""
@@ -18,8 +22,6 @@ class StrategyFactory:
 
     def _register_default_strategies(self):
         """Register default strategy types"""
-        from .base_strategy import BaseStrategy
-        from .hybrid_strategy import HybridStrategy
 
         self._strategies['base'] = BaseStrategy
         self._strategies['hybrid'] = HybridStrategy

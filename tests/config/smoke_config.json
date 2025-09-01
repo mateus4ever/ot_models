@@ -6,7 +6,7 @@
     "enable_validation_checks": true
   },
   "data_loading": {
-    "data_source": "tests/data",
+    "data_source": "tests/data/big",
     "skip_initial_rows": 0,
     "max_records": 300,
     "file_pattern": "*.csv"
