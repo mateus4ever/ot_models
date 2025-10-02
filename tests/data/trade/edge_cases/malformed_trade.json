@@ -1,0 +1,16 @@
+{
+  "trades": [
+    {
+      "uuid": "broken-trade",
+      "timestamp": "2024-04-01T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "TEST"
+          "amount": 10,
+          "entry_value": 100.0
+        }
+      ]
+    }
+  ]
+}

@@ -46,7 +46,6 @@ Feature: DataManager Multi-Market Data Loading and Temporal Management
     Then current position should match expected location
     When I advance pointer using next(<step_size>) method
     Then pointer should move to new position correctly
-    Then pointer should move to new position correctly
     When I set pointer to absolute position <target_position>
     Then pointer should be at specified position
 

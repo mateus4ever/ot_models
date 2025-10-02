@@ -7,12 +7,6 @@
     "debug_mode": false,
     "enable_validation_checks": true
   },
-  "data_loading": {
-    "data_source": "data/eurusd",
-    "skip_initial_rows": 150000,
-    "max_records": 55000,
-    "file_pattern": "*.csv"
-  },
   "mathematical_operations": {
     "zero": 0,
     "two": 2,

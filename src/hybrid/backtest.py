@@ -36,6 +36,18 @@ from src.hybrid.optimization import (
 )
 
 
+class DataLoadingError(Exception):
+    """Raised when DataManager fails to load market data"""
+    def __init__(self, message: str, source: str = None):
+        super().__init__(message)
+        self.source = source
+
+class ConfigurationError(Exception):
+    """Raised when required configuration is missing or invalid"""
+    def __init__(self, message: str, config_section: str = None):
+        super().__init__(message)
+        self.config_section = config_section
+
 class BacktestOrchestrator:
     """
     Main backtesting orchestrator - chooses appropriate backtesting method
@@ -118,6 +130,70 @@ class BacktestOrchestrator:
             self._handle_error(e, start_time)
             return {}
 
+    # Step 2: Load market data using DataManager Strategy pattern
+    def _load_market_data(self, data_manager: DataManager, markets: List[str] = None) -> List[str]:
+        """
+        Load market data using DataManager controller interface
+
+        Args:
+            data_manager: Initialized DataManager instance
+            markets: Optional list of specific markets to load
+
+        Returns:
+            List of successfully loaded market identifiers
+
+        Raises:
+            DataLoadingError: If market data loading fails
+            ConfigurationError: If data source configuration is invalid
+        """
+        logger = logging.getLogger(__name__)
+
+        if markets is None:
+            # Auto-discover markets using DataManager Strategy pattern
+            logger.info("Auto-discovering markets from configured data source")
+
+            data_config = self.config.get_section('data_loading', {})
+            data_source = data_config.get('data_source')
+
+            if not data_source:
+                raise ConfigurationError("data_source not specified in data_loading configuration")
+
+            # Use DataManager to load all available data from source
+            logger.debug(f"Loading market data from data source: {data_source}")
+            success = data_manager.load_market_data(data_source)
+
+            if not success:
+                raise DataLoadingError(f"Failed to load market data from data source: {data_source}")
+
+            # Get list of successfully loaded markets
+            loaded_markets = data_manager.get_available_markets()
+
+            if not loaded_markets:
+                raise DataLoadingError(f"No markets found in data source: {data_source}")
+
+            logger.info(f"Auto-discovered {len(loaded_markets)} markets: {loaded_markets}")
+            return loaded_markets
+
+        else:
+            # Load specific markets
+            logger.info(f"Loading specific markets: {markets}")
+
+            success = data_manager.load_market_data(markets)
+
+            if not success:
+                raise DataLoadingError(f"Failed to load specified markets: {markets}")
+
+            # Verify all requested markets were loaded
+            loaded_markets = data_manager.get_available_markets()
+            missing_markets = [m for m in markets if m not in loaded_markets]
+
+            if missing_markets:
+                logger.warning(f"Some requested markets could not be loaded: {missing_markets}")
+                logger.info(f"Successfully loaded markets: {loaded_markets}")
+
+            return loaded_markets
+
+    # Updated run_multi_strategy_backtest method with refactored Step 2
     def run_multi_strategy_backtest(self,
                                     strategies: List[Union[StrategyInterface, str]],
                                     markets: List[str] = None,
@@ -145,28 +221,9 @@ class BacktestOrchestrator:
             money_manager = MoneyManager(self.config)
             logger.debug("Managers initialized successfully")
 
-            # 2. Load market data
-            if markets is None:
-                data_config = self.config.get_section('data_loading', {})
-                data_directory = data_config.get('data_source')
-
-                if not data_directory:
-                    raise ConfigurationError("data_source not specified in data_loading configuration")
-
-                data_path = Path(data_directory)
-                if not data_path.exists():
-                    raise FileNotFoundError(f"Data directory not found: {data_directory}")
-
-                csv_files = list(data_path.glob('*.csv'))
-                if not csv_files:
-                    raise FileNotFoundError(f"No CSV files found in data directory: {data_directory}")
-
-                markets = [f.stem for f in csv_files]
-                logger.info(f"Auto-discovered {len(markets)} markets from {data_directory}: {markets}")
-
-            logger.debug(f"About to load market data for markets: {markets}")
-            market_data = data_manager.load_market_data(markets)
-            logger.info(f"Market data loaded for {len(markets)} markets")
+            # 2. Load market data using DataManager Strategy pattern
+            loaded_markets = self._load_market_data(data_manager, markets)
+            logger.info(f"Market data loaded successfully for {len(loaded_markets)} markets")
 
             # 3. Initialize strategies with components and dependency injection
             # todo: optimizer_type must be derived from config.
@@ -176,9 +233,9 @@ class BacktestOrchestrator:
 
             # 4. Each strategy runs its own backtest
             if execution_mode.lower() == "parallel":
-                results = self._execute_strategies_parallel(strategy_instances, market_data)
+                results = self._execute_strategies_parallel(strategy_instances, loaded_markets)
             else:
-                results = self._execute_strategies_serial(strategy_instances, market_data)
+                results = self._execute_strategies_serial(strategy_instances, loaded_markets)
 
             # 5. Aggregate and analyze results
             aggregated_results = self._aggregate_strategy_results(results, start_time)

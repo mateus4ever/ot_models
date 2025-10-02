@@ -3,6 +3,7 @@
 pytest-bdd test runner for DataManager Controller functionality
 Tests data controller pattern with temporal boundary enforcement
 ZERO DATAFRAME EXPOSURE - Controller interface only
+Updated for Strategy Pattern source_config interface
 """
 
 import pytest
@@ -42,6 +43,30 @@ def test_context(request):
     else:
         ctx["scenario_name"] = request.node.name  # fallback
     return ctx
+
+
+def create_source_config(file_paths=None, directory_path=None):
+    """
+    Create source_config for Strategy pattern interface.
+    If file_paths provided → specific file loading
+    If directory_path provided → directory discovery loading
+    """
+    if file_paths:
+        # Specific file paths provided
+        return {
+            'loader_type': 'filepath',
+            'file_paths': file_paths
+        }
+    elif directory_path:
+        # Directory discovery mode
+        return {
+            'loader_type': 'directory_scan',
+            'directory_path': str(directory_path),
+            'file_pattern': '*.csv',
+            'recursive': True
+        }
+    else:
+        raise ValueError("Must provide either file_paths or directory_path")
 
 
 # =============================================================================
@@ -97,6 +122,7 @@ def step_have_market_data_files(test_context, file_count, data_directory):
     test_context['market_files'] = csv_files[:file_count]
     test_context['expected_file_count'] = file_count
     test_context['data_directory'] = data_directory
+    test_context['data_directory_path'] = data_path
 
 
 @given(parsers.parse('each market file has {rows_per_file:d} rows without headers'))
@@ -146,6 +172,7 @@ def step_have_market_data_file(test_context, data_file, data_directory):
     test_context['temporal_data_file'] = data_path
     test_context['temporal_data_filename'] = data_file
     test_context['data_directory'] = data_directory
+    test_context['data_directory_path'] = base_path / data_directory
 
 
 @given('I have loaded market data with temporal boundaries initialized')
@@ -158,12 +185,14 @@ def step_loaded_data_with_temporal_boundaries(test_context):
 
     data_manager = DataManager(config)
 
-    # Use market files from context established in previous steps
-    market_files = [str(f) for f in test_context['market_files']]  # Convert Path to cross-platform string
+    # Create source_config for Strategy pattern
+    market_files = test_context['market_files']
+    file_paths = [str(f) for f in market_files]  # Convert Path to cross-platform string
+    source_config = create_source_config(file_paths=file_paths)
 
     try:
-        # Load markets and initialize temporal boundaries
-        success = data_manager.load_market_data_with_temporal_setup(market_files, 20000)
+        # Load markets and initialize temporal boundaries using Strategy pattern interface
+        success = data_manager.load_market_data_with_temporal_setup(source_config, 20000)
         test_context['data_manager'] = data_manager
         test_context['temporal_setup_success'] = success
         assert success, "Failed to load data with temporal setup"
@@ -189,18 +218,19 @@ def step_loaded_multiple_markets_with_temporal(test_context):
 
     data_manager = DataManager(config)
 
-    # Use market files from context established in previous steps
-    market_files = [f.name for f in test_context['market_files']]
+    # Create source_config for Strategy pattern
+    market_files = test_context['market_files']
+    file_paths = [str(f) for f in market_files]
+    source_config = create_source_config(file_paths=file_paths)
 
     try:
-        success = data_manager.load_market_data_with_temporal_setup(market_files, 200)
+        success = data_manager.load_market_data_with_temporal_setup(source_config, 200)
         test_context['data_manager'] = data_manager
         test_context['temporal_setup_success'] = success
         assert success, "Failed to load multiple markets with temporal setup"
     except Exception as e:
         test_context['temporal_setup_error'] = e
         raise
-
 
 @given(parsers.parse('I have previously loaded market data for {market_name}'))
 def step_previously_loaded_market_data(test_context, market_name):
@@ -210,21 +240,14 @@ def step_previously_loaded_market_data(test_context, market_name):
     config_path = test_context['config_path']
     config = UnifiedConfig(config_path=str(config_path))
 
-    # Override data source to use the subdirectory with base_data_directory
-    data_directory = test_context['data_directory']
-    base_data_path = test_context['base_data_directory']
-    full_data_path = base_data_path / data_directory
-
-    config.config['data_loading']['data_source'] = str(full_data_path)
-
     data_manager = DataManager(config)
 
-    # Use first available market file (since market_name might not match exact filename)
-    market_files = test_context['market_files']
-    market_file_names = [f.name for f in market_files]
+    # Create source_config for directory discovery (caching scenario)
+    data_directory_path = test_context['data_directory_path']
+    source_config = create_source_config(directory_path=data_directory_path)
 
-    success = data_manager.load_market_data(market_file_names)
-    assert success, f"Failed to pre-load market data from {market_file_names}"
+    success = data_manager.load_market_data(source_config)
+    assert success, f"Failed to pre-load market data from {data_directory_path}"
 
     test_context['data_manager'] = data_manager
     test_context['previously_loaded_market'] = market_name
@@ -234,6 +257,34 @@ def step_previously_loaded_market_data(test_context, market_name):
 def step_invalid_data_directory(test_context, invalid_directory):
     """Setup invalid directory for error testing"""
     test_context['invalid_directory'] = invalid_directory.strip('"')
+
+@given(parsers.parse('I have a new trade with timestamp "{timestamp}"'))
+def create_new_trade_with_timestamp(test_context, timestamp):
+    """Create new trade with specified timestamp"""
+    test_context['new_trade_timestamp'] = timestamp
+    test_context['original_count'] = pytest.trade_history.get_trade_count()
+
+@given(parsers.parse('the trade has position with name_of_position "{name_of_position}", type "{position_type}", entry_value {entry_value}, amount {amount}, and entry_fees {entry_fees}'))
+def add_position_to_new_trade(test_context, name_of_position, position_type, entry_value, amount, entry_fees):
+    """Add position data to new trade"""
+    test_context['new_trade_data'] = {
+        'uuid': f"test-trade-{test_context['new_trade_timestamp']}",
+        'timestamp': test_context['new_trade_timestamp'],
+        'status': 'open',
+        'positions': [{
+            'name_of_position': name_of_position,
+            'type': position_type,
+            'amount': float(amount),
+            'entry_value': float(entry_value),
+            'entry_fees': float(entry_fees),
+            'currency': 'USD',
+            'status': 'open',
+            'entry_timestamp': test_context['new_trade_timestamp'],
+            'exit_value': None,
+            'exit_timestamp': None,
+            'exit_fees': None
+        }]
+    }
 
 
 # =============================================================================
@@ -248,30 +299,34 @@ def step_load_multiple_market_data(test_context):
     config_path = test_context['config_path']
     config = UnifiedConfig(config_path=str(config_path))
 
-    # Override data source to use the subdirectory with base_data_directory
-    data_directory = test_context['data_directory']
-    base_data_path = test_context['base_data_directory']
-    full_data_path = base_data_path / data_directory
-
-    # Update config to point to correct subdirectory
-    config.config['data_loading']['data_source'] = str(full_data_path)
-
     data_manager = DataManager(config)
 
-    # Create market names from files
-    market_files = test_context['market_files']
-    markets = [f.name for f in market_files]
+    # Create appropriate source_config based on scenario
+    data_directory_path = test_context['data_directory_path']
+
+    # For multi-market loading, use directory discovery to let DataManager
+    # decide between file consolidation vs separate markets
+    source_config = create_source_config(directory_path=data_directory_path)
+
+    # Debug logging
+    print(f"DEBUG: Loading from directory: {data_directory_path}")
+    print(f"DEBUG: Source config: {source_config}")
 
     try:
         # Controller returns boolean success, not data dictionary
-        success = data_manager.load_market_data(markets)
+        success = data_manager.load_market_data(source_config)
         test_context['loading_success'] = success
         test_context['data_manager'] = data_manager
         test_context['data_error'] = None
 
+        print(f"DEBUG: Loading success: {success}")
+
     except Exception as e:
         test_context['loading_success'] = False
         test_context['data_error'] = e
+        print(f"DEBUG: Loading exception: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 @when(parsers.parse(
@@ -290,22 +345,15 @@ def step_load_data_initialize_temporal_pointer(test_context, training_records):
     config_path = test_context['config_path']
     config = UnifiedConfig(config_path=str(config_path))
 
-    # Override data source to use the subdirectory with base_data_directory
-    data_directory = test_context['data_directory']
-    base_data_path = test_context['base_data_directory']
-    full_data_path = base_data_path / data_directory
-
-    # Update config to point to correct subdirectory
-    config.config['data_loading']['data_source'] = str(full_data_path)
-
     data_manager = DataManager(config)
 
-    # Get the data file from context
-    data_file = str(test_context['temporal_data_file'])
+    # Get the specific data file path for temporal testing
+    data_file_path = str(test_context['temporal_data_file'])
+    source_config = create_source_config(file_paths=[data_file_path])
 
     try:
         # Load single market with temporal setup
-        success = data_manager.load_market_data_with_temporal_setup([data_file], training_records)
+        success = data_manager.load_market_data_with_temporal_setup(source_config, training_records)
         test_context['data_manager'] = data_manager
         test_context['temporal_setup_success'] = success
         test_context['training_window'] = training_records
@@ -364,8 +412,14 @@ def step_attempt_advance_beyond_data(test_context):
     data_manager = test_context['data_manager']
 
     try:
-        # Try to advance by a very large number to exceed boundaries
-        success = data_manager.next(1000000)
+        # Get actual data size and attempt to advance 1 step beyond it
+        record_counts = data_manager.get_market_record_counts()
+        max_records = max(record_counts.values())
+        current_position = data_manager.get_current_pointer()
+
+        # Advance to 1 position beyond the last record
+        steps_to_end = max_records - current_position + 1
+        success = data_manager.next(steps_to_end)
         test_context['boundary_test_success'] = success
         test_context['boundary_test_error'] = None
     except Exception as e:
@@ -421,13 +475,13 @@ def step_request_same_market_data_again(test_context):
     """Request cached data through controller"""
     data_manager = test_context['data_manager']
 
-    # Use the actual loaded market files for cache test
-    market_files = test_context['market_files']
-    market_file_names = [f.name for f in market_files]
+    # Create same source_config for cache test
+    data_directory_path = test_context['data_directory_path']
+    source_config = create_source_config(directory_path=data_directory_path)
 
     try:
-        # Request same market data again (should use cache) - use load_market_data for consistency
-        success = data_manager.load_market_data(market_file_names)
+        # Request same market data again (should use cache)
+        success = data_manager.load_market_data(source_config)
         test_context['cache_request_success'] = success
         test_context['cache_request_error'] = None
     except Exception as e:
@@ -443,20 +497,31 @@ def step_attempt_load_market_data(test_context):
     config_path = test_context['config_path']
     config = UnifiedConfig(config_path=str(config_path))
 
-    # Override data source to invalid directory
-    invalid_dir = test_context['invalid_directory']
-    config.config['data_loading']['data_source'] = invalid_dir
-
     data_manager = DataManager(config)
 
+    # Create source_config for invalid directory
+    invalid_dir = test_context['invalid_directory']
+    source_config = create_source_config(directory_path=invalid_dir)
+
     try:
-        success = data_manager.load_market_data_single("nonexistent.csv")
+        success = data_manager.load_market_data(source_config)
         test_context['invalid_load_success'] = success
         test_context['invalid_load_error'] = None
     except Exception as e:
         test_context['invalid_load_success'] = False
         test_context['invalid_load_error'] = e
 
+
+@when('I calculate trade statistics from all positions')
+def calculate_trade_statistics_all_positions(test_context):
+    """Calculate trade statistics from all loaded positions"""
+    trade_history = test_context['trade_history']
+
+    # Calculate statistics from all positions (no lookback limit)
+    statistics = trade_history.get_trade_statistics(lookback_periods=0)
+
+    # Store in context for verification steps
+    test_context['calculated_statistics'] = statistics
 
 # =============================================================================
 # THEN steps - Assertions
@@ -712,10 +777,12 @@ def step_cache_hit_logged(test_context):
 @then('appropriate error messages should be logged')
 def step_appropriate_error_messages_logged(test_context):
     """Verify error logging for invalid operations"""
+    invalid_success = test_context.get('invalid_load_success')
     invalid_error = test_context.get('invalid_load_error')
-    # Should have an error for invalid directory
-    assert invalid_error is not None, "Should have error for invalid directory access"
 
+    # Should either return False OR raise exception
+    assert (invalid_success is False or invalid_error is not None), \
+        "Should have error for invalid directory access"
 
 @then('loading should fail gracefully')
 def step_loading_fails_gracefully(test_context):
@@ -727,6 +794,65 @@ def step_loading_fails_gracefully(test_context):
 @then('no system crash should occur')
 def step_no_system_crash(test_context):
     """Verify system stability despite errors"""
-    # If we reach this assertion, system didn't crash
-    # Test framework would have failed earlier if there was a crash
-    assert True, "System should remain stable"
+    # Verify that even though loading failed, the system handled it gracefully
+    invalid_error = test_context.get('invalid_load_error')
+    invalid_success = test_context.get('invalid_load_success')
+
+    # System should have either returned False or raised a controlled exception
+    # but not crashed the entire test framework
+    assert invalid_success is False or invalid_error is not None, \
+        "System should handle invalid operations gracefully without crashing"
+
+    # If there was an exception, it should be a controlled one, not a system crash
+    if invalid_error is not None:
+        assert isinstance(invalid_error, (FileNotFoundError, ValueError, RuntimeError)), \
+            f"Expected controlled exception, got system-level error: {type(invalid_error)}"
+
+    @then('the statistics should include total_positions count')
+    def verify_total_positions_count(test_context):
+        """Verify total positions count is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'total_positions')
+        assert stats.total_positions >= 0
+
+    @then('the statistics should include winning_positions count')
+    def verify_winning_positions_count(test_context):
+        """Verify winning positions count is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'winning_positions')
+        assert stats.winning_positions >= 0
+
+    @then('the statistics should include losing_positions count')
+    def verify_losing_positions_count(test_context):
+        """Verify losing positions count is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'losing_positions')
+        assert stats.losing_positions >= 0
+
+    @then('the statistics should include break_even_positions count')
+    def verify_break_even_positions_count(test_context):
+        """Verify break even positions count is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'break_even_positions')
+        assert stats.break_even_positions >= 0
+
+    @then('the statistics should include total_pnl amount')
+    def verify_total_pnl_amount(test_context):
+        """Verify total P&L amount is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'total_pnl')
+        assert isinstance(stats.total_pnl, (int, float))
+
+    @then('the statistics should include total_fees amount')
+    def verify_total_fees_amount(test_context):
+        """Verify total fees amount is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'total_fees')
+        assert isinstance(stats.total_fees, (int, float))
+
+    @then('the statistics should include position outcomes list')
+    def verify_position_outcomes_list(test_context):
+        """Verify position outcomes list is present"""
+        stats = test_context['calculated_statistics']
+        assert hasattr(stats, 'outcomes')
+        assert isinstance(stats.outcomes, list)

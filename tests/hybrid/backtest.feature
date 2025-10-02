@@ -2,6 +2,7 @@ Feature: BacktestOrchestrator Methods Testing
   As a developer
   I want to test only the methods in backtest.py
   So that I can verify the BacktestOrchestrator logic works independently
+  #todo: 01 still not consistent with config, data folder
 
   Background:
     Given the system has proper directory structure

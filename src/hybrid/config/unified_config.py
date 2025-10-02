@@ -122,12 +122,10 @@ class UnifiedConfig:
         # Define the load order (base files first, then environment overrides)
         config_files = [
             "base.json",
-            "risk.json",
-            "technical.json",
-            "optimization.json",
+            "data_management",
             "display.json",
             "files.json",
-            "presets.json"
+            "money_management.json"
         ]
 
         # Load base configuration files

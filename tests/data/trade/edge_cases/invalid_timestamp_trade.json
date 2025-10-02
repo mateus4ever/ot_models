@@ -1,0 +1,30 @@
+{
+  "trades": [
+    {
+      "uuid": "invalid-timestamp-trade",
+      "timestamp": "not-a-valid-timestamp",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "TEST-INVALID-TIME",
+          "amount": 10,
+          "type": "stock",
+          "entry_value": 100.0,
+          "exit_value": 110.0,
+          "currency": "USD",
+          "entry_fees": 2.0,
+          "exit_fees": 2.0,
+          "status": "closed",
+          "entry_timestamp": "also-not-a-timestamp",
+          "exit_timestamp": "2024-04-01T15:00:00Z"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "base_currency": "USD",
+    "total_trades": 1,
+    "description": "Trade with invalid timestamp format for error handling testing",
+    "created_for": "error_handling_testing"
+  }
+}

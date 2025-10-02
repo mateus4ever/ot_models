@@ -1,0 +1,9 @@
+{
+  "trades": [],
+  "metadata": {
+    "base_currency": "USD",
+    "total_trades": 0,
+    "description": "Empty trade history for testing zero-trade edge case",
+    "created_for": "edge_case_testing"
+  }
+}

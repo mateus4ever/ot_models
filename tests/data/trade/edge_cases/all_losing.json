@@ -1,0 +1,110 @@
+{
+  "trades": [
+    {
+      "uuid": "loss-trade-001",
+      "timestamp": "2024-04-01T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "AAPL-LOSS-001",
+          "amount": 10,
+          "type": "stock",
+          "entry_value": 100.0,
+          "exit_value": 85.0,
+          "currency": "USD",
+          "entry_fees": 2.0,
+          "exit_fees": 1.7,
+          "status": "closed",
+          "entry_timestamp": "2024-04-01T10:00:00Z",
+          "exit_timestamp": "2024-04-01T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "loss-trade-002",
+      "timestamp": "2024-04-02T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "MSFT-LOSS-002",
+          "amount": 8,
+          "type": "stock",
+          "entry_value": 200.0,
+          "exit_value": 175.0,
+          "currency": "USD",
+          "entry_fees": 3.2,
+          "exit_fees": 2.8,
+          "status": "closed",
+          "entry_timestamp": "2024-04-02T10:00:00Z",
+          "exit_timestamp": "2024-04-02T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "loss-trade-003",
+      "timestamp": "2024-04-03T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "GOOGL-LOSS-003",
+          "amount": 5,
+          "type": "stock",
+          "entry_value": 150.0,
+          "exit_value": 125.0,
+          "currency": "USD",
+          "entry_fees": 1.5,
+          "exit_fees": 1.25,
+          "status": "closed",
+          "entry_timestamp": "2024-04-03T10:00:00Z",
+          "exit_timestamp": "2024-04-03T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "loss-trade-004",
+      "timestamp": "2024-04-04T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "TSLA-LOSS-004",
+          "amount": 12,
+          "type": "stock",
+          "entry_value": 80.0,
+          "exit_value": 65.0,
+          "currency": "USD",
+          "entry_fees": 2.4,
+          "exit_fees": 1.95,
+          "status": "closed",
+          "entry_timestamp": "2024-04-04T10:00:00Z",
+          "exit_timestamp": "2024-04-04T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "loss-trade-005",
+      "timestamp": "2024-04-05T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "NVDA-LOSS-005",
+          "amount": 6,
+          "type": "stock",
+          "entry_value": 300.0,
+          "exit_value": 260.0,
+          "currency": "USD",
+          "entry_fees": 3.6,
+          "exit_fees": 3.12,
+          "status": "closed",
+          "entry_timestamp": "2024-04-05T10:00:00Z",
+          "exit_timestamp": "2024-04-05T15:00:00Z"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "base_currency": "USD",
+    "total_trades": 5,
+    "description": "All losing trades for testing zero winning positions edge case",
+    "created_for": "edge_case_testing"
+  }
+}

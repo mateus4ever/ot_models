@@ -1,0 +1,110 @@
+{
+  "trades": [
+    {
+      "uuid": "even-trade-001",
+      "timestamp": "2024-04-01T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "AAPL-EVEN-001",
+          "amount": 10,
+          "type": "stock",
+          "entry_value": 100.0,
+          "exit_value": 101.0,
+          "currency": "USD",
+          "entry_fees": 5.0,
+          "exit_fees": 5.0,
+          "status": "closed",
+          "entry_timestamp": "2024-04-01T10:00:00Z",
+          "exit_timestamp": "2024-04-01T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "even-trade-002",
+      "timestamp": "2024-04-02T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "MSFT-EVEN-002",
+          "amount": 8,
+          "type": "stock",
+          "entry_value": 200.0,
+          "exit_value": 202.0,
+          "currency": "USD",
+          "entry_fees": 8.0,
+          "exit_fees": 8.0,
+          "status": "closed",
+          "entry_timestamp": "2024-04-02T10:00:00Z",
+          "exit_timestamp": "2024-04-02T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "even-trade-003",
+      "timestamp": "2024-04-03T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "GOOGL-EVEN-003",
+          "amount": 5,
+          "type": "stock",
+          "entry_value": 150.0,
+          "exit_value": 155.0,
+          "currency": "USD",
+          "entry_fees": 10,
+          "exit_fees": 15,
+          "status": "closed",
+          "entry_timestamp": "2024-04-03T10:00:00Z",
+          "exit_timestamp": "2024-04-03T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "even-trade-004",
+      "timestamp": "2024-04-04T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "TSLA-EVEN-004",
+          "amount": 10,
+          "type": "stock",
+          "entry_value": 80.0,
+          "exit_value": 84.0,
+          "currency": "USD",
+          "entry_fees": 20.0,
+          "exit_fees": 20.0,
+          "status": "closed",
+          "entry_timestamp": "2024-04-04T10:00:00Z",
+          "exit_timestamp": "2024-04-04T15:00:00Z"
+        }
+      ]
+    },
+    {
+      "uuid": "even-trade-005",
+      "timestamp": "2024-04-05T10:00:00Z",
+      "status": "closed",
+      "positions": [
+        {
+          "name_of_position": "NVDA-EVEN-005",
+          "amount": 6,
+          "type": "stock",
+          "entry_value": 300.0,
+          "exit_value": 301.0,
+          "currency": "USD",
+          "entry_fees": 2.5,
+          "exit_fees": 3.5,
+          "status": "closed",
+          "entry_timestamp": "2024-04-05T10:00:00Z",
+          "exit_timestamp": "2024-04-05T15:00:00Z"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "base_currency": "USD",
+    "total_trades": 5,
+    "description": "All break-even trades for testing zero net P&L edge case",
+    "created_for": "edge_case_testing"
+  }
+}
