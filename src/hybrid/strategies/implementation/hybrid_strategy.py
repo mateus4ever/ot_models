@@ -57,31 +57,31 @@ class HybridStrategy(StrategyInterface):
         """Add verificator component to strategy"""
         self.verificators.append(verificator)
 
-    def initialize(self, market_data: Dict) -> bool:
-        """Initialize strategy with market data"""
-        logger.debug(f"Initializing {self.name} hybrid strategy")
-
-        # Initialize ML components if available
-        if self.predictors:
-            logger.debug("Initializing ML predictors")
-
-        # Initialize technical indicators if available
-        if self.signals:
-            logger.debug("Initializing technical signals")
-
-        return True
-
-    def generate_signals(self, data: Dict) -> Any:
-        """Generate trading signals using hybrid approach"""
-        logger.debug(f"Generating hybrid signals for {self.name}")
-
-        ml_signals = self._generate_ml_signals(data)
-        technical_signals = self._generate_technical_signals(data)
-
-        # Combine ML and technical signals
-        hybrid_signals = self._combine_signals(ml_signals, technical_signals)
-
-        return hybrid_signals
+    # def initialize(self, market_data: Dict) -> bool:
+    #     """Initialize strategy with market data"""
+    #     logger.debug(f"Initializing {self.name} hybrid strategy")
+    #
+    #     # Initialize ML components if available
+    #     if self.predictors:
+    #         logger.debug("Initializing ML predictors")
+    #
+    #     # Initialize technical indicators if available
+    #     if self.signals:
+    #         logger.debug("Initializing technical signals")
+    #
+    #     return True
+    #
+    # def generate_signals(self, data: Dict) -> Any:
+    #     """Generate trading signals using hybrid approach"""
+    #     logger.debug(f"Generating hybrid signals for {self.name}")
+    #
+    #     ml_signals = self._generate_ml_signals(data)
+    #     technical_signals = self._generate_technical_signals(data)
+    #
+    #     # Combine ML and technical signals
+    #     hybrid_signals = self._combine_signals(ml_signals, technical_signals)
+    #
+    #     return hybrid_signals
 
     def _generate_ml_signals(self, data: Dict) -> list:
         """Generate ML-based signals"""
@@ -125,35 +125,35 @@ class HybridStrategy(StrategyInterface):
 
         return combined
 
-    def execute_trades(self, signals: Any) -> Dict:
-        """Execute trades based on hybrid signals"""
-        logger.debug(f"Executing hybrid trades for {self.name}")
+    # def execute_trades(self, signals: Any) -> Dict:
+    #     """Execute trades based on hybrid signals"""
+    #     logger.debug(f"Executing hybrid trades for {self.name}")
+    #
+    #     total_profit = 0.0
+    #     trade_count = 0
+    #
+    #     for signal in signals:
+    #         confidence = signal.get('confidence', 0.5)
+    #
+    #         # Use money manager for position sizing if available
+    #         if self.money_manager:
+    #             position_size = self.money_manager.calculate_position_size(self.name, signal)
+    #         else:
+    #             position_size = 1000 * confidence  # Simple fallback
+    #
+    #         # Simple profit calculation based on confidence
+    #         trade_profit = position_size * confidence * 0.01  # 1% return per confidence point
+    #         total_profit += trade_profit
+    #         trade_count += 1
+    #
+    #     return {
+    #         'trades': trade_count,
+    #         'profit': total_profit,
+    #         'strategy': self.name,
+    #         'strategy_type': 'hybrid'
+    #     }
 
-        total_profit = 0.0
-        trade_count = 0
-
-        for signal in signals:
-            confidence = signal.get('confidence', 0.5)
-
-            # Use money manager for position sizing if available
-            if self.money_manager:
-                position_size = self.money_manager.calculate_position_size(self.name, signal)
-            else:
-                position_size = 1000 * confidence  # Simple fallback
-
-            # Simple profit calculation based on confidence
-            trade_profit = position_size * confidence * 0.01  # 1% return per confidence point
-            total_profit += trade_profit
-            trade_count += 1
-
-        return {
-            'trades': trade_count,
-            'profit': total_profit,
-            'strategy': self.name,
-            'strategy_type': 'hybrid'
-        }
-
-    def run_backtest(self, market_data: Dict) -> Dict:
+    def run(self, market_data: Dict) -> Dict:
         """Run complete backtest for hybrid strategy"""
         logger.info(f"Running hybrid backtest for {self.name}")
 

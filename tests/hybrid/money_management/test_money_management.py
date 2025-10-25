@@ -58,6 +58,7 @@ def load_configuration_file(test_context, config_file, config_directory):
     assert full_config_path.exists(), f"Configuration file not found: {full_config_path}"
 
     config = UnifiedConfig(config_path=str(config_path), environment="test")
+
     test_context['mm_config'] = config
     test_context['root_path'] = root_path
     test_context['config_path'] = config_path

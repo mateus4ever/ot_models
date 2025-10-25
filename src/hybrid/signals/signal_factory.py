@@ -22,9 +22,10 @@ class SignalFactory:
     and provides unified interface for signal creation and management
     """
 
-    def __init__(self):
+    def __init__(self,config):
         self._signal_registry: Dict[str, Type[SignalInterface]] = {}
         self._discover_signals()
+        self.config = config;
         logger.info(f"SignalFactory initialized with {len(self._signal_registry)} signals")
 
     def _discover_signals(self) -> None:
@@ -152,7 +153,7 @@ class SignalFactory:
 
         try:
             # Create signal instance with configuration - pass config as single parameter
-            signal = signal_class(config)
+            signal = signal_class(self.config)
 
             logger.info(f"Created signal: {signal_name} ({signal_class.__name__})")
             return signal

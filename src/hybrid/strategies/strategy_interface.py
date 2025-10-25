@@ -50,18 +50,7 @@ class StrategyInterface(Protocol):
         """Add verificator component to strategy"""
         ...
 
-    def initialize(self, market_data: Dict) -> bool:
-        """Initialize strategy with market data"""
-        ...
 
-    def generate_signals(self, data: Dict) -> Any:
-        """Generate trading signals"""
-        ...
-
-    def execute_trades(self, signals: Any) -> Dict:
-        """Execute trades based on signals"""
-        ...
-
-    def run_backtest(self, market_data: Dict) -> Dict:
+    def run(self, market_data: Dict) -> Dict:
         """Run complete backtest for this strategy"""
         ...

@@ -26,7 +26,7 @@ class RSISignal(SignalInterface):
     All parameters configurable through config object
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config):
         """
         Initialize RSI signal with configurable parameters
 
@@ -38,13 +38,13 @@ class RSISignal(SignalInterface):
                    - overbought_threshold: RSI level for overbought condition (default 70)
                    - buffer_multiplier: Historical data buffer size multiplier (default 3)
         """
-        config = config or {}
+        self.rsi_config = config.get_section('signals')['momentum']['rsi']
 
         # Load configurable parameters
-        self.period = config.get('period', 14)  # TODO: Load from unified config system
-        self.oversold_threshold = config.get('oversold_threshold', 30.0)
-        self.overbought_threshold = config.get('overbought_threshold', 70.0)
-        self.buffer_multiplier = config.get('buffer_multiplier', 3)
+        self.period = self.rsi_config['period']
+        self.oversold_threshold = self.rsi_config['oversold_threshold']
+        self.overbought_threshold = self.rsi_config['overbought_threshold']
+        self.buffer_multiplier = self.rsi_config['buffer_multiplier']
 
         self.historical_data = pd.DataFrame()
         self.is_ready = False

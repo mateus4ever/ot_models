@@ -7,13 +7,13 @@
 # MARKET CONSOLIDATION - Append chunked files into single market datasets
 # STRATEGY PATTERN INTEGRATION - Supports both file paths and directory discovery
 
-import pandas as pd
 import logging
-import re
-from typing import Dict, List, Optional, Union
 from pathlib import Path
+from typing import Dict, List, Optional, Union
 
-from .data_loader import DataLoader, FilePathLoader, FileDiscoveryLoader, DirectoryScanner
+import pandas as pd
+
+from .data_loader import FilePathLoader, FileDiscoveryLoader, DirectoryScanner
 from .trade_history import TradeHistory
 
 logger = logging.getLogger(__name__)
@@ -31,8 +31,9 @@ class DataManager:
     - Directory discovery (Dict with directory_path)
     """
 
-    def __init__(self, config):
+    def __init__(self, config,project_root: Path = None):
         self.config = config
+        self.project_root = project_root or Path.cwd()
         self._cached_data = {}  # Private - no external access {market_name: consolidated_dataframe}
         self._training_data_cache = {}  # Private - no external access
 
@@ -87,23 +88,32 @@ class DataManager:
             if csv_files:
                 logger.debug(f"Available CSV files: {[f.name for f in csv_files[:5]]}")
 
-    def load_market_data(self, source: Union[List[str], Dict, str]) -> bool:
-        """Load market data using Strategy pattern or legacy interface
+    def load_market_data(self, source: Union[List[str], Dict, str, None] = None) -> bool:
+        """Load market data using Strategy pattern or from configuration
 
         Supports multiple input formats:
-        1. List[str] - Legacy: list of filenames (backward compatibility)
+        1. None - Load from config's data_source
         2. str - Single file path or directory path
-        3. Dict - Strategy pattern source_config:
+        3. List[str] - Legacy: list of filenames (backward compatibility)
+        4. Dict - Strategy pattern source_config:
            - {'loader_type': 'filepath', 'file_paths': [path1, path2, ...]}
            - {'loader_type': 'discovery', 'directory_path': '/path/to/dir', 'file_pattern': '*.csv'}
 
         Args:
-            source: Data source specification
+            source: Optional data source specification. If None, uses config's data_source.
 
         Returns:
             True if all markets loaded successfully
         """
-        logger.info(f"Loading market data with source type: {type(source)}")
+        # If no source provided, get from config
+        if source is None:
+            data_config = self.config.get_section('data_loading', {})
+            source = data_config.get('directory_path')
+            if not source:
+                raise ValueError("No data_source in config and no source parameter provided")
+            logger.info(f"Loading market data from config data_source: {source}")
+        else:
+            logger.info(f"Loading market data from provided source: {type(source)}")
 
         # Convert input to standardized source_config
         source_config = self._normalize_source_input(source)
@@ -164,29 +174,22 @@ class DataManager:
             return source
 
         elif isinstance(source, str):
-            # Single string - detect if complete file path or directory
             path = Path(source)
 
-            if path.is_file() or (not path.is_dir() and ('.' in path.name)):
-                # Complete file path (exists or has extension) → FilePathLoader
-                return {
-                    'loader_type': 'filepath',
-                    'file_paths': [str(path)]
-                }
+            # Resolve relative paths from CWD (project root)
+            if not path.is_absolute():
+                path = self.project_root / path
+
+            # Now check what it actually is
+            if path.is_file():
+                return {'loader_type': 'filepath', 'file_paths': [str(path)]}
             elif path.is_dir():
-                # Directory only → DirectoryScanner
-                return {
-                    'loader_type': 'directory_scan',
-                    'directory_path': str(path),
-                    'recursive': True,
-                    'file_pattern': '*.csv'
-                }
+                return {'loader_type': 'directory_scan',
+                        'directory_path': str(path),
+                        'recursive': True,
+                        'file_pattern': '*.csv'}
             else:
-                # Assume it's a filename to be discovered
-                return {
-                    'loader_type': 'discovery',
-                    'filenames': [source]
-                }
+                raise FileNotFoundError(f"Path does not exist: {path}")
 
         elif isinstance(source, list):
             # List format - check first item to determine type
@@ -300,14 +303,14 @@ class DataManager:
         Returns:
             Position of temporal pointer (1-based)
         """
-        if len(market_data) <= training_window:
+        if not (len(market_data) >= training_window):
             raise ValueError(f"Market data has {len(market_data)} records, need at least {training_window + 1}")
 
         self.training_window_size = training_window
         self.total_records = len(market_data)
 
         # Set temporal pointer to timestamp at training window position
-        self.temporal_timestamp = market_data.index[training_window]  # Get actual timestamp
+        self.temporal_timestamp = market_data.index[training_window-1]  # Get actual timestamp
         self._active_market_index = training_window  # Cache index position for performance
 
         logger.info(f"Temporal pointer initialized for {self._active_market}: training window={training_window}")
@@ -452,7 +455,7 @@ class DataManager:
 
         # Get all data before current timestamp
         past_data = {
-            self._active_market: self._active_market_data.loc[:self.temporal_timestamp].iloc[:-1].copy()
+            self._active_market: self._active_market_data.loc[:self.temporal_timestamp].copy()
         }
 
         logger.debug(

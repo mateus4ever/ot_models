@@ -7,7 +7,6 @@ from datetime import datetime
 from src.hybrid.optimization.optimization_interface import IOptimizerBase
 from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.load_data import load_and_preprocess_data
 from src.hybrid.hybrid_strategy import HybridStrategy
 from src.hybrid.backtesting import BacktestEngine
 
@@ -93,8 +92,9 @@ class BayesianOptimizer(IOptimizerBase):
             data_path = data_config.get('data_source')
 
         # Load full dataset
-        full_data = load_and_preprocess_data(data_path, self.config)
-        print(f"✓ Loaded full dataset: {len(full_data):,} rows")
+        # full_data = load_and_preprocess_data(data_path, self.config)
+        full_data = None
+        # print(f"✓ Loaded full dataset: {len(full_data):,} rows")
 
         # Get walk-forward configuration
         walk_forward_config = self.config.get_section('walk_forward', {})

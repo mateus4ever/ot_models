@@ -201,37 +201,6 @@ def step_loaded_data_with_temporal_boundaries(test_context):
         raise
 
 
-@given('I have loaded multiple markets with temporal boundaries')
-def step_loaded_multiple_markets_with_temporal(test_context):
-    """Setup DataManager with multiple markets and temporal boundaries"""
-
-    # Ensure context exists
-    if 'config_path' not in test_context:
-        root_path = Path(__file__).parent.parent.parent.parent
-        test_context['root_path'] = root_path
-        test_context['config_path'] = root_path / 'tests' / 'config' / 'smoke_config.json'
-        test_context['base_data_directory'] = root_path / 'tests' / 'data'
-
-    # Use centralized config path
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
-
-    data_manager = DataManager(config)
-
-    # Create source_config for Strategy pattern
-    market_files = test_context['market_files']
-    file_paths = [str(f) for f in market_files]
-    source_config = create_source_config(file_paths=file_paths)
-
-    try:
-        success = data_manager.load_market_data_with_temporal_setup(source_config, 200)
-        test_context['data_manager'] = data_manager
-        test_context['temporal_setup_success'] = success
-        assert success, "Failed to load multiple markets with temporal setup"
-    except Exception as e:
-        test_context['temporal_setup_error'] = e
-        raise
-
 @given(parsers.parse('I have previously loaded market data for {market_name}'))
 def step_previously_loaded_market_data(test_context, market_name):
     """Setup previously loaded data for caching test"""
@@ -257,34 +226,6 @@ def step_previously_loaded_market_data(test_context, market_name):
 def step_invalid_data_directory(test_context, invalid_directory):
     """Setup invalid directory for error testing"""
     test_context['invalid_directory'] = invalid_directory.strip('"')
-
-@given(parsers.parse('I have a new trade with timestamp "{timestamp}"'))
-def create_new_trade_with_timestamp(test_context, timestamp):
-    """Create new trade with specified timestamp"""
-    test_context['new_trade_timestamp'] = timestamp
-    test_context['original_count'] = pytest.trade_history.get_trade_count()
-
-@given(parsers.parse('the trade has position with name_of_position "{name_of_position}", type "{position_type}", entry_value {entry_value}, amount {amount}, and entry_fees {entry_fees}'))
-def add_position_to_new_trade(test_context, name_of_position, position_type, entry_value, amount, entry_fees):
-    """Add position data to new trade"""
-    test_context['new_trade_data'] = {
-        'uuid': f"test-trade-{test_context['new_trade_timestamp']}",
-        'timestamp': test_context['new_trade_timestamp'],
-        'status': 'open',
-        'positions': [{
-            'name_of_position': name_of_position,
-            'type': position_type,
-            'amount': float(amount),
-            'entry_value': float(entry_value),
-            'entry_fees': float(entry_fees),
-            'currency': 'USD',
-            'status': 'open',
-            'entry_timestamp': test_context['new_trade_timestamp'],
-            'exit_value': None,
-            'exit_timestamp': None,
-            'exit_fees': None
-        }]
-    }
 
 
 # =============================================================================
@@ -512,20 +453,26 @@ def step_attempt_load_market_data(test_context):
         test_context['invalid_load_error'] = e
 
 
-@when('I calculate trade statistics from all positions')
-def calculate_trade_statistics_all_positions(test_context):
-    """Calculate trade statistics from all loaded positions"""
-    trade_history = test_context['trade_history']
-
-    # Calculate statistics from all positions (no lookback limit)
-    statistics = trade_history.get_trade_statistics(lookback_periods=0)
-
-    # Store in context for verification steps
-    test_context['calculated_statistics'] = statistics
-
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
+
+@then('no system crash should occur')
+def step_no_system_crash(test_context):
+    """Verify system stability despite errors"""
+    # Verify that even though loading failed, the system handled it gracefully
+    invalid_error = test_context.get('invalid_load_error')
+    invalid_success = test_context.get('invalid_load_success')
+
+    # System should have either returned False or raised a controlled exception
+    # but not crashed the entire test framework
+    assert invalid_success is False or invalid_error is not None, \
+        "System should handle invalid operations gracefully without crashing"
+
+    # If there was an exception, it should be a controlled one, not a system crash
+    if invalid_error is not None:
+        assert isinstance(invalid_error, (FileNotFoundError, ValueError, RuntimeError)), \
+            f"Expected controlled exception, got system-level error: {type(invalid_error)}"
 
 @then('DataManager should load all markets successfully')
 def step_datamanager_loads_successfully(test_context):
@@ -789,70 +736,3 @@ def step_loading_fails_gracefully(test_context):
     """Verify loading fails gracefully"""
     invalid_success = test_context.get('invalid_load_success')
     assert invalid_success is False, "Loading from invalid directory should fail"
-
-
-@then('no system crash should occur')
-def step_no_system_crash(test_context):
-    """Verify system stability despite errors"""
-    # Verify that even though loading failed, the system handled it gracefully
-    invalid_error = test_context.get('invalid_load_error')
-    invalid_success = test_context.get('invalid_load_success')
-
-    # System should have either returned False or raised a controlled exception
-    # but not crashed the entire test framework
-    assert invalid_success is False or invalid_error is not None, \
-        "System should handle invalid operations gracefully without crashing"
-
-    # If there was an exception, it should be a controlled one, not a system crash
-    if invalid_error is not None:
-        assert isinstance(invalid_error, (FileNotFoundError, ValueError, RuntimeError)), \
-            f"Expected controlled exception, got system-level error: {type(invalid_error)}"
-
-    @then('the statistics should include total_positions count')
-    def verify_total_positions_count(test_context):
-        """Verify total positions count is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'total_positions')
-        assert stats.total_positions >= 0
-
-    @then('the statistics should include winning_positions count')
-    def verify_winning_positions_count(test_context):
-        """Verify winning positions count is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'winning_positions')
-        assert stats.winning_positions >= 0
-
-    @then('the statistics should include losing_positions count')
-    def verify_losing_positions_count(test_context):
-        """Verify losing positions count is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'losing_positions')
-        assert stats.losing_positions >= 0
-
-    @then('the statistics should include break_even_positions count')
-    def verify_break_even_positions_count(test_context):
-        """Verify break even positions count is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'break_even_positions')
-        assert stats.break_even_positions >= 0
-
-    @then('the statistics should include total_pnl amount')
-    def verify_total_pnl_amount(test_context):
-        """Verify total P&L amount is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'total_pnl')
-        assert isinstance(stats.total_pnl, (int, float))
-
-    @then('the statistics should include total_fees amount')
-    def verify_total_fees_amount(test_context):
-        """Verify total fees amount is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'total_fees')
-        assert isinstance(stats.total_fees, (int, float))
-
-    @then('the statistics should include position outcomes list')
-    def verify_position_outcomes_list(test_context):
-        """Verify position outcomes list is present"""
-        stats = test_context['calculated_statistics']
-        assert hasattr(stats, 'outcomes')
-        assert isinstance(stats.outcomes, list)

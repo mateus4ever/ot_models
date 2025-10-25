@@ -5,11 +5,10 @@
     "debug_mode": false,
     "enable_validation_checks": true
   },
-  "data_loading": {
-    "data_source": "tests/data/big",
-    "skip_initial_rows": 0,
-    "max_records": 300,
-    "file_pattern": "*.csv"
+  "strategy": {
+      "signals": ["trend_following.simplemovingaveragecrossover"],
+      "predictors": [],
+      "metrics": []
   },
   "mathematical_operations": {
     "zero": 0,
@@ -21,16 +20,6 @@
     "ma_medium": 20,
     "default_rsi_period": 14,
     "default_bollinger_period": 20
-  },
-  "walk_forward": {
-    "pretrain_rows": 50,
-    "retrain_frequency": 10,
-    "progress_report_frequency": 10,
-    "min_training_rows": 30,
-    "step_sampling_frequency": 5,
-    "batch_size": 10,
-    "train_window_size": 50,
-    "test_window_size": 50
   },
   "array_indexing": {
     "first_index": 0,

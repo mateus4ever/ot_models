@@ -5,7 +5,8 @@
     "train_test_split": 0.7,
     "save_signals": false,
     "debug_mode": false,
-    "enable_validation_checks": true
+    "enable_validation_checks": true,
+    "currency": "USD"
   },
   "mathematical_operations": {
     "zero": 0,

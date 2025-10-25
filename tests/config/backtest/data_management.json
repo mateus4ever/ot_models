@@ -1,0 +1,37 @@
+{
+  "data_loading": {
+    "loader_type": "directory_scan",
+    "directory_path": "/data/eurusd",
+    "file_pattern": "*.csv",
+    "recursive": true,
+    "skip_initial_rows": 0,
+    "data_formatting": {
+      "header": 0,
+      "names": "['timestamp', 'volume','open', 'high', 'low', 'close', 'volume']",
+      "format_timestamp": "'%Y%m%d %H%M%S'"
+    }
+  },
+  "trade_history": {
+    "default_lookback_periods": 0,
+    "save_backup_on_load": false,
+    "validate_on_load": true,
+    "data_file_path": "/results/trade/base_trade.json"
+  },
+  "transaction_costs": {
+    "commission_pct": 0.001,
+    "slippage_pct": 0.0005
+  },
+  "backtesting": {
+    "method": "walk_forward",
+    "initial_capital": 1000,
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
+    "print_trades": false,
+    "verbose_output": false,
+    "calculations": {
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0
+    }
+  }
+}

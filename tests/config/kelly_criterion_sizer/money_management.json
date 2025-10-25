@@ -1,7 +1,7 @@
 {
   "money_management": {
     "initial_capital": 100000,
-    "position_sizing": "fixed_fractional",
+    "position_sizing": "kelly_criterion",
     "risk_management": "atr_based",
 
     "position_sizers": {
@@ -36,7 +36,7 @@
         "max_drawdown": 0.20,
         "atr_period": 14,
         "starting_atr": 0.000890,
-        "calculation_tolerance": 0.01
+        "calculation_tolerance": 0.000001
       },
       "volatility_based": {
         "volatility_multiplier": 2.0,

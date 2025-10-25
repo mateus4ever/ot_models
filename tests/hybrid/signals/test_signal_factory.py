@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 from pytest_bdd import scenarios, given, when, then, parsers
 
+from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.signals.signal_factory import SignalFactory
 
 # Load scenarios from the signal_factory.feature
@@ -21,47 +22,55 @@ logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(me
 
 # Test fixtures and shared state
 @pytest.fixture
-def test_context():
-    """Shared test context for storing state between steps"""
-    return {}
-
-
-def get_default_value_for_param(param_name):
-    """Single source of truth for parameter defaults"""
-    defaults = {
-        'period': 20, 'std_dev': 2.0, 'buffer_multiplier': 1.0,
-        'oversold_threshold': 30, 'overbought_threshold': 70,
-        'fast_period': 10, 'slow_period': 30, 'crossover_confirmation': True
-    }
-    return defaults.get(param_name, 1.0)
+def test_context(request):
+    """
+    A per-scenario context dict with scenario name pre-attached.
+    """
+    ctx = {}
+    # pytest node is the test function generated for the scenario
+    # ._obj is the underlying function object
+    # __scenario__ is attached by pytest-bdd
+    scenario = getattr(request.node._obj, "__scenario__", None)
+    if scenario:
+        ctx["scenario_name"] = scenario.name
+    else:
+        ctx["scenario_name"] = request.node.name  # fallback
+    return ctx
 
 
 # =============================================================================
 # GIVEN steps - Setup
 # =============================================================================
 
-@given('the system has proper directory structure')
-def step_system_directory_structure(test_context):
-    """Verify basic directory structure exists"""
+@given(parsers.parse('config files are available in {config_directory}'))
+def load_configuration_file(test_context, config_directory):
+    """Load configuration file from specified directory"""
+
     root_path = Path(__file__).parent.parent.parent.parent
-    assert (root_path / 'src').exists(), "src directory missing"
-    assert (root_path / 'tests').exists(), "tests directory missing"
+    config_path = root_path / config_directory
+
+    assert config_path.exists(), f"Configuration file not found: {config_path}"
+
+    config = UnifiedConfig(config_path=str(config_path), environment="test")
+
+    test_context['config'] = config
     test_context['root_path'] = root_path
+    test_context['config_path'] = config_path
 
 
 @given('I have a SignalFactory instance')
 def step_have_signal_factory_instance(test_context):
     """Create a SignalFactory instance for testing"""
     logger = logging.getLogger(__name__)
+    config = test_context['config']
 
     try:
-        factory = SignalFactory()
+        factory = SignalFactory(config)
         test_context['factory'] = factory
         logger.debug("SignalFactory instance created successfully")
 
     except Exception as e:
         pytest.fail(f"Failed to create SignalFactory: {e}")
-
 
 @given('the factory is properly initialized')
 def step_factory_properly_initialized(test_context):
@@ -78,13 +87,6 @@ def step_factory_properly_initialized(test_context):
     assert hasattr(factory, 'get_available_categories'), "Factory should have get_available_categories method"
 
     test_context['factory_initialized'] = True
-
-
-@given('I have a valid signal configuration object')
-def step_have_valid_signal_configuration(test_context):
-    """Create a valid configuration object for testing"""
-    # This step is deprecated - configuration is now built dynamically from signal requirements
-    pass
 
 
 # =============================================================================
@@ -108,37 +110,6 @@ def step_create_signal(test_context, signal_name):
         test_context['created_signal'] = None
         test_context['creation_error'] = e
         logger.debug(f"Signal creation failed: {e}")
-
-
-@when(parsers.parse('I create a {signal_name} signal with configuration'))
-def step_create_signal_with_config(test_context, signal_name):
-    """Create a signal with configuration using the factory"""
-    logger = logging.getLogger(__name__)
-    factory = test_context['factory']
-
-    try:
-        # Get required parameters from the signal class
-        if signal_name not in factory._signal_registry:
-            raise ValueError(f"Signal {signal_name} not found in registry")
-
-        signal_class = factory._signal_registry[signal_name]
-        required_params = signal_class.get_required_parameters()
-
-        # Build valid configuration dynamically
-        config = {param: get_default_value_for_param(param) for param in required_params}
-
-        signal = factory.create_signal(signal_name, config)
-        test_context['created_signal'] = signal
-        test_context['creation_error'] = None
-        test_context['signal_name'] = signal_name
-        test_context['used_config'] = config
-        logger.debug(f"Successfully created signal with config: {signal_name}")
-
-    except Exception as e:
-        test_context['created_signal'] = None
-        test_context['creation_error'] = e
-        logger.debug(f"Signal creation with config failed: {e}")
-
 
 @when(parsers.parse('I try to create a signal with name {signal_name}'))
 def step_try_create_signal_with_name(test_context, signal_name):
@@ -258,17 +229,6 @@ def step_valid_signal_instance_created(test_context):
     signal = test_context.get('created_signal')
     assert signal is not None, "Signal instance should not be None"
 
-
-@then('a valid signal instance should be created with config')
-def step_valid_signal_instance_created_with_config(test_context):
-    """Verify a valid signal instance was created with configuration"""
-    creation_error = test_context.get('creation_error')
-    assert creation_error is None, f"Signal creation with config failed: {creation_error}"
-
-    signal = test_context.get('created_signal')
-    assert signal is not None, "Signal instance should not be None"
-
-
 @then('the signal should implement SignalInterface')
 def step_signal_implements_interface(test_context):
     """Verify signal implements SignalInterface protocol"""
@@ -280,26 +240,6 @@ def step_signal_implements_interface(test_context):
     for method in required_methods:
         assert hasattr(signal, method), f"Signal missing required method: {method}"
         assert callable(getattr(signal, method)), f"Signal {method} should be callable"
-
-
-@then('no creation errors should occur')
-def step_no_creation_errors(test_context):
-    """Verify no errors occurred during signal creation"""
-    creation_error = test_context.get('creation_error')
-    assert creation_error is None, f"Signal creation should not cause errors: {creation_error}"
-
-
-@then('the configuration should be passed to the signal')
-def step_configuration_passed_to_signal(test_context):
-    """Verify configuration was passed to signal"""
-    signal = test_context.get('created_signal')
-    used_config = test_context.get('used_config')
-
-    # Verify signal received configuration (implementation specific)
-    # At minimum, signal should be created without error when config is passed
-    assert signal is not None, "Signal should be created successfully with config"
-    assert used_config is not None, "Config should have been used in creation"
-
 
 @then('a ValueError should be thrown')
 def step_value_error_thrown(test_context):
@@ -378,6 +318,12 @@ def step_category_list_contains(test_context, category_name):
 
     assert category_name in available_categories, \
         f"Available categories should contain '{category_name}': {available_categories}"
+
+@then('no creation errors should occur')
+def step_no_creation_errors(test_context):
+    """Verify no errors occurred during signal creation"""
+    creation_error = test_context.get('creation_error')
+    assert creation_error is None, f"Signal creation should not cause errors: {creation_error}"
 
 
 @then(parsers.parse('the category list should have exactly {expected_count:d} categories'))

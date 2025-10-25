@@ -6,7 +6,6 @@ from typing import Dict, List
 from src.hybrid.optimization.optimization_interface import IOptimizerBase
 from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.load_data import load_and_preprocess_data
 from src.hybrid.hybrid_strategy import HybridStrategy
 from src.hybrid.backtesting import BacktestEngine
 
@@ -91,8 +90,9 @@ class CachedRandomOptimizer(IOptimizerBase):
             data_config = self.config.get_section('data_loading', {})
             data_path = data_config.get('data_source', 'data/eurusd')
 
-        self.cached_data = load_and_preprocess_data(data_path, self.config)
+        # self.cached_data = load_and_preprocess_data(data_path, self.config)
         print(f"✓ Data loaded: {len(self.cached_data)} records")
+
 
         self.cached_strategy = HybridStrategy(self.config)
         training_results = self.cached_strategy.train(self.cached_data)

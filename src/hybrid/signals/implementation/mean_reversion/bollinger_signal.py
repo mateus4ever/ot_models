@@ -25,7 +25,7 @@ class BollingerSignal(SignalInterface):
     All parameters configurable through config object
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config):
         """
         Initialize Bollinger Bands signal with configurable parameters
 
@@ -36,12 +36,12 @@ class BollingerSignal(SignalInterface):
                    - std_dev: Standard deviation multiplier (default from config)
                    - buffer_multiplier: Historical data buffer size multiplier (default from config)
         """
-        config = config or {}
+        self.bollinger_config = config.get_section('signals')['mean_reversion']['bollinger']
 
         # Load configurable parameters
-        self.period = config.get('period', 20)  # TODO: Load from unified config system
-        self.std_dev = config.get('std_dev', 2.0)  # TODO: Load from unified config system
-        self.buffer_multiplier = config.get('buffer_multiplier', 2)  # TODO: Load from unified config system
+        self.period = self.bollinger_config['period']
+        self.std_dev = self.bollinger_config['std_dev']
+        self.buffer_multiplier = self.bollinger_config['buffer_multiplier']
 
         self.historical_data = pd.DataFrame()
         self.is_ready = False

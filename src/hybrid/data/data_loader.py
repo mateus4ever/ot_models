@@ -73,15 +73,6 @@ class DataLoader(ABC):
 
         return True
 
-    @abstractmethod
-    def get_required_config_fields(self) -> List[str]:
-        """Return list of required configuration fields for this loader
-
-        Returns:
-            List of required field names
-        """
-        pass
-
     def get_loader_info(self) -> Dict[str, Any]:
         """Return information about this loader implementation
 
@@ -94,14 +85,6 @@ class DataLoader(ABC):
             'required_config': self.get_required_config_fields()
         }
 
-    @abstractmethod
-    def get_supported_sources(self) -> List[str]:
-        """Return list of supported source types for this loader
-
-        Returns:
-            List of source type identifiers
-        """
-        pass
 
     def _extract_market_from_filename(self, filename: str) -> str:
         """Extract market identifier from filename with strict pattern matching
@@ -142,6 +125,7 @@ class DataLoader(ABC):
 
         try:
             # Load CSV with semicolon delimiter
+            #TODO: this is static and must be somewhat more modular. yahoo has for example a header in first row, a timestamp (different), "vol","high","low","close","volume"
             logger.debug("Loading CSV with semicolon delimiter, no headers")
             df = pd.read_csv(
                 file_path,

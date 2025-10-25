@@ -26,7 +26,7 @@ class SimpleMovingAverageCrossover(SignalInterface):
     All parameters configurable through config object
     """
 
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config):
         """
         Initialize SMA Crossover signal with configurable parameters
 
@@ -38,13 +38,13 @@ class SimpleMovingAverageCrossover(SignalInterface):
                    - buffer_multiplier: Historical data buffer size multiplier (default 3)
                    - crossover_confirmation: Periods to confirm crossover (default 1)
         """
-        config = config or {}
+        self.simplemovingaveragecrossover_config = config.get_section('signals')['trend_following']['simplemovingaveragecrossover']
 
         # Load configurable parameters
-        self.fast_period = config.get('fast_period', 10)  # TODO: Load from unified config system
-        self.slow_period = config.get('slow_period', 30)
-        self.buffer_multiplier = config.get('buffer_multiplier', 3)
-        self.crossover_confirmation = config.get('crossover_confirmation', 1)
+        self.fast_period = self.simplemovingaveragecrossover_config['fast_period']
+        self.slow_period = self.simplemovingaveragecrossover_config['slow_period']
+        self.buffer_multiplier = self.simplemovingaveragecrossover_config['buffer_multiplier']
+        self.crossover_confirmation = self.simplemovingaveragecrossover_config['crossover_confirmation']
 
         # Validation
         if self.fast_period >= self.slow_period:
@@ -64,6 +64,7 @@ class SimpleMovingAverageCrossover(SignalInterface):
         Args:
             training_data: Historical market data with 'close' column
         """
+
         if 'close' not in training_data.columns:
             raise ValueError("Training data must contain 'close' column")
 

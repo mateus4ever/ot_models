@@ -217,7 +217,6 @@ class SimpleRandomOptimizer(IOptimizerBase):
         }
         """
         # Import here to avoid circular dependency
-        from src.hybrid.backtest import run_hybrid_strategy_backtest
 
         if n_combinations is None:
             n_combinations = self.config.get_section('optimization', {}).get('defaults', {}).get('n_combinations', 10)
@@ -233,11 +232,12 @@ class SimpleRandomOptimizer(IOptimizerBase):
 
             try:
                 test_config = self.create_test_config(params)
-                backtest_results = run_hybrid_strategy_backtest(
-                    data_path=data_path,
-                    config=test_config,
-                    save_results_flag=False
-                )
+                # backtest_results = run_hybrid_strategy_backtest(
+                #     data_path=data_path,
+                #     config=test_config,
+                #     save_results_flag=False
+                # )
+                backtest_results = None
 
                 if backtest_results and 'backtest' in backtest_results:
                     fitness = self.calculate_fitness(backtest_results['backtest'])

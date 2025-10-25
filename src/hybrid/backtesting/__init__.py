@@ -7,8 +7,6 @@ from .metrics import MetricsCalculator
 from .results import ResultsFormatter
 from .engine import BacktestEngine
 from .executor import TradeExecutor
-from .validator import ConfigValidator
-from .risk import RiskManagement
 
 # NEW: Walk-forward backtesting components
 from .walk_forward_engine import (
@@ -24,12 +22,11 @@ __all__ = [
     'ResultsFormatter',
     'BacktestEngine',
     'TradeExecutor',
-    'ConfigValidator',
-    'RiskManagement',
 
     # NEW: Walk-forward components
     'TemporalDataGuard',
-    'WalkForwardRetrainingStrategy',
+    'WalkForwardRetraini'
+    'ngStrategy',
     'WalkForwardBacktester',
     'WalkForwardResultsFormatter'
 ]

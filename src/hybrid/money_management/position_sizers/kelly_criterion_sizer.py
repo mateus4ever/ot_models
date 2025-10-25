@@ -17,6 +17,7 @@ class KellyCriterionSizer(PositionSizingStrategy):
         super().__init__(config)
 
         # Static parameters from configuration
+
         self.kelly_fraction = self.config['kelly_fraction']
         self.kelly_lookback = self.config['kelly_lookback']
         self.max_kelly_position = self.config['max_kelly_position']
@@ -25,7 +26,7 @@ class KellyCriterionSizer(PositionSizingStrategy):
         self.kelly_avg_loss = self.config['kelly_avg_loss']
 
         # Trade history integration parameters
-        self.min_trades_threshold = self.config.get('kelly_min_trades_threshold', 30)
+        self.min_trades_threshold = self.config.get('kelly_min_trades_threshold')
         self.trade_outcomes = []
 
         if self.kelly_lookback <= 0:
@@ -131,6 +132,72 @@ class KellyCriterionSizer(PositionSizingStrategy):
         position_size = int(risk_budget / stop_distance)
 
         return max(0, position_size)
+
+    def _calculate_kelly_percentage(self) -> float:
+        """Calculate raw Kelly percentage using current statistics"""
+        win_rate, avg_win, avg_loss = self._get_current_statistics()
+
+        if avg_loss == 0:
+            logger.warning("Average loss is zero, Kelly calculation invalid")
+            return 0.0
+
+        win_loss_ratio = avg_win / avg_loss
+        kelly_percentage = win_rate - ((1 - win_rate) / win_loss_ratio)
+
+        return kelly_percentage
+
+    def _get_current_statistics(self):
+        """Bayesian approach: weight prior and observed data"""
+        n_outcomes = len(self.trade_outcomes)
+
+        if n_outcomes == 0:
+            return self.kelly_win_rate, self.kelly_avg_win, self.kelly_avg_loss
+
+        # Weight decreases as more data observed
+        prior_weight = self.min_trades_threshold / (self.min_trades_threshold + n_outcomes)
+        data_weight = n_outcomes / (self.min_trades_threshold + n_outcomes)
+
+        # Calculate from actual outcomes
+        wins = [o for o in self.trade_outcomes if o.outcome == 'win']
+        losses = [o for o in self.trade_outcomes if o.outcome == 'loss']
+
+        observed_win_rate = len(wins) / len(self.trade_outcomes) if self.trade_outcomes else 0
+        observed_avg_win = sum(o.net_pnl for o in wins) / len(wins) if wins else 0
+        observed_avg_loss = abs(sum(o.net_pnl for o in losses) / len(losses)) if losses else 0
+
+        # DEBUG
+        print(f"\nDEBUG n_outcomes: {n_outcomes}")
+        print(f"DEBUG wins: {len(wins)}, losses: {len(losses)}")
+        print(f"DEBUG observed_win_rate: {observed_win_rate}")
+        print(f"DEBUG prior_weight: {prior_weight}, data_weight: {data_weight}")
+        print(f"DEBUG bootstrap win_rate: {self.kelly_win_rate}")
+
+        # Weighted combination
+        win_rate = prior_weight * self.kelly_win_rate + data_weight * observed_win_rate
+        avg_win = prior_weight * self.kelly_avg_win + data_weight * observed_avg_win
+        avg_loss = prior_weight * self.kelly_avg_loss + data_weight * observed_avg_loss
+
+        return win_rate, avg_win, avg_loss
+
+    def _calculate_statistics_from_outcomes(self) -> tuple[float, float, float]:
+        """Calculate win rate and averages from accumulated PositionOutcome objects
+
+        Returns:
+            Tuple of (win_rate, avg_win, avg_loss)
+        """
+        wins = [o for o in self.trade_outcomes if o.outcome == 'win']
+        losses = [o for o in self.trade_outcomes if o.outcome == 'loss']
+
+        total_trades = len(wins) + len(losses)  # Exclude break-even
+        if total_trades == 0:
+            # No wins or losses yet, return bootstrap values
+            return self.kelly_win_rate, self.kelly_avg_win, self.kelly_avg_loss
+
+        win_rate = len(wins) / total_trades
+        avg_win = sum(o.net_pnl for o in wins) / len(wins) if wins else 0.0
+        avg_loss = abs(sum(o.net_pnl for o in losses) / len(losses)) if losses else 0.0
+
+        return win_rate, avg_win, avg_loss
 
     def get_strategy_name(self) -> str:
         """Return strategy name for logging"""
