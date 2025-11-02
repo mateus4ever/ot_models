@@ -11,6 +11,7 @@ from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data import DataManager
+from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.signals.signal_factory import SignalFactory
 
 # Load scenarios from the signal_factory.feature
@@ -18,6 +19,7 @@ scenarios('sma_crossover_signal.feature')
 
 # Set up debug logging for tests
 logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(message)s')
+
 
 # Test fixtures and shared state
 @pytest.fixture
@@ -58,6 +60,7 @@ def load_configuration_file(test_context, config_directory):
 
     print("\n--- Registered Given Steps ---")
 
+
 @given(parsers.parse('SMA signal with fast and slow period {fast_period:d}, {slow_period:d} is initialized'))
 def step_create_sma_signal_configured(test_context, fast_period, slow_period):
     """
@@ -95,6 +98,7 @@ def step_create_sma_signal_configured(test_context, fast_period, slow_period):
     assert signal.fast_period == fast_period
     assert signal.slow_period == slow_period
 
+
 @given(parsers.parse('market data is loaded from {data_file}'))
 def load_market_data(test_context, data_file):
     """Load market data using DataManager"""
@@ -122,27 +126,25 @@ def load_market_data(test_context, data_file):
     test_context['market_id'] = market_id
 
 
-
-@given(parsers.parse('historical market data with {data_points} periods'))
-def load_market_data(test_context, data_points):
-    """Load market data using DataManager"""
-
+@given(parsers.parse('historical market data with {data_points:d} periods'))
+def set_data_points(test_context, data_points):
+    """Set the number of data points for training"""
     test_context['data_points'] = data_points
 
 
 @given('the recent historical price data is updated:')
-def step_load_historical_prices(test_context,docstring):
+def step_load_historical_prices(test_context, docstring):
     """
     Parses the Doc String containing complete time-series price rows (timestamp;open;high;low;close;volume)
     robustly using Pandas, converts it to a time-series DataFrame, and passes each row (pd.Series)
     sequentially to the signal's update method.
     """
-    signal  = test_context['signal']
+    signal = test_context['signal']
 
     # Use io.StringIO to treat the docstring as a file-like object
     data = io.StringIO(docstring)
 
-    # Read the data using pandas, settg the timestamp as the index and parsing dates
+    # Read the data using pandas, setting the timestamp as the index and parsing dates
     try:
         df = pandas.read_csv(
             data,
@@ -163,16 +165,21 @@ def step_load_historical_prices(test_context,docstring):
         # satisfying the data_point: pd.Series requirement.
         signal.update_with_new_data(row)
 
-@given(parsers.parse('crossover confirmation is {confirmation_periods}'))
+
+@given(parsers.parse('crossover confirmation is {confirmation_periods:d}'))
 def set_crossover_confirmation(test_context, confirmation_periods):
     """Set crossover confirmation periods"""
     signal = test_context['signal']
-    signal.crossover_confirmation = int(confirmation_periods)
+    signal.crossover_confirmation = confirmation_periods
+
+
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================
+
 @when(parsers.parse('signal is trained'))
 def train_signal(test_context):
+    """Train the signal with historical data"""
     data_manager = test_context['data_manager']
     signal = test_context['signal']
 
@@ -194,98 +201,57 @@ def train_signal(test_context):
         test_context['training_error'] = e
         test_context['signal_ready'] = False
 
-@when('the current price {current_price:g} is processed')
-def step_process_current_price(context, current_price):
-    """
-    Processes the final, current price, which is expected to trigger the signal event.
-    The ':g' type converter handles floats/decimal numbers.
-    """
-    if not hasattr(context, 'signal'):
-        raise AssertionError("Signal object is missing in context. Check preceding Given steps.")
-
-    # 1. Process the price (this will update the MAs for the final time)
-    context.signal.update_price(current_price)
-
-    # 2. Generate the signal based on the current state (MAs cross)
-    # Store the result in the context for the 'Then' step to assert
-    context.generated_signal = context.signal.get_current_signal()
-
 
 @when(parsers.parse('the current price {current_price:g} is processed'))
 def process_current_price(test_context, current_price: float):
     """
-    The final price update that should cause the Golden Cross.
-    It creates a full, single-row pd.Series for the final update to satisfy the API.
+    Process the current price by creating a synthetic OHLCV bar and generating a signal.
+    The timestamp is set as the series name/index.
     """
-    # ** THE ANSWER: The timestamp is the index (the series name). **
-    # We use a placeholder unique timestamp, which must be set using the 'name' argument.
     signal = test_context['signal']
 
     next_timestamp = Timestamp.now()
 
+    # Create synthetic bar where open=high=low=close=current_price (zero-range bar)
     final_data_point = Series({
         'open': current_price,
         'high': current_price,
         'low': current_price,
         'close': current_price,
-    }, name=next_timestamp)  # <-- Timestamp is set here as the series index
+    }, name=next_timestamp)
 
+    # Update the signal with the new data point
     signal.update_with_new_data(final_data_point)
+
+    # Generate and store the signal for assertion
+    test_context['generated_signal'] = signal.generate_signal()
 
 
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
 
-
-@then(parsers.parse('signal should be {expected_readiness}'))
-def verify_signal_readiness(test_context, expected_readiness):
+@then(parsers.parse('signal has readiness {state}'))
+def verify_signal_readiness(test_context, state):
     """Verify signal readiness state"""
     signal = test_context['signal']
 
-    expected_ready = (expected_readiness == 'ready')
+    expected_ready = (state == 'ready')
     actual_ready = signal.is_ready
 
     assert actual_ready == expected_ready, \
         f"Expected signal to be {'ready' if expected_ready else 'not ready'}, but it was {'ready' if actual_ready else 'not ready'}"
 
 
-@then('signal should be BUY')
-def step_assert_signal_is_buy(context):
-    """
-    Asserts that the signal generated in the 'When' step matches the expected BUY signal.
-    """
-    expected_signal = 'BUY'
+@then(parsers.parse('signal direction is {expected_direction}'))
+def verify_signal_direction(test_context, expected_direction):
+    """Assert that the generated signal matches expected direction"""
+    actual_signal = test_context.get('generated_signal')
 
-    if not hasattr(context, 'generated_signal'):
-        raise AssertionError("Signal was not generated in the 'When' step.")
+    if actual_signal is None:
+        pytest.fail("No signal was generated in the When step")
 
-    # 1. Perform the final assertion
-    assert context.generated_signal == expected_signal, (
-        f"Expected signal to be '{expected_signal}', but received '{context.generated_signal}'."
-    )
+    expected_enum = MarketSignal[expected_direction]
 
-    from pytest_bdd import given, then
-
-@given('the SMA signal is initialized')
-def step_init_sma(test_context):
-    test_context['sma_initialized'] = True
-
-@given('the historical price data is:')
-def step_load_historical_prices(test_context, docstring):
-    print("DocString content:", docstring)  # Debug output
-    test_context['prices'] = [float(p.strip()) for p in docstring.split(',')]
-
-@then('the signal should process the data')
-def step_process_data(test_context):
-    assert hasattr(test_context, 'prices')
-    assert len(test_context.prices) == 5
-
-@then('signal should be BUY')
-def signal_should_be_buy(test_context):
-
-    signal = test_context['signal']
-    """Asserts that the signal generated is 'BUY' by calling the final method."""
-    # Call the final generation method and assert the result
-    actual_signal = signal.generate_signal()
-    assert actual_signal == 'BUY', f"Expected BUY signal, but received {actual_signal}"
+    assert actual_signal == expected_enum, \
+        f"Expected {expected_enum} signal, but received {actual_signal}"

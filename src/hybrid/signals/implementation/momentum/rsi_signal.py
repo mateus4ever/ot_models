@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 import logging
+
+from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.signals.signal_interface import SignalInterface
 
 logger = logging.getLogger(__name__)
@@ -91,42 +93,34 @@ class RSISignal(SignalInterface):
 
         logger.debug(f"Updated historical data, buffer size: {len(self.historical_data)}")
 
-    def generate_signal(self, current_data: pd.Series) -> str:
+    def generate_signal(self) -> MarketSignal:
         """
-        Generate RSI trading signal
-
-        Args:
-            current_data: Current market data point with 'close' price
+        Generate RSI trading signal based on current historical data
 
         Returns:
-            "BUY", "SELL", or "HOLD"
+            "BULLISH", "BEARISH", or "NEUTRAL"
 
         Raises:
-            ValueError: If insufficient historical data or missing 'close' price
+            ValueError: If insufficient historical data
         """
         if not self.is_ready:
             raise ValueError(
                 f"Insufficient historical data. Need {self.period + 1} points, have {len(self.historical_data)}")
 
-        if 'close' not in current_data:
-            raise ValueError("Current data must contain 'close' price")
+        # Calculate RSI from historical data only
+        rsi_value = self._calculate_rsi(self.historical_data['close'])
 
-        # Calculate RSI using historical data + current price
-        current_price = current_data['close']
-        all_prices = pd.concat([self.historical_data['close'], pd.Series([current_price])])
-
-        rsi_value = self._calculate_rsi(all_prices)
-
-        # Generate signal based on RSI thresholds
+        # Generate signal based on RSI thresholds (product-agnostic)
         if rsi_value <= self.oversold_threshold:
-            signal = "BUY"
-            logger.debug(f"BUY signal: RSI={rsi_value:.2f} <= oversold_threshold={self.oversold_threshold}")
+            signal = MarketSignal.BULLISH
+            logger.debug(f"BULLISH signal: RSI={rsi_value:.2f} <= oversold_threshold={self.oversold_threshold}")
         elif rsi_value >= self.overbought_threshold:
-            signal = "SELL"
-            logger.debug(f"SELL signal: RSI={rsi_value:.2f} >= overbought_threshold={self.overbought_threshold}")
+            signal = MarketSignal.BEARISH
+            logger.debug(f"BEARISH signal: RSI={rsi_value:.2f} >= overbought_threshold={self.overbought_threshold}")
         else:
-            signal = "HOLD"
-            logger.debug(f"HOLD signal: {self.oversold_threshold} < RSI={rsi_value:.2f} < {self.overbought_threshold}")
+            signal = MarketSignal.NEUTRAL
+            logger.debug(
+                f"NEUTRAL signal: {self.oversold_threshold} < RSI={rsi_value:.2f} < {self.overbought_threshold}")
 
         return signal
 

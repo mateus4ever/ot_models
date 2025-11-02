@@ -28,18 +28,14 @@ class ATRBasedRiskManager(RiskManagementStrategy):
         self.max_drawdown = risk_config['max_drawdown']
         self.atr_period = risk_config['atr_period']
         self.starting_atr = risk_config['starting_atr']
+
     def calculate_stop_loss(self, signal: TradingSignal, market_data: pd.DataFrame) -> float:
         """Calculate stop loss using ATR"""
         atr = self._calculate_atr(market_data)
 
-        logger.info(f"ATR_DEBUG: ATR={atr:.6f} ({atr * 10000:.1f} pips), "
+        logger.info(f"ATR_DEBUG: ATR={atr:.6f}, "
                     f"Multiplier={self.atr_multiplier}, "
                     f"Data points={len(market_data)}")
-
-        # Check if ATR is suspiciously small
-        if atr < 0.00001:  # Less than 0.1 pip
-            logger.warning(f"ATR_WARNING: ATR too small! Using starting_atr={self.starting_atr}")
-            atr = self.starting_atr
 
         if signal.direction == PositionDirection.LONG:
             stop_loss = signal.entry_price - (atr * self.atr_multiplier)
@@ -48,7 +44,7 @@ class ATRBasedRiskManager(RiskManagementStrategy):
 
         stop_distance = abs(signal.entry_price - stop_loss)
         logger.info(f"STOP_CALC: Entry={signal.entry_price:.5f}, "
-                    f"Stop={stop_loss:.5f}, Distance={stop_distance * 10000:.1f} pips")
+                    f"Stop={stop_loss:.5f}, Distance={stop_distance:.6f}")
 
         return stop_loss
 

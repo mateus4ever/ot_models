@@ -3,22 +3,16 @@
     {
       "uuid": "invalid-timestamp-trade",
       "timestamp": "not-a-valid-timestamp",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "TEST-INVALID-TIME",
-          "amount": 10,
-          "type": "stock",
-          "entry_value": 100.0,
-          "exit_value": 110.0,
-          "currency": "USD",
-          "entry_fees": 2.0,
-          "exit_fees": 2.0,
-          "status": "closed",
-          "entry_timestamp": "also-not-a-timestamp",
-          "exit_timestamp": "2024-04-01T15:00:00Z"
-        }
-      ]
+      "entry_date": "also-not-a-timestamp",
+      "exit_date": "2024-04-01T15:00:00Z",
+      "entry_price": 100.0,
+      "exit_price": 110.0,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "TEST-INVALID-TIME",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     }
   ],
   "metadata": {

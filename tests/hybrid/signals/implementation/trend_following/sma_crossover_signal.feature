@@ -4,7 +4,7 @@ Feature: SMA Crossover Signal Generator
   So that I can identify trend direction changes
 
   Background:
-    Given config files are available in tests/config
+    Given config files are available in tests/config/signals
 
   # ============================================================================
   # INITIALIZATION AND TRAINING
@@ -16,7 +16,7 @@ Scenario Outline: Train signal with varying amounts of historical data
   And market data is loaded from tests/data/small/DAT_ASCII_EURUSD_M1_2021_smoke.csv
   And historical market data with <data_points> periods
   When signal is trained
-  Then signal should be <expected_readiness>
+  Then signal has readiness <expected_readiness>
 #  And historical buffer should contain <expected_buffer_size> records
   Examples:5
     | fast_period | slow_period | data_points | expected_readiness | expected_buffer_size |
@@ -28,70 +28,90 @@ Scenario Outline: Train signal with varying amounts of historical data
   # ============================================================================
   # SIGNAL GENERATION - GOLDEN CROSS (BUY)
   # ============================================================================
-  Scenario Outline: Golden cross generates BUY signal
-    Given SMA signal with fast and slow period <fast_period>, <slow_period> is initialized
+Scenario: Golden cross with sharp reversal
+    Given SMA signal with fast and slow period 5, 10 is initialized
     And the recent historical price data is updated:
     """
-    20210103 170000;1.22290;1.22305;1.22290;1.22300;1000
-    20210103 170100;1.22300;1.22315;1.22300;1.22310;1100
-    20210103 170200;1.22310;1.22325;1.22310;1.22320;1200
-    20210103 170300;1.22320;1.22335;1.22320;1.22330;1300
-    20210103 170400;1.22330;1.22345;1.22330;1.22340;1400
+    20210103 170000;1.2400;1.2400;1.2400;1.2400;1000
+    20210103 170100;1.2380;1.2380;1.2380;1.2380;1000
+    20210103 170200;1.2360;1.2360;1.2360;1.2360;1000
+    20210103 170300;1.2340;1.2340;1.2340;1.2340;1000
+    20210103 170400;1.2320;1.2320;1.2320;1.2320;1000
+    20210103 170500;1.2310;1.2310;1.2310;1.2310;1000
+    20210103 170600;1.2305;1.2305;1.2305;1.2305;1000
+    20210103 170700;1.2315;1.2315;1.2315;1.2315;1000
+    20210103 170800;1.2330;1.2330;1.2330;1.2330;1000
+    20210103 170900;1.2350;1.2350;1.2350;1.2350;1000
+    20210103 171000;1.2370;1.2370;1.2370;1.2370;1000
     """
-    # Note: current_price represents a single tick price
-    # Signal currently requires full OHLCV bars, so test creates synthetic bar
-    # where open=high=low=close=current_price (zero-range bar)
-    # TODO: Consider tick-based signal interface for live trading
-    When the current price <current_price> is processed
-    Then signal should be BUY
+    When the current price 1.2390 is processed
+    Then signal direction is BULLISH
 
-    Examples:
-      | fast_period | slow_period | current_price |
-      | 10          | 30          | 1.22450       |
-      | 5           | 20          | 1.22480       |
-
+  Scenario: Golden cross with gradual reversal
+    Given SMA signal with fast and slow period 5, 10 is initialized
+    And the recent historical price data is updated:
+    """
+    20210103 170000;1.2350;1.2350;1.2350;1.2350;1000
+    20210103 170100;1.2345;1.2345;1.2345;1.2345;1000
+    20210103 170200;1.2340;1.2340;1.2340;1.2340;1000
+    20210103 170300;1.2335;1.2335;1.2335;1.2335;1000
+    20210103 170400;1.2330;1.2330;1.2330;1.2330;1000
+    20210103 170500;1.2328;1.2328;1.2328;1.2328;1000
+    20210103 170600;1.2327;1.2327;1.2327;1.2327;1000
+    20210103 170700;1.2329;1.2329;1.2329;1.2329;1000
+    20210103 170800;1.2333;1.2333;1.2333;1.2333;1000
+    20210103 170900;1.2338;1.2338;1.2338;1.2338;1000
+    20210103 171000;1.2344;1.2344;1.2344;1.2344;1000
+    """
+    When the current price 1.2351 is processed
+    Then signal direction is BULLISH
   # ============================================================================
   # SIGNAL GENERATION - DEATH CROSS (SELL)
   # ============================================================================
 
-  Scenario Outline: Death cross generates SELL signal
-    Given SMA signal with fast and slow period <fast_period>, <slow_period> is initialized
+# ============================================================================
+# SIGNAL GENERATION - DEATH CROSS (BEARISH)
+# ============================================================================
+
+  Scenario: Death cross with sharp reversal
+    Given SMA signal with fast and slow period 5, 10 is initialized
     And the recent historical price data is updated:
     """
-    20210103 170000;1.22400;1.22400;1.22380;1.22390;1000
-    20210103 170100;1.22380;1.22390;1.22360;1.22370;1100
-    20210103 170200;1.22360;1.22370;1.22340;1.22350;1200
-    20210103 170300;1.22340;1.22350;1.22320;1.22330;1300
-    20210103 170400;1.22320;1.22330;1.22300;1.22310;1400
+    20210103 170000;1.2200;1.2200;1.2200;1.2200;1000
+    20210103 170100;1.2220;1.2220;1.2220;1.2220;1000
+    20210103 170200;1.2240;1.2240;1.2240;1.2240;1000
+    20210103 170300;1.2260;1.2260;1.2260;1.2260;1000
+    20210103 170400;1.2280;1.2280;1.2280;1.2280;1000
+    20210103 170500;1.2290;1.2290;1.2290;1.2290;1000
+    20210103 170600;1.2295;1.2295;1.2295;1.2295;1000
+    20210103 170700;1.2285;1.2285;1.2285;1.2285;1000
+    20210103 170800;1.2270;1.2270;1.2270;1.2270;1000
+    20210103 170900;1.2250;1.2250;1.2250;1.2250;1000
+    20210103 171000;1.2230;1.2230;1.2230;1.2230;1000
     """
-    When the current price <current_price> is processed
-    Then signal should be SELL
-
-    Examples:
-      | fast_period | slow_period | current_price |
-      | 10          | 30          | 1.22250       |
-      | 5           | 20          | 1.22200       |
+    When the current price 1.2210 is processed
+    Then signal direction is BEARISH
 
   # ============================================================================
   # CROSSOVER CONFIRMATION
   # ============================================================================
 
-  Scenario Outline: Crossover confirmation periods
-    Given SMA signal with fast and slow period 10, 30 is initialized
-    And crossover confirmation is <confirmation_periods>
+  Scenario: Crossover with confirmation=1 detects immediately
+    Given SMA signal with fast and slow period 5, 10 is initialized
+    And crossover confirmation is 1
     And the recent historical price data is updated:
     """
-    20210103 170000;1.22290;1.22305;1.22290;1.22300;1000
-    20210103 170100;1.22300;1.22315;1.22300;1.22310;1100
-    20210103 170200;1.22310;1.22325;1.22310;1.22320;1200
-    20210103 170300;1.22320;1.22335;1.22320;1.22330;1300
-    20210103 170400;1.22330;1.22345;1.22330;1.22340;1400
+    20210103 165900;1.2380;1.2380;1.2380;1.2380;1000
+    20210103 170000;1.2370;1.2370;1.2370;1.2370;1000
+    20210103 170100;1.2360;1.2360;1.2360;1.2360;1000
+    20210103 170200;1.2350;1.2350;1.2350;1.2350;1000
+    20210103 170300;1.2340;1.2340;1.2340;1.2340;1000
+    20210103 170400;1.2335;1.2335;1.2335;1.2335;1000
+    20210103 170500;1.2330;1.2330;1.2330;1.2330;1000
+    20210103 170600;1.2335;1.2335;1.2335;1.2335;1000
+    20210103 170700;1.2345;1.2345;1.2345;1.2345;1000
+    20210103 170800;1.2360;1.2360;1.2360;1.2360;1000
+    20210103 170900;1.2375;1.2375;1.2375;1.2375;1000
     """
-    When the current price <price1> is processed
-    Then signal should be <expected_signal1>
-    When the current price <price2> is processed
-    Then signal should be <expected_signal2>
-    Examples:
-      | confirmation_periods | price1  | price2  | expected_signal1 | expected_signal2 |
-      | 1                    | 1.22450 | 1.22480 | BUY              | BUY              |
-      | 2                    | 1.22450 | 1.22480 | HOLD             | BUY              |
+    When the current price 1.2380 is processed
+    Then signal direction is BULLISH

@@ -7,6 +7,8 @@ All parameters configurable - no hardcoded values
 import pandas as pd
 from typing import Dict, Any
 import logging
+
+from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.signals.signal_interface import SignalInterface
 
 logger = logging.getLogger(__name__)
@@ -88,27 +90,22 @@ class BollingerSignal(SignalInterface):
 
         logger.debug(f"Updated historical data, buffer size: {len(self.historical_data)}")
 
-    def generate_signal(self, current_data: pd.Series) -> str:
+    def generate_signal(self) -> MarketSignal:
         """
-        Generate Bollinger Bands trading signal
-
-        Args:
-            current_data: Current market data point with 'close' price
+        Generate Bollinger Bands trading signal based on current historical data
 
         Returns:
-            "BUY", "SELL", or "HOLD"
+            "BULLISH", "BEARISH", or "NEUTRAL"
 
         Raises:
-            ValueError: If insufficient historical data or missing 'close' price
+            ValueError: If insufficient historical data
         """
         if not self.is_ready:
             raise ValueError(
                 f"Insufficient historical data. Need {self.period} points, have {len(self.historical_data)}")
 
-        if 'close' not in current_data:
-            raise ValueError("Current data must contain 'close' price")
-
-        current_price = current_data['close']
+        # Get current price from most recent historical data point
+        current_price = self.historical_data['close'].iloc[-1]
 
         # Calculate Bollinger Bands using historical data
         recent_prices = self.historical_data['close'].tail(self.period)
@@ -123,16 +120,16 @@ class BollingerSignal(SignalInterface):
         upper_band = sma + (self.std_dev * std)
         lower_band = sma - (self.std_dev * std)
 
-        # Generate signal based on current price vs bands
+        # Generate signal based on current price vs bands (product-agnostic)
         if current_price <= lower_band:
-            signal = "BUY"
-            logger.debug(f"BUY signal: price={current_price:.4f} <= lower_band={lower_band:.4f}")
+            signal = MarketSignal.BULLISH
+            logger.debug(f"BULLISH signal: price={current_price:.4f} <= lower_band={lower_band:.4f}")
         elif current_price >= upper_band:
-            signal = "SELL"
-            logger.debug(f"SELL signal: price={current_price:.4f} >= upper_band={upper_band:.4f}")
+            signal = MarketSignal.BEARISH
+            logger.debug(f"BEARISH signal: price={current_price:.4f} >= upper_band={upper_band:.4f}")
         else:
-            signal = "HOLD"
-            logger.debug(f"HOLD signal: {lower_band:.4f} < price={current_price:.4f} < {upper_band:.4f}")
+            signal = MarketSignal.NEUTRAL
+            logger.debug(f"NEUTRAL signal: {lower_band:.4f} < price={current_price:.4f} < {upper_band:.4f}")
 
         return signal
 

@@ -6,6 +6,8 @@ Defines contract for both rule-based and ML-based signals
 from typing import Protocol, Dict, Any
 import pandas as pd
 
+from src.hybrid.signals.market_signal_enum import MarketSignal
+
 
 class SignalInterface(Protocol):
     """
@@ -43,7 +45,7 @@ class SignalInterface(Protocol):
         """
         ...
 
-    def generate_signal(self, current_data: pd.Series) -> str:
+    def generate_signal(self) -> MarketSignal:
         """
         Generate trading signal based on current market data
 

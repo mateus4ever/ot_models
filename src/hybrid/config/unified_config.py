@@ -126,7 +126,8 @@ class UnifiedConfig:
             "data_management.json",
             "display.json",
             "files.json",
-            "money_management.json"
+            "money_management.json",
+            "transaction_costs.json"
         ]
 
         # Load base configuration files

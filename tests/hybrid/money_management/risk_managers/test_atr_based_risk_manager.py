@@ -261,6 +261,8 @@ def verify_stop_loss(test_context, expected_stop_loss):
     calculated = test_context['calculated_stop_loss']
     expected = float(expected_stop_loss)
 
+    print(
+        f"DEBUG: calculated={calculated:.10f}, expected={expected:.10f}, diff={abs(calculated - expected):.10e}, tolerance={tolerance}")
     assert abs(calculated - expected) < tolerance, \
         f"Stop loss {calculated:.2f} does not match expected {expected:.2f} (tolerance: {tolerance})"
 

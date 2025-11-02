@@ -67,16 +67,27 @@ def loaded_trade_data(test_context, file_path):
     test_context['load_success'] = success
 
 
-@given(parsers.parse('I have a position with entry_value {entry_value}, exit_value {exit_value}, amount {amount}, entry_fees {entry_fees}, and exit_fees {exit_fees}'))
-def create_test_position_with_new_fees(test_context, entry_value, exit_value, amount, entry_fees, exit_fees):
-    """Create test position with entry/exit fee structure"""
+@given(parsers.parse(
+    'I have a position with entry_price {entry_price}, exit_price {exit_price}, quantity {quantity}, direction {direction}'))
+def create_test_position_with_cost_model(test_context, entry_price, exit_price, quantity, direction):
+    """Create test position using real cost model"""
+    from datetime import datetime, timedelta
+
+    # Use relative dates (same day trade)
+    now = datetime.now()
+    entry_date = now.replace(hour=10, minute=0, second=0, microsecond=0)
+    exit_date = now.replace(hour=15, minute=0, second=0, microsecond=0)
+
     test_context['test_position'] = {
-        'entry_value': float(entry_value),
-        'exit_value': float(exit_value),
-        'amount': float(amount),
-        'entry_fees': float(entry_fees),
-        'exit_fees': float(exit_fees),
-        'status': 'closed'
+        'entry_price': float(entry_price),
+        'exit_price': float(exit_price),
+        'quantity': int (quantity),
+        'direction': direction,
+        'entry_date': entry_date,
+        'exit_date': exit_date,
+        'status': 'closed',
+        'timestamp': entry_date.isoformat() + 'Z',
+        'symbol': 'TEST'
     }
 
 @given('I have loaded trade history data for persistence testing')
@@ -87,7 +98,7 @@ def prepare_trade_history_for_persistence_test(test_context):
     original_count = pytest.trade_history.get_trade_count()
     test_context['original_stats'] = original_stats
     test_context['original_count'] = original_count
-    test_context['original_positions'] = pytest.trade_history.all_positions.copy()
+    test_context['original_trades'] = list(pytest.trade_history.trades.values()).copy()
 
 @given(parsers.parse('I have a new trade with timestamp "{timestamp}"'))
 def create_new_trade_with_timestamp(test_context, timestamp):
@@ -95,28 +106,30 @@ def create_new_trade_with_timestamp(test_context, timestamp):
     test_context['new_trade_timestamp'] = timestamp
     test_context['original_count'] = pytest.trade_history.get_trade_count()
 
-@given(parsers.parse('the trade has position with name_of_position "{name_of_position}", type "{position_type}", entry_value {entry_value}, amount {amount}, and entry_fees {entry_fees}'))
-def add_position_to_new_trade(test_context, name_of_position, position_type, entry_value, amount, entry_fees):
-    """Add position data to new trade"""
-    test_context['new_trade_data'] = {
-        'uuid': f"test-trade-{test_context['new_trade_timestamp']}",
-        'timestamp': test_context['new_trade_timestamp'],
-        'status': 'open',
-        'positions': [{
-            'name_of_position': name_of_position,
-            'type': position_type,
-            'amount': float(amount),
-            'entry_value': float(entry_value),
-            'entry_fees': float(entry_fees),
-            'currency': 'USD',
-            'status': 'open',
-            'entry_timestamp': test_context['new_trade_timestamp'],
-            'exit_value': None,
-            'exit_timestamp': None,
-            'exit_fees': None
-        }]
-    }
 
+@given(parsers.parse(
+    'the trade has position with symbol {symbol}, type {position_type}, entry_price {entry_price}, quantity {quantity}'))
+def add_position_to_new_trade(test_context, symbol, position_type, entry_price, quantity):
+    """Add trade data in new flat format"""
+    from datetime import datetime
+
+    timestamp_str = test_context['new_trade_timestamp']
+    timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+
+    test_context['new_trade_data'] = {
+        'uuid': f"test-trade-{timestamp_str}",
+        'timestamp': timestamp_str,
+        'entry_date': timestamp_str,
+        'exit_date': None,
+        'entry_price': float(entry_price),
+        'exit_price': None,
+        'quantity': int(quantity),
+        'direction': 'LONG',
+        'symbol': symbol,
+        'type': position_type,
+        'currency': 'USD',
+        'status': 'open'
+    }
 
 @given(parsers.parse('I have a TradeHistory with trade pattern from "{file_path}"'))
 def create_trade_history_with_pattern(test_context, file_path):
@@ -144,7 +157,17 @@ def access_positions():
 def calculate_position_outcome(test_context):
     """Calculate outcome for test position"""
     position = test_context['test_position']
-    outcome = pytest.trade_history._calculate_position_outcome(position)
+
+    # Add trade to history (triggers cost calculation)
+    success = pytest.trade_history.add_trade(position)
+    assert success, "Failed to add test position to trade history"
+
+    # Now get the stored trade with calculated costs
+    timestamp = pytest.trade_history._parse_timestamp(position['timestamp'])
+    stored_trade = pytest.trade_history.trades[timestamp]
+
+    # Calculate outcome from stored trade (now has costs)
+    outcome = pytest.trade_history._calculate_position_outcome(stored_trade)
     test_context['calculated_outcome'] = outcome
 
 
@@ -234,9 +257,59 @@ def encounter_error_condition(test_context, error_condition):
         test_context['operation_result'] = result
         test_context['expected_result'] = False
 
+
+@when('I identify open and closed trades')
+def identify_open_closed_trades(test_context):
+    """Identify and store open and closed trades"""
+    test_context['open_trades'] = []
+    test_context['closed_trades'] = []
+
+    for trade_data in pytest.trade_history.trades.values():
+        if trade_data.get('status') == 'open':
+            test_context['open_trades'].append(trade_data)
+        elif trade_data.get('status') == 'closed':
+            test_context['closed_trades'].append(trade_data)
+
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
+@then('each trade should have required fields')
+def verify_trade_has_required_fields(test_context):
+    """Verify each trade has required fields for new format"""
+    required_fields = ['timestamp', 'entry_price', 'exit_price', 'quantity',
+                       'direction', 'entry_date', 'exit_date', 'symbol']
+
+    for trade_data in pytest.trade_history.trades.values():
+        for field in required_fields:
+            assert field in trade_data, f"Trade missing required field: {field}"
+
+@then(parsers.parse('each trade should have symbol "{expected_symbol}"'))
+def verify_trade_symbol(expected_symbol):
+    """Verify all trades have expected symbol"""
+    for trade_data in pytest.trade_history.trades.values():
+        assert trade_data.get('symbol') == expected_symbol, \
+            f"Trade has wrong symbol: {trade_data.get('symbol')}, expected: {expected_symbol}"
+
+
+@then(parsers.parse('each trade should have {field1}, {field2}, {field3}, and {field4}'))
+def verify_trade_has_fields(field1, field2, field3, field4):
+    """Verify trades have specified fields"""
+    required_fields = [field1, field2, field3, field4]
+
+    for trade_data in pytest.trade_history.trades.values():
+        for field in required_fields:
+            assert field in trade_data, f"Trade missing field: {field}"
+
+
+@then(parsers.parse('closed trades should have {field1} and {field2}'))
+def verify_closed_trades_have_fields(field1, field2):
+    """Verify closed trades have specified fields"""
+    for trade_data in pytest.trade_history.trades.values():
+        if trade_data.get('status') == 'closed':
+            assert field1 in trade_data, f"Closed trade missing {field1}"
+            assert field2 in trade_data, f"Closed trade missing {field2}"
+            assert trade_data[field1] is not None, f"Closed trade has null {field1}"
+            assert trade_data[field2] is not None, f"Closed trade has null {field2}"
 
 
 @then(parsers.parse('{expected_count:d} trades should be loaded successfully'))
@@ -293,25 +366,35 @@ def verify_net_pnl(test_context, expected_pnl):
     actual_pnl = test_context['calculated_outcome'].net_pnl
     assert actual_pnl == expected_pnl
 
-
 @then('fees should be properly subtracted from gross P&L')
 def verify_fees_subtracted(test_context):
     """Verify fee handling in P&L calculation"""
     outcome = test_context['calculated_outcome']
     position = test_context['test_position']
 
-    expected_gross = (position['exit_value'] - position['entry_value']) * position['amount']
+    direction = position['direction']
+    entry_price = position['entry_price']
+    exit_price = position['exit_price']
+    quantity = position['quantity']
 
-    # Calculate total fees from entry and exit fees (matching the new structure)
-    entry_fees = position.get('entry_fees', 0)
-    exit_fees = position.get('exit_fees', 0) if position.get('exit_fees') is not None else 0
-    total_fees = entry_fees + exit_fees
+    # Calculate expected gross P&L
+    if direction.upper() == 'SHORT':
+        expected_gross = (entry_price - exit_price) * quantity
+    else:
+        expected_gross = (exit_price - entry_price) * quantity
 
-    expected_net = expected_gross - total_fees
+    # Verify gross P&L matches
+    assert outcome.gross_pnl == expected_gross, \
+        f"Gross P&L mismatch: {outcome.gross_pnl} != {expected_gross}"
 
-    assert outcome.gross_pnl == expected_gross
-    assert outcome.net_pnl == expected_net
-    assert outcome.fees == total_fees  # Also verify the fees field is calculated correctly
+    # Verify net P&L = gross - fees
+    expected_net = expected_gross - outcome.fees
+    assert outcome.net_pnl == expected_net, \
+        f"Net P&L mismatch: {outcome.net_pnl} != {expected_net}"
+
+    # Verify fees were calculated (not zero for non-zero trades)
+    if quantity > 0 and entry_price > 0:
+        assert outcome.fees > 0, "Fees should be calculated for real trades"
 
 @then('the statistics should include total_positions count')
 def verify_total_positions_count(test_context):
@@ -415,18 +498,19 @@ def verify_trade_data_preserved(test_context):
 
 
 @then('all position data should be preserved')
-def verify_position_data_preserved(test_context):
-    """Verify all positions are preserved"""
-    original_positions = test_context['original_positions']
-    new_positions = pytest.new_trade_history.all_positions
+def verify_trade_data_preserved(test_context):
+    """Verify all trades are preserved"""
+    original_trades = test_context['original_trades']
+    new_trades = list(pytest.new_trade_history.trades.values())
 
-    assert len(new_positions) == len(original_positions)
+    assert len(new_trades) == len(original_trades)
 
-    # Compare key fields for each position
-    for orig, new in zip(original_positions, new_positions):
-        assert orig['name_of_position'] == new['name_of_position']
-        assert orig['entry_value'] == new['entry_value']
-        assert orig['amount'] == new['amount']
+    # Compare key fields for each trade
+    for orig, new in zip(original_trades, new_trades):
+        assert orig['symbol'] == new['symbol']
+        assert orig['entry_price'] == new['entry_price']
+        assert orig['quantity'] == new['quantity']
+        assert orig['direction'] == new['direction']
 
 
 @then('timestamp ordering should be maintained')
@@ -633,3 +717,25 @@ def verify_error_logging(test_context):
     """Verify errors are logged appropriately"""
     # Verify operation completed without unhandled exceptions
     assert 'operation_result' in test_context
+
+
+@then(parsers.parse('trade "{trade_uuid}" should be open'))
+def verify_trade_is_open(test_context, trade_uuid):
+    """Verify specific trade is open"""
+    trade_found = False
+    for trade_data in pytest.trade_history.trades.values():
+        if trade_data.get('uuid') == trade_uuid:
+            assert trade_data.get('status') == 'open', f"Trade {trade_uuid} is not open"
+            test_context['current_trade'] = trade_data
+            trade_found = True
+            break
+
+    assert trade_found, f"Trade {trade_uuid} not found"
+
+
+@then(parsers.parse('the open trade should have {field} as null'))
+def verify_open_trade_field_is_null(test_context, field):
+    """Verify open trade has null field"""
+    trade_data = test_context.get('current_trade')
+    assert trade_data is not None, "No current trade in context"
+    assert trade_data.get(field) is None, f"Open trade has non-null {field}: {trade_data.get(field)}"

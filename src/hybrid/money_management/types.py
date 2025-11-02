@@ -1,13 +1,10 @@
 # types.py
 from dataclasses import dataclass
-from enum import Enum
 from typing import Dict, Optional
+
 import pandas as pd
 
-
-class PositionDirection(Enum):
-    LONG = "long"
-    SHORT = "short"
+from src.hybrid.products.product_types import PositionDirection
 
 
 @dataclass

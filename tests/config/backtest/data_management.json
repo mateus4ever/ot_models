@@ -1,25 +1,27 @@
 {
-  "data_loading": {
-    "loader_type": "directory_scan",
-    "directory_path": "/data/eurusd",
-    "file_pattern": "*.csv",
-    "recursive": true,
-    "skip_initial_rows": 0,
-    "data_formatting": {
-      "header": 0,
-      "names": "['timestamp', 'volume','open', 'high', 'low', 'close', 'volume']",
-      "format_timestamp": "'%Y%m%d %H%M%S'"
+  "markets": {
+    "TSLA": {
+    "product_type": "cfd",
+    "leverage": 1.0
     }
+  },
+  "data_loading": {
+      "loader_type": "directory_scan",
+      "directory_path": "/data/yahoo",
+      "file_pattern": "*.csv",
+      "recursive": true,
+      "csv_format": {
+        "delimiter": ",",
+        "has_header": true,
+        "timestamp_column": "Timestamp",
+        "timestamp_format": null
+      }
   },
   "trade_history": {
     "default_lookback_periods": 0,
     "save_backup_on_load": false,
     "validate_on_load": true,
     "data_file_path": "/results/trade/base_trade.json"
-  },
-  "transaction_costs": {
-    "commission_pct": 0.001,
-    "slippage_pct": 0.0005
   },
   "backtesting": {
     "method": "walk_forward",

@@ -5,8 +5,6 @@
 # Core backtesting components
 from .metrics import MetricsCalculator
 from .results import ResultsFormatter
-from .engine import BacktestEngine
-from .executor import TradeExecutor
 
 # NEW: Walk-forward backtesting components
 from .walk_forward_engine import (
@@ -20,8 +18,6 @@ __all__ = [
     # Original components
     'MetricsCalculator',
     'ResultsFormatter',
-    'BacktestEngine',
-    'TradeExecutor',
 
     # NEW: Walk-forward components
     'TemporalDataGuard',

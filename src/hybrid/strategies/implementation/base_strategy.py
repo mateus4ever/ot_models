@@ -27,6 +27,8 @@ from typing import Dict, List, Any
 import pandas as pd
 
 from src.hybrid.money_management import PositionDirection, TradingSignal
+from src.hybrid.products.product_types import ProductFactory
+from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.strategies import StrategyInterface
 
 logger = logging.getLogger(__name__)
@@ -62,9 +64,6 @@ class BaseStrategy(StrategyInterface):
 
     def addOptimizer(self, optimizer):
         self.optimizers.append(optimizer)
-
-    def addRunner(self, runner):
-        self.runners.append(runner)
 
     def addMetric(self, metric):
         self.metrics.append(metric)
@@ -127,10 +126,17 @@ class BaseStrategy(StrategyInterface):
 
         training_window = signals_config['training_window']
 
-
-
         active_market_data = self.data_manager._active_market_data
         self.data_manager.initialize_temporal_pointer(active_market_data, training_window)
+
+        data_config = self.config.get_section('data_management', {})
+        markets_config = data_config.get('markets', {})
+        market_config = markets_config.get(market_id, {})
+        product_type = market_config.get('product_type', 'stock')
+
+        self.product = ProductFactory.create_product(product_type)
+        logger.info(f"Market {market_id} using product: {product_type}")
+
 
         # Get past data for training
         past_data_dict = self.data_manager.get_past_data()
@@ -140,6 +146,7 @@ class BaseStrategy(StrategyInterface):
             'market_id': market_id,
             'past_data': past_data
         }
+
 
     def _train_signals(self, past_data: pd.DataFrame) -> None:
         """Train all signals on historical data
@@ -166,7 +173,11 @@ class BaseStrategy(StrategyInterface):
         trades = []
         current_position = None
         iteration = 0
-        signal_counts = {'BUY': 0, 'SELL': 0, 'HOLD': 0}
+        signal_counts = {
+            MarketSignal.BULLISH: 0,
+            MarketSignal.BEARISH: 0,
+            MarketSignal.NEUTRAL: 0
+        }
 
         while self.data_manager.next():
             iteration += 1
@@ -178,86 +189,140 @@ class BaseStrategy(StrategyInterface):
                     f"({iteration / self.data_manager.total_records * 100:.1f}%), Trades: {len(trades)}"
                 )
 
-            # Check stop loss
-            if current_position:
-                if self._check_stop_loss_hit(current_bar, current_position):
-                    trade = self._exit_on_stop_loss(current_bar, current_position)
-                    trades.append(trade)
-
-                    # Notify listeners
-                    self._notify_exit_signal(market_id, trade['exit'], trade['pnl'])
-
-                    current_position = None
-                    logger.info(f"Position stopped out at {current_bar['close']}")
-                    continue  # Skip to next bar, don't check signals this bar
-
             current_data_dict = self.data_manager.get_current_data()
             current_bar = current_data_dict[market_id]
 
-            # Generate signal
-            signal_value = self.signals[0].generate_signal(current_bar)
+            # Check stop loss before processing signals
+            if current_position:
+                stop_loss_trade = self._handle_stop_loss(current_bar, current_position, market_id)
+                if stop_loss_trade:
+                    trades.append(stop_loss_trade)
+                    current_position = None
+                    continue  # Skip to next bar
+
+            # Update signal with new data and generate signal
+            self.signals[0].update_with_new_data(current_bar)
+            signal_value = self.signals[0].generate_signal()
             signal_counts[signal_value] += 1
 
             if iteration % 5000 == 0:
                 logger.info(f"Signal at iteration {iteration}: {signal_value}, Close: {current_bar['close']}")
 
-            # Try to enter position
-            if signal_value == 'BUY' and not current_position:
-                current_position = self._try_enter_position(current_bar, market_id)
+            # Handle signal
+            if signal_value == MarketSignal.BULLISH:
+                result = self._handle_bullish_signal(current_bar, current_position, market_id)
+                if result['trade']:
+                    trades.append(result['trade'])
+                current_position = result['position']
 
-                # Notify execution listeners (for live trading)
-                if current_position:
-                    self._notify_entry_signal(
-                        market_id,
-                        current_position['entry_price'],
-                        current_position['size']
-                    )
-
-            # Try to exit position
-            elif signal_value == 'SELL' and current_position:
-                trade = self._try_exit_position(current_bar, current_position)
-                if trade:
-                    trades.append(trade)
-
-                    # Notify execution listeners (for live trading)
-                    self._notify_exit_signal(
-                        market_id,
-                        trade['exit'],
-                        trade['pnl']
-                    )
-                    current_position = None
+            elif signal_value == MarketSignal.BEARISH:
+                result = self._handle_bearish_signal(current_bar, current_position, market_id)
+                if result['trade']:
+                    trades.append(result['trade'])
+                current_position = result['position']
 
         logger.info(
-            f"Signal distribution - BUY: {signal_counts['BUY']}, "
-            f"SELL: {signal_counts['SELL']}, HOLD: {signal_counts['HOLD']}"
+            f"Signal distribution - BULLISH: {signal_counts[MarketSignal.BULLISH]}, "
+            f"BEARISH: {signal_counts[MarketSignal.BEARISH]}, "
+            f"NEUTRAL: {signal_counts[MarketSignal.NEUTRAL]}"
         )
 
         return trades
 
-    def _try_enter_position(self, current_bar: pd.Series, market_id: str) -> Dict:
-        """Attempt to enter a long position
-
-        Args:
-            current_bar: Current market data
-            market_id: Market identifier
+    def _handle_stop_loss(self, current_bar: pd.Series, position: Dict, market_id: str) -> Dict:
+        """Handle stop loss check and exit
 
         Returns:
-            Position dictionary if entered, None otherwise
+            Trade dict if stop loss hit, None otherwise
         """
-        # Get past data for position sizing
+        if self._check_stop_loss_hit(current_bar, position):
+            trade = self._exit_on_stop_loss(current_bar, position)
+            self._notify_exit_signal(market_id, trade['exit'], trade['pnl'])
+            logger.info(f"Position stopped out at {current_bar['close']}")
+            return trade
+        return None
+
+    def _handle_bullish_signal(self, current_bar: pd.Series, current_position: Dict,
+                               market_id: str) -> Dict:
+        """Handle BULLISH signal - enter LONG or exit SHORT
+
+        Returns:
+            Dict with 'trade' (if any) and 'position' (updated or None)
+        """
+        result = {'trade': None, 'position': current_position}
+
+        if not current_position:
+            # No position - enter LONG if product allows
+            if self.product.can_trade_direction(PositionDirection.LONG):
+                new_position = self._try_enter_position(current_bar, market_id, PositionDirection.LONG)
+                if new_position:
+                    self._notify_entry_signal(
+                        market_id,
+                        new_position['entry_price'],
+                        new_position['size']
+                    )
+                    result['position'] = new_position
+
+        elif current_position['direction'] == 'SHORT':
+            # Have SHORT position - exit it
+            trade = self._try_exit_position(current_bar, current_position)
+            if trade:
+                self._notify_exit_signal(market_id, trade['exit'], trade['pnl'])
+                logger.info(f"Exited SHORT at {current_bar['close']}")
+                result['trade'] = trade
+                result['position'] = None
+
+        return result
+
+    def _handle_bearish_signal(self, current_bar: pd.Series, current_position: Dict,
+                               market_id: str) -> Dict:
+        """Handle BEARISH signal - enter SHORT or exit LONG
+
+        Returns:
+            Dict with 'trade' (if any) and 'position' (updated or None)
+        """
+        result = {'trade': None, 'position': current_position}
+
+        if not current_position:
+            # No position - enter SHORT if product allows
+            if self.product.can_trade_direction(PositionDirection.SHORT):
+                new_position = self._try_enter_position(current_bar, market_id, PositionDirection.SHORT)
+                if new_position:
+                    self._notify_entry_signal(
+                        market_id,
+                        new_position['entry_price'],
+                        new_position['size']
+                    )
+                    result['position'] = new_position
+
+        elif current_position['direction'] == 'LONG':
+            # Have LONG position - exit it
+            trade = self._try_exit_position(current_bar, current_position)
+            if trade:
+                self._notify_exit_signal(market_id, trade['exit'], trade['pnl'])
+                logger.info(f"Exited LONG at {current_bar['close']}")
+                result['trade'] = trade
+                result['position'] = None
+
+        return result
+
+    def _try_enter_position(self, current_bar: pd.Series, market_id: str,
+                            direction: PositionDirection) -> Dict:
+        """Attempt to enter a position in specified direction"""
+
         past_data_dict = self.data_manager.get_past_data()
         past_data = past_data_dict[market_id]
 
-        # Create trading signal
+        # Create trading signal with specified direction
         trading_signal = TradingSignal(
             symbol=market_id,
-            direction=PositionDirection.LONG,
+            direction=direction,  # ← Now parameterized
             strength=1.0,
             entry_price=current_bar['close'],
             timestamp=current_bar.name
         )
 
-        # Calculate position size via MoneyManager
+        # MoneyManager calculates size based on direction
         position_size = self.money_manager.calculate_position_size(
             trading_signal,
             past_data
@@ -268,10 +333,10 @@ class BaseStrategy(StrategyInterface):
             position = {
                 'entry_price': current_bar['close'],
                 'size': position_size,
-                'direction': 'LONG',
+                'direction': direction.value,  # Store as string: 'LONG' or 'SHORT'
                 'stop_loss': stop_loss
             }
-            logger.debug(f"Entered LONG at {current_bar['close']}, size={position_size}")
+            logger.debug(f"Entered {direction.value} at {current_bar['close']}, size={position_size}")
             return position
 
         return None

@@ -186,7 +186,6 @@ class BacktestOrchestrator:
             # Add components
             created_strategy.addPredictor("placeholder_predictor")
             created_strategy.addOptimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
-            created_strategy.addRunner("placeholder_runner")
             created_strategy.addMetric("placeholder_metric")
 
             strategy_instances.append(created_strategy)

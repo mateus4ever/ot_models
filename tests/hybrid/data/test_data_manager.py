@@ -73,18 +73,19 @@ def create_source_config(file_paths=None, directory_path=None):
 # GIVEN steps - Setup and preconditions
 # =============================================================================
 
-@given('the system has proper directory structure')
-def step_system_directory_structure(test_context):
-    """Verify basic directory structure exists and establish centralized paths"""
-    root_path = Path(__file__).parent.parent.parent.parent
+@given(parsers.parse('config files are available in {config_directory}'))
+def load_configuration_file(test_context, config_directory):
+    """Load configuration file from specified directory"""
 
-    # Check key directories exist
-    assert (root_path / 'src').exists(), "src directory missing"
-    assert (root_path / 'tests').exists(), "tests directory missing"
+    root_path = Path(__file__).parent.parent.parent
+    config_path = root_path / config_directory
 
-    # Establish centralized path configuration
+    assert config_path.exists(), f"Configuration file not found: {config_path}"
+
+    config = UnifiedConfig(config_path=str(config_path), environment="test")
+
+    test_context['config'] = config
     test_context['root_path'] = root_path
-    test_context['config_path'] = root_path / 'tests' / 'config' / 'smoke_config.json'
 
 
 @given(parsers.parse('test data files are available in {base_data_directory}'))
@@ -97,6 +98,7 @@ def step_test_data_files_available(test_context, base_data_directory):
     assert base_data_path.exists(), f"Base data directory {base_data_directory} missing"
 
     # Check that subdirectories exist (don't check for CSV files in base)
+    # TODO: it's hardcoded and needs to be adapted
     small_dir = base_data_path / 'small'
     big_dir = base_data_path / 'big'
 
@@ -180,9 +182,7 @@ def step_loaded_data_with_temporal_boundaries(test_context):
     """Setup DataManager with loaded data and temporal boundaries"""
 
     # Use centralized config path from Background
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
-
+    config = test_context['config']
     data_manager = DataManager(config)
 
     # Create source_config for Strategy pattern
@@ -206,9 +206,7 @@ def step_previously_loaded_market_data(test_context, market_name):
     """Setup previously loaded data for caching test"""
 
     # Use centralized config path
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
-
+    config = test_context['config']
     data_manager = DataManager(config)
 
     # Create source_config for directory discovery (caching scenario)
@@ -237,9 +235,7 @@ def step_load_multiple_market_data(test_context):
     """Load multiple market data through DataManager controller"""
 
     # Use centralized config path from Background
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
-
+    config = test_context['config']
     data_manager = DataManager(config)
 
     # Create appropriate source_config based on scenario
@@ -275,16 +271,8 @@ def step_load_multiple_market_data(test_context):
 def step_load_data_initialize_temporal_pointer(test_context, training_records):
     """Load data and initialize temporal pointer through controller"""
 
-    # Ensure context exists
-    if 'config_path' not in test_context:
-        root_path = Path(__file__).parent.parent.parent.parent
-        test_context['root_path'] = root_path
-        test_context['config_path'] = root_path / 'tests' / 'config' / 'smoke_config.json'
-        test_context['base_data_directory'] = root_path / 'tests' / 'data'
-
-    # Use centralized config path
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
+    # Use the config that was already loaded in Background
+    config = test_context['config']
 
     data_manager = DataManager(config)
 
@@ -303,7 +291,6 @@ def step_load_data_initialize_temporal_pointer(test_context, training_records):
     except Exception as e:
         test_context['temporal_setup_success'] = False
         test_context['temporal_error'] = e
-
 
 @when('I query current pointer position')
 def step_query_current_pointer_position(test_context):
@@ -435,9 +422,7 @@ def step_attempt_load_market_data(test_context):
     """Attempt to load market data from invalid directory"""
 
     # Use centralized config path
-    config_path = test_context['config_path']
-    config = UnifiedConfig(config_path=str(config_path))
-
+    config = test_context['config']
     data_manager = DataManager(config)
 
     # Create source_config for invalid directory

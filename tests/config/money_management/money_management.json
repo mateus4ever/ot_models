@@ -36,7 +36,7 @@
         "max_drawdown": 0.20,
         "atr_period": 14,
         "starting_atr": 0.000890,
-        "calculation_tolerance": 0.00001
+        "calculation_tolerance": 0.000001
       },
       "volatility_based": {
         "volatility_multiplier": 2.0,

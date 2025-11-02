@@ -221,12 +221,22 @@ def step_portfolio_available_cash(test_context, available_cash):
     money_manager.portfolio.available_cash = available_cash
     test_context['expected_available_cash'] = available_cash
 
-@given(parsers.parse('the portfolio has {max_drawdown:f} maximum drawdown'))
-def step_portfolio_maximum_drawdown(test_context, max_drawdown):
-    """Set portfolio maximum drawdown"""
+
+@given(parsers.parse('the portfolio is currently at {current_drawdown} drawdown from peak'))
+def step_portfolio_current_drawdown(test_context, current_drawdown):
+    """Set portfolio equity to reflect current drawdown from peak"""
     money_manager = test_context['money_manager']
-    money_manager.portfolio.max_drawdown = max_drawdown
-    test_context['expected_max_drawdown'] = max_drawdown
+    portfolio = money_manager.portfolio
+
+    # Calculate total_equity based on drawdown from peak
+    # drawdown = (peak - total) / peak
+    # Therefore: total = peak * (1 - drawdown)
+
+    current_drawdown = float(current_drawdown)
+
+    portfolio.total_equity = portfolio.peak_equity * (1.0 - current_drawdown)
+
+    test_context['current_drawdown'] = current_drawdown
 
 
 @given(parsers.parse('I have money management configuration with {sizer_type} position sizer'))

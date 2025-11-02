@@ -1,6 +1,5 @@
 {
   "signals": {
-    "training_window": 50,
     "trend_following": {
       "simplemovingaveragecrossover": {
         "fast_period": 10,

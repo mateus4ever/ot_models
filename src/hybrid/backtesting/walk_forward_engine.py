@@ -13,7 +13,6 @@ from datetime import datetime
 
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.hybrid_strategy import HybridStrategy
-from .engine import BacktestEngine
 from .metrics import MetricsCalculator
 
 logger = logging.getLogger(__name__)
@@ -162,7 +161,6 @@ class WalkForwardBacktester:
         # Initialize components
         self.temporal_guard = TemporalDataGuard(config)
         self.retraining_strategy = WalkForwardRetrainingStrategy(config)
-        self.backtest_engine = BacktestEngine(config)
         self.metrics_calculator = MetricsCalculator(config)
 
     def _cache_config_values(self):

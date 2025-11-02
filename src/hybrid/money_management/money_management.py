@@ -15,6 +15,7 @@ from .position_sizers.volatility_based_sizer import VolatilityBasedSizer
 from .risk_managers.atr_based_risk_manager import ATRBasedRiskManager
 from .risk_managers.volatility_based_risk_manager import VolatilityBasedRiskManager
 from .risk_managers.portfolio_heat_risk_manager import PortfolioHeatRiskManager
+from ..costs.transaction_costs import SimpleTransactionCostModel
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +27,13 @@ class MoneyManager:
     a stable external interface.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, cost_model=None):
         """
-        Initialize MoneyManager with configuration
+        Initialize MoneyManager with configuration and cost_model
 
         Args:
-            config: UnifiedConfig instance
+            config: Configuration object
+            cost_model: Optional external cost model (for shared instance)
         """
         try:
             logger.debug(f"Constructor called with {type(config)}")
@@ -54,6 +56,7 @@ class MoneyManager:
             # Initialize strategy components
             self.position_sizer = self._create_position_sizer()
             self.risk_manager = self._create_risk_manager()
+            self.cost_model = cost_model if cost_model else SimpleTransactionCostModel(config)
 
             logger.info(f"MoneyManager initialized with {self.position_sizer.get_strategy_name()} "
                         f"position sizing and initial capital ${self.portfolio.total_equity:,.2f}")
@@ -237,6 +240,29 @@ class MoneyManager:
     def should_reduce_risk(self) -> bool:
         """Check if risk should be reduced based on current portfolio state"""
         return self.risk_manager.should_reduce_risk(self.portfolio)
+
+    def calculate_position_costs(self, position, current_price, current_date):
+        """
+        Calculate costs for position at current state
+
+        Args:
+            position: Current position
+            current_price: Current market price
+            current_date: Current date
+
+        Returns:
+            Dictionary with cost breakdown
+        """
+        days_held = (current_date - position.entry_date).days
+        is_short = (position.direction == PositionDirection.SHORT)
+
+        return self.cost_model.calculate_total_trade_cost(
+            entry_price=position.entry_price,
+            exit_price=current_price,
+            quantity=position.quantity,
+            days_held=days_held,
+            is_short=is_short
+        )
 
     # =============================================================================
     # PRIVATE HELPER METHODS

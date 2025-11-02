@@ -3,102 +3,72 @@
     {
       "uuid": "win-trade-001",
       "timestamp": "2024-04-01T10:00:00Z",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "AAPL-WIN-001",
-          "amount": 10,
-          "type": "stock",
-          "entry_value": 100.0,
-          "exit_value": 115.0,
-          "currency": "USD",
-          "entry_fees": 2.0,
-          "exit_fees": 2.0,
-          "status": "closed",
-          "entry_timestamp": "2024-04-01T10:00:00Z",
-          "exit_timestamp": "2024-04-01T15:00:00Z"
-        }
-      ]
+      "entry_date": "2024-04-01T10:00:00Z",
+      "exit_date": "2024-04-01T15:00:00Z",
+      "entry_price": 100.0,
+      "exit_price": 115.0,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "AAPL-WIN-001",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     },
     {
       "uuid": "win-trade-002",
       "timestamp": "2024-04-02T10:00:00Z",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "MSFT-WIN-002",
-          "amount": 8,
-          "type": "stock",
-          "entry_value": 200.0,
-          "exit_value": 225.0,
-          "currency": "USD",
-          "entry_fees": 3.2,
-          "exit_fees": 3.6,
-          "status": "closed",
-          "entry_timestamp": "2024-04-02T10:00:00Z",
-          "exit_timestamp": "2024-04-02T15:00:00Z"
-        }
-      ]
+      "entry_date": "2024-04-02T10:00:00Z",
+      "exit_date": "2024-04-02T15:00:00Z",
+      "entry_price": 200.0,
+      "exit_price": 225.0,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MSFT-WIN-002",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     },
     {
       "uuid": "win-trade-003",
       "timestamp": "2024-04-03T10:00:00Z",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "GOOGL-WIN-003",
-          "amount": 5,
-          "type": "stock",
-          "entry_value": 150.0,
-          "exit_value": 180.0,
-          "currency": "USD",
-          "entry_fees": 1.5,
-          "exit_fees": 1.8,
-          "status": "closed",
-          "entry_timestamp": "2024-04-03T10:00:00Z",
-          "exit_timestamp": "2024-04-03T15:00:00Z"
-        }
-      ]
+      "entry_date": "2024-04-03T10:00:00Z",
+      "exit_date": "2024-04-03T15:00:00Z",
+      "entry_price": 150.0,
+      "exit_price": 180.0,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "GOOGL-WIN-003",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     },
     {
       "uuid": "win-trade-004",
       "timestamp": "2024-04-04T10:00:00Z",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "TSLA-WIN-004",
-          "amount": 12,
-          "type": "stock",
-          "entry_value": 80.0,
-          "exit_value": 95.0,
-          "currency": "USD",
-          "entry_fees": 2.4,
-          "exit_fees": 2.85,
-          "status": "closed",
-          "entry_timestamp": "2024-04-04T10:00:00Z",
-          "exit_timestamp": "2024-04-04T15:00:00Z"
-        }
-      ]
+      "entry_date": "2024-04-04T10:00:00Z",
+      "exit_date": "2024-04-04T15:00:00Z",
+      "entry_price": 80.0,
+      "exit_price": 95.0,
+      "quantity": 12,
+      "direction": "LONG",
+      "symbol": "TSLA-WIN-004",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     },
     {
       "uuid": "win-trade-005",
       "timestamp": "2024-04-05T10:00:00Z",
-      "status": "closed",
-      "positions": [
-        {
-          "name_of_position": "NVDA-WIN-005",
-          "amount": 6,
-          "type": "stock",
-          "entry_value": 300.0,
-          "exit_value": 340.0,
-          "currency": "USD",
-          "entry_fees": 3.6,
-          "exit_fees": 4.08,
-          "status": "closed",
-          "entry_timestamp": "2024-04-05T10:00:00Z",
-          "exit_timestamp": "2024-04-05T15:00:00Z"
-        }
-      ]
+      "entry_date": "2024-04-05T10:00:00Z",
+      "exit_date": "2024-04-05T15:00:00Z",
+      "entry_price": 300.0,
+      "exit_price": 340.0,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "NVDA-WIN-005",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed"
     }
   ],
   "metadata": {

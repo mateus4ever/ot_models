@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 from typing import Dict, Any
 import logging
+
+from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.signals.signal_interface import SignalInterface
 
 logger = logging.getLogger(__name__)
@@ -97,41 +99,32 @@ class SimpleMovingAverageCrossover(SignalInterface):
 
         logger.debug(f"Updated historical data, buffer size: {len(self.historical_data)}")
 
-    def generate_signal(self, current_data: pd.Series) -> str:
+    def generate_signal(self) -> MarketSignal:
         """
-        Generate SMA crossover trading signal
-
-        Args:
-            current_data: Current market data point with 'close' price
+        Generate SMA crossover trading signal based on current historical data
 
         Returns:
-            "BUY", "SELL", or "HOLD"
+            "BULLISH", "BEARISH", or "NEUTRAL"
 
         Raises:
-            ValueError: If insufficient historical data or missing 'close' price
+            ValueError: If insufficient historical data
         """
         if not self.is_ready:
             required_points = self.slow_period + self.crossover_confirmation
             raise ValueError(
                 f"Insufficient historical data. Need {required_points} points, have {len(self.historical_data)}")
 
-        if 'close' not in current_data:
-            raise ValueError("Current data must contain 'close' price")
+        # Calculate moving averages from historical data only
+        fast_sma = self.historical_data['close'].rolling(window=self.fast_period).mean()
+        slow_sma = self.historical_data['close'].rolling(window=self.slow_period).mean()
 
-        # Calculate moving averages using historical data + current price
-        current_price = current_data['close']
-        all_prices = pd.concat([self.historical_data['close'], pd.Series([current_price])])
-
-        fast_sma = all_prices.rolling(window=self.fast_period).mean()
-        slow_sma = all_prices.rolling(window=self.slow_period).mean()
-
-        # Check for crossover
+        # Detect crossover - returns product-agnostic market view
         signal = self._detect_crossover(fast_sma, slow_sma)
 
-        logger.debug(f"SMA Signal: {signal}, Fast SMA: {fast_sma.iloc[-1]:.4f}, Slow SMA: {slow_sma.iloc[-1]:.4f}")
+        logger.debug(f"Market Signal: {signal}, Fast SMA: {fast_sma.iloc[-1]:.4f}, Slow SMA: {slow_sma.iloc[-1]:.4f}")
         return signal
 
-    def _detect_crossover(self, fast_sma: pd.Series, slow_sma: pd.Series) -> str:
+    def _detect_crossover(self, fast_sma: pd.Series, slow_sma: pd.Series) -> MarketSignal:
         """
         Detect crossover events between fast and slow moving averages
 
@@ -140,11 +133,11 @@ class SimpleMovingAverageCrossover(SignalInterface):
             slow_sma: Slow moving average series
 
         Returns:
-            Signal based on crossover detection
+            Signal based on crossover detection: "BULLISH", "BEARISH", or "NEUTRAL"
         """
         # Need at least confirmation periods + 1 to detect crossover
         if len(fast_sma) < self.crossover_confirmation + 1:
-            return "HOLD"
+            return MarketSignal.NEUTRAL
 
         # Current and previous values
         current_fast = fast_sma.iloc[-1]
@@ -155,22 +148,22 @@ class SimpleMovingAverageCrossover(SignalInterface):
         # Detect crossover with confirmation
         if prev_fast <= prev_slow and current_fast > current_slow:
             # Golden cross - fast MA crossed above slow MA
-            signal = "BUY"
+            signal = MarketSignal.BULLISH
             self.last_crossover_signal = signal
             logger.debug(f"Golden cross detected: fast crossed above slow")
         elif prev_fast >= prev_slow and current_fast < current_slow:
             # Death cross - fast MA crossed below slow MA
-            signal = "SELL"
+            signal = MarketSignal.BEARISH
             self.last_crossover_signal = signal
             logger.debug(f"Death cross detected: fast crossed below slow")
         else:
             # No crossover - maintain trend direction or hold
             if current_fast > current_slow:
-                signal = "HOLD"  # Uptrend but no fresh signal
+                signal = MarketSignal.NEUTRAL
             elif current_fast < current_slow:
-                signal = "HOLD"  # Downtrend but no fresh signal
+                signal = MarketSignal.NEUTRAL
             else:
-                signal = "HOLD"  # MAs are equal
+                signal = MarketSignal.NEUTRAL
 
         return signal
 

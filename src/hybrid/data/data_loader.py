@@ -113,7 +113,7 @@ class DataLoader(ABC):
         return "UNKNOWN"
 
     def _load_csv_file(self, file_path: str) -> pd.DataFrame:
-        """Load CSV file with proper parsing
+        """Load CSV file with proper parsing using configured format
 
         Args:
             file_path: Path to CSV file
@@ -123,27 +123,11 @@ class DataLoader(ABC):
         """
         logger.debug(f"Starting CSV file load: {file_path}")
 
+        csv_format = self._get_csv_format_config()
+
         try:
-            # Load CSV with semicolon delimiter
-            #TODO: this is static and must be somewhat more modular. yahoo has for example a header in first row, a timestamp (different), "vol","high","low","close","volume"
-            logger.debug("Loading CSV with semicolon delimiter, no headers")
-            df = pd.read_csv(
-                file_path,
-                delimiter=';',
-                header=None,
-                names=['timestamp', 'open', 'high', 'low', 'close', 'volume']
-            )
-
-            logger.debug(f"Raw CSV loaded: {len(df)} rows, {len(df.columns)} columns")
-
-            # Convert timestamp to datetime and set as index
-            logger.debug("Converting timestamp column to datetime index")
-            df['timestamp'] = pd.to_datetime(df['timestamp'], format='%Y%m%d %H%M%S')
-            df.set_index('timestamp', inplace=True)
-
-            # Sort by timestamp
-            logger.debug("Sorting data by timestamp")
-            df.sort_index(inplace=True)
+            df = self._read_csv_with_config(file_path, csv_format)
+            df = self._normalize_dataframe(df, csv_format)
 
             logger.info(f"Successfully loaded and processed {len(df)} rows from {file_path}")
             logger.debug(f"Data date range: {df.index[0]} to {df.index[-1]}")
@@ -156,6 +140,122 @@ class DataLoader(ABC):
             logger.debug(f"CSV loading error details", exc_info=True)
             raise
 
+    def _get_csv_format_config(self) -> dict:
+        """Get and validate CSV format configuration
+
+        Returns:
+            CSV format configuration dictionary
+
+        Raises:
+            ValueError: If required configuration is missing
+        """
+        csv_format = self.config.get('csv_format')
+        if not csv_format:
+            raise ValueError("Missing 'csv_format' section in configuration")
+
+        # Validate required fields
+        delimiter = csv_format.get('delimiter')
+        has_header = csv_format.get('has_header')
+        timestamp_column = csv_format.get('timestamp_column')
+
+        if delimiter is None:
+            raise ValueError("Missing 'delimiter' in csv_format configuration")
+        if has_header is None:
+            raise ValueError("Missing 'has_header' in csv_format configuration")
+        if timestamp_column is None:
+            raise ValueError("Missing 'timestamp_column' in csv_format configuration")
+
+        return csv_format
+
+    def _read_csv_with_config(self, file_path: str, csv_format: dict) -> pd.DataFrame:
+        """Read CSV file using configuration parameters
+
+        Args:
+            file_path: Path to CSV file
+            csv_format: CSV format configuration
+
+        Returns:
+            Raw DataFrame from CSV
+        """
+        delimiter = csv_format.get('delimiter')
+        has_header = csv_format.get('has_header')
+        column_names = csv_format.get('column_names')
+
+        # Build pd.read_csv parameters dynamically
+        read_params = {'delimiter': delimiter}
+
+        if has_header:
+            read_params['header'] = 0
+        else:
+            read_params['header'] = None
+            if column_names:
+                read_params['names'] = column_names
+            else:
+                raise ValueError("'column_names' required when has_header=false")
+
+        logger.debug(f"Loading CSV with delimiter='{delimiter}', has_header={has_header}")
+        df = pd.read_csv(file_path, **read_params)
+        logger.debug(f"Raw CSV loaded: {len(df)} rows, {len(df.columns)} columns")
+
+        return df
+
+    def _normalize_dataframe(self, df: pd.DataFrame, csv_format: dict) -> pd.DataFrame:
+        """Normalize dataframe columns and set timestamp index
+
+        Args:
+            df: Raw dataframe
+            csv_format: CSV format configuration
+
+        Returns:
+            Normalized dataframe with datetime index
+        """
+        # Normalize column names to lowercase
+        df.columns = df.columns.str.lower()
+        logger.debug(f"Normalized columns: {list(df.columns)}")
+
+        # Convert timestamp and set as index
+        df = self._set_timestamp_index(df, csv_format)
+
+        # Sort by timestamp
+        df.sort_index(inplace=True)
+        logger.debug("Sorted data by timestamp")
+
+        return df
+
+    def _set_timestamp_index(self, df: pd.DataFrame, csv_format: dict) -> pd.DataFrame:
+        """Convert timestamp column to datetime and set as index
+
+        Args:
+            df: Dataframe with normalized columns
+            csv_format: CSV format configuration
+
+        Returns:
+            Dataframe with datetime index
+        """
+        timestamp_column = csv_format.get('timestamp_column').lower()
+        timestamp_format = csv_format.get('timestamp_format')
+
+        if timestamp_column not in df.columns:
+            raise ValueError(
+                f"Timestamp column '{timestamp_column}' not found. "
+                f"Available columns: {list(df.columns)}"
+            )
+
+        logger.debug(f"Converting '{timestamp_column}' to datetime index")
+
+        # Convert to datetime
+        if timestamp_format:
+            if timestamp_format == "ISO8601":
+                df[timestamp_column] = pd.to_datetime(df[timestamp_column])
+            else:
+                df[timestamp_column] = pd.to_datetime(df[timestamp_column], format=timestamp_format)
+        else:
+            df[timestamp_column] = pd.to_datetime(df[timestamp_column])
+
+        # Set as index
+        df.set_index(timestamp_column, inplace=True)
+
+        return df
     def _consolidate_market_data(self, market_id: str, file_paths: List[str]) -> pd.DataFrame:
         """Consolidate multiple CSV files into single market dataset
 

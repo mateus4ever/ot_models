@@ -4,7 +4,7 @@ Feature: MoneyManager Core Service Functionality
   So that the service loads configuration and calculates position sizes correctly
 
 Background:
-  Given money_management.json is available in tests/config and loaded
+  Given money_management.json is available in tests/config/money_management and loaded
 
   @money_management @initialization @core
   Scenario: MoneyManager service initialization
@@ -98,12 +98,12 @@ Scenario Outline: Portfolio summary provides complete metrics
   Scenario Outline: Risk constraint validation with specific conditions
     Given I have a MoneyManager with risk limits
     And the portfolio has <daily_pnl> daily PnL
-    And the portfolio has <max_drawdown> maximum drawdown
+    And the portfolio is currently at <current_drawdown> drawdown from peak
     When I check if risk should be reduced
     Then the risk evaluation should return <expected_result>
 
     Examples:
-      | daily_pnl | max_drawdown | expected_result |
+      | daily_pnl |  current_drawdown | expected_result |
       | -2000     | 0.03         | false          |
       | -6000     | 0.15         | true           |
       | -3000     | 0.25         | true           |

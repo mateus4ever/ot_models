@@ -8,7 +8,6 @@ from src.hybrid.optimization.optimization_interface import IOptimizerBase
 from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.hybrid_strategy import HybridStrategy
-from src.hybrid.backtesting import BacktestEngine
 
 # Bayesian optimization imports
 try:
@@ -136,122 +135,122 @@ class BayesianOptimizer(IOptimizerBase):
         print(f"  ✓ No data leakage - models trained on past, tested on future")
         print("✓ Cache initialization complete - ready for fresh signal generation per trial!\n")
 
-    def objective_function(self, params_list: List[float]) -> float:
-        """
-        FIXED: Generate fresh signals for each optimization trial
-
-        This ensures position sizing and other strategy parameters
-        are properly applied for each parameter combination
-        """
-        array_config = self.config.get_section('array_indexing', {})
-        math_config = self.config.get_section('mathematical_operations', {})
-        one = math_config.get('unity')
-
-        self.evaluation_count += one
-
-        # Get parameter indices from config
-        stop_loss_index = array_config.get('first_index')
-        take_profit_index = array_config.get('second_index')
-        max_position_index = array_config.get('third_index')
-
-        params = {
-            'stop_loss_pct': params_list[stop_loss_index],
-            'take_profit_pct': params_list[take_profit_index],
-            'max_position_size': params_list[max_position_index]
-        }
-
-        try:
-            # Create optimized config with parameters
-            new_config = UnifiedConfig(self.config.config_path)
-            new_config.config = self.config.config.copy()
-
-            # Get debug config values
-            debug_config = self.config.get_section('debug_configuration', {})
-            general_config = self.config.get_section('general', {})
-            backtesting_config = self.config.get_section('backtesting', {})
-
-            updates = {
-                'risk_management': params,
-                'general': {
-                    'verbose': general_config.get('verbose'),
-                    'save_signals': general_config.get('save_signals'),
-                    'debug_mode': general_config.get('debug_mode')
-                },
-                'debug_configuration': {
-                    'enable_metrics_debug': debug_config.get('enable_metrics_debug'),
-                    'enable_direct_math_check': debug_config.get('enable_direct_math_check'),
-                    'enable_trade_debug': debug_config.get('enable_trade_debug'),
-                    'enable_position_debug': debug_config.get('enable_position_debug'),
-                    'print_trade_details': debug_config.get('print_trade_details'),
-                    'log_trades': debug_config.get('log_trades'),
-                    'trade_debug_count': math_config.get('zero'),
-                    'enable_fee_debug': debug_config.get('enable_fee_debug')
-                },
-                'backtesting': {
-                    'print_trades': backtesting_config.get('print_trades'),
-                    'verbose_output': backtesting_config.get('verbose_output')
-                }
-            }
-            new_config.update_config(updates)
-
-            # KEY FIX: Create fresh strategy with optimized config for signal generation
-            fresh_strategy = HybridStrategy(new_config)
-
-            # Copy the trained ML models from base strategy to avoid retraining
-            fresh_strategy.ml_manager = self.base_trained_strategy.ml_manager
-            fresh_strategy.is_trained = True
-            fresh_strategy.training_results = self.base_trained_strategy.training_results
-
-            # Generate fresh signals with the optimized configuration
-            fresh_signals = fresh_strategy.generate_signals(self.cached_test_data)
-
-            # Run backtest with fresh signals
-            backtest_engine = BacktestEngine(new_config)
-            backtest_results = backtest_engine.run_backtest(self.cached_test_data, fresh_signals)
-
-            fitness = self.calculate_fitness(backtest_results)
-
-            # Get keys from config
-            result_keys = self.config.get_section('result_keys', {})
-            zero_default = math_config.get('zero')
-            true_value = self.config.get_section('boolean_values', {}).get('true', True)
-
-            # Store evaluation
-            self.all_evaluations.append({
-                'evaluation': self.evaluation_count,
-                'params': params.copy(),
-                'fitness': fitness,
-                'return': backtest_results.get(result_keys.get('total_return', 'total_return'), zero_default),
-                'sharpe': backtest_results.get(result_keys.get('sharpe_ratio', 'sharpe_ratio'), zero_default),
-                'trades': backtest_results.get(result_keys.get('num_trades', 'num_trades'), zero_default),
-                'success': true_value
-            })
-
-            return -fitness  # Negative for minimization
-
-        except Exception as e:
-            # Error handling
-            import traceback
-            import sys
-
-            exc_type, exc_value, exc_traceback = sys.exc_info()
-
-            if "unsupported operand type(s) for %" in str(e):
-                print(f"\n=== MODULO ERROR FOUND IN EVALUATION {self.evaluation_count} ===")
-                print(f"Error message: {e}")
-                traceback.print_exc()
-                print("=== END MODULO ERROR DETAILS ===\n")
-            else:
-                print(f"Error in evaluation {self.evaluation_count}: {e}")
-
-            self.all_evaluations.append({
-                'evaluation': self.evaluation_count,
-                'params': params.copy(),
-                'fitness': self.severe_penalty,
-                'success': False,
-                'error': str(e)
-            })
-            return abs(self.severe_penalty)
+    # def objective_function(self, params_list: List[float]) -> float:
+    #     """
+    #     FIXED: Generate fresh signals for each optimization trial
+    #
+    #     This ensures position sizing and other strategy parameters
+    #     are properly applied for each parameter combination
+    #     """
+    #     array_config = self.config.get_section('array_indexing', {})
+    #     math_config = self.config.get_section('mathematical_operations', {})
+    #     one = math_config.get('unity')
+    #
+    #     self.evaluation_count += one
+    #
+    #     # Get parameter indices from config
+    #     stop_loss_index = array_config.get('first_index')
+    #     take_profit_index = array_config.get('second_index')
+    #     max_position_index = array_config.get('third_index')
+    #
+    #     params = {
+    #         'stop_loss_pct': params_list[stop_loss_index],
+    #         'take_profit_pct': params_list[take_profit_index],
+    #         'max_position_size': params_list[max_position_index]
+    #     }
+    #
+    #     try:
+    #         # Create optimized config with parameters
+    #         new_config = UnifiedConfig(self.config.config_path)
+    #         new_config.config = self.config.config.copy()
+    #
+    #         # Get debug config values
+    #         debug_config = self.config.get_section('debug_configuration', {})
+    #         general_config = self.config.get_section('general', {})
+    #         backtesting_config = self.config.get_section('backtesting', {})
+    #
+    #         updates = {
+    #             'risk_management': params,
+    #             'general': {
+    #                 'verbose': general_config.get('verbose'),
+    #                 'save_signals': general_config.get('save_signals'),
+    #                 'debug_mode': general_config.get('debug_mode')
+    #             },
+    #             'debug_configuration': {
+    #                 'enable_metrics_debug': debug_config.get('enable_metrics_debug'),
+    #                 'enable_direct_math_check': debug_config.get('enable_direct_math_check'),
+    #                 'enable_trade_debug': debug_config.get('enable_trade_debug'),
+    #                 'enable_position_debug': debug_config.get('enable_position_debug'),
+    #                 'print_trade_details': debug_config.get('print_trade_details'),
+    #                 'log_trades': debug_config.get('log_trades'),
+    #                 'trade_debug_count': math_config.get('zero'),
+    #                 'enable_fee_debug': debug_config.get('enable_fee_debug')
+    #             },
+    #             'backtesting': {
+    #                 'print_trades': backtesting_config.get('print_trades'),
+    #                 'verbose_output': backtesting_config.get('verbose_output')
+    #             }
+    #         }
+    #         new_config.update_config(updates)
+    #
+    #         # KEY FIX: Create fresh strategy with optimized config for signal generation
+    #         fresh_strategy = HybridStrategy(new_config)
+    #
+    #         # Copy the trained ML models from base strategy to avoid retraining
+    #         fresh_strategy.ml_manager = self.base_trained_strategy.ml_manager
+    #         fresh_strategy.is_trained = True
+    #         fresh_strategy.training_results = self.base_trained_strategy.training_results
+    #
+    #         # Generate fresh signals with the optimized configuration
+    #         fresh_signals = fresh_strategy.generate_signals(self.cached_test_data)
+    #
+    #         # Run backtest with fresh signals
+    #         backtest_engine = BacktestEngine(new_config)
+    #         backtest_results = backtest_engine.run_backtest(self.cached_test_data, fresh_signals)
+    #
+    #         fitness = self.calculate_fitness(backtest_results)
+    #
+    #         # Get keys from config
+    #         result_keys = self.config.get_section('result_keys', {})
+    #         zero_default = math_config.get('zero')
+    #         true_value = self.config.get_section('boolean_values', {}).get('true', True)
+    #
+    #         # Store evaluation
+    #         self.all_evaluations.append({
+    #             'evaluation': self.evaluation_count,
+    #             'params': params.copy(),
+    #             'fitness': fitness,
+    #             'return': backtest_results.get(result_keys.get('total_return', 'total_return'), zero_default),
+    #             'sharpe': backtest_results.get(result_keys.get('sharpe_ratio', 'sharpe_ratio'), zero_default),
+    #             'trades': backtest_results.get(result_keys.get('num_trades', 'num_trades'), zero_default),
+    #             'success': true_value
+    #         })
+    #
+    #         return -fitness  # Negative for minimization
+    #
+    #     except Exception as e:
+    #         # Error handling
+    #         import traceback
+    #         import sys
+    #
+    #         exc_type, exc_value, exc_traceback = sys.exc_info()
+    #
+    #         if "unsupported operand type(s) for %" in str(e):
+    #             print(f"\n=== MODULO ERROR FOUND IN EVALUATION {self.evaluation_count} ===")
+    #             print(f"Error message: {e}")
+    #             traceback.print_exc()
+    #             print("=== END MODULO ERROR DETAILS ===\n")
+    #         else:
+    #             print(f"Error in evaluation {self.evaluation_count}: {e}")
+    #
+    #         self.all_evaluations.append({
+    #             'evaluation': self.evaluation_count,
+    #             'params': params.copy(),
+    #             'fitness': self.severe_penalty,
+    #             'success': False,
+    #             'error': str(e)
+    #         })
+    #         return abs(self.severe_penalty)
 
     def _print_optimization_results(self, valid_evaluations: List[Dict]):
         """Print formatted optimization results table with ML component quality metrics"""

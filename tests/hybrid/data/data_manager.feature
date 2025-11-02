@@ -4,8 +4,8 @@ Feature: DataManager Multi-Market Data Loading and Temporal Management
   So that strategies can access clean data while preventing data leakage
 
   Background:
-    Given the system has proper directory structure
-    And test data files are available in tests/data
+    Given config files are available in config/data
+    And test data files are available in data
 
   @data @loading @multi-market
   Scenario Outline: Multi-market data loading coordination

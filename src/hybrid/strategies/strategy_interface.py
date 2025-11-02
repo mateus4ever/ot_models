@@ -38,10 +38,6 @@ class StrategyInterface(Protocol):
         """Add predictor component to strategy"""
         ...
 
-    def addRunner(self, runner: Any) -> None:
-        """Add runner component to strategy"""
-        ...
-
     def addMetric(self, metric: Any) -> None:
         """Add metric component to strategy"""
         ...

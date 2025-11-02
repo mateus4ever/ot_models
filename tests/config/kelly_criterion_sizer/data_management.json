@@ -12,10 +12,6 @@
     "validate_on_load": true,
     "data_file_path": "/results/trade/base_trade.json"
   },
-  "transaction_costs": {
-    "commission_pct": 0.001,
-    "slippage_pct": 0.0005
-  },
   "backtesting": {
     "method": "walk_forward",
     "initial_capital": 1000,

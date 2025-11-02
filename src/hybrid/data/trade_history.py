@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 from sortedcontainers import SortedDict
 
+from src.hybrid.costs.transaction_costs import SimpleTransactionCostModel
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +15,16 @@ class PositionOutcome:
     """Represents the outcome of a single position"""
 
     def __init__(self, outcome: str = 'unknown', gross_pnl: float = 0.0,
-                 net_pnl: float = 0.0, fees: float = 0.0):
+                 net_pnl: float = 0.0, fees: float = 0.0, cost_model=None):
+        """
+        Initialize TradeHistory
+
+        Args:
+            config: Configuration dictionary
+            cost_model: Optional external cost model (for shared instance)
+        """
+
+
         self.outcome = outcome
         self.gross_pnl = gross_pnl
         self.net_pnl = net_pnl
@@ -43,8 +54,8 @@ class TradeHistory:
     All parameters are configuration-driven with no hardcoded values.
     """
 
-    def __init__(self, config):
-        """Initialize TradeHistory with configuration
+    def __init__(self, config, cost_model=None):
+        """Initialize TradeHistory with configuration and cost_model
 
         Args:
             config: UnifiedConfig instance containing trade_history and base configuration
@@ -73,9 +84,10 @@ class TradeHistory:
                 self.base_currency = 'USD'
 
         # Configuration-driven parameters
-        self.default_lookback_periods = trade_config.get('default_lookback_periods', 0)
-        self.save_backup_on_load = trade_config.get('save_backup_on_load', False)
-        self.validate_on_load = trade_config.get('validate_on_load', True)
+        self.default_lookback_periods = trade_config.get('default_lookback_periods')
+        self.save_backup_on_load = trade_config.get('save_backup_on_load')
+        self.validate_on_load = trade_config.get('validate_on_load')
+        self.break_even_tolerance = trade_config.get('break_even_tolerance')
 
         # Timestamp-ordered trade storage
         self.trades = SortedDict()  # key: timestamp, value: trade_data
@@ -84,21 +96,15 @@ class TradeHistory:
         self._stats_cache = {}
         self._cache_valid = False
 
+        self.cost_model = cost_model if cost_model else SimpleTransactionCostModel(config)
+
         logger.info(f"TradeHistory initialized with base_currency: {self.base_currency}")
         logger.debug(f"Configuration: lookback={self.default_lookback_periods}, "
                      f"backup={self.save_backup_on_load}, validate={self.validate_on_load}")
 
     def load_from_json(self, file_path: str) -> bool:
-        """Load trade data from JSON file
-
-        Args:
-            file_path: Path to JSON file containing trade data
-
-        Returns:
-            True if loading successful, False otherwise
-        """
+        """Load trade data from JSON file"""
         try:
-
             file_path = self._resolve_trade_file_path(file_path)
 
             if not file_path.exists():
@@ -124,19 +130,16 @@ class TradeHistory:
             self.trades.clear()
             self._invalidate_cache()
 
-            # Load trades into sorted storage
+            # CHANGED: Use add_trade() instead of direct storage
             loaded_count = 0
             for trade_data in trades_data:
-                if self._validate_trade_structure(trade_data):
-                    timestamp = self._parse_timestamp(trade_data['timestamp'])
-                    if timestamp:
-                        self.trades[timestamp] = trade_data
-                        loaded_count += 1
-                    else:
-                        logger.warning(f"Skipping trade with invalid timestamp: {trade_data.get('uuid', 'unknown')}")
+                logger.info(f"Attempting to add trade: {trade_data.get('uuid', 'unknown')}")
+                result = self.add_trade(trade_data)
+                logger.info(f"Result: {result}")
+                if result:
+                    loaded_count += 1
                 else:
-                    logger.warning(f"Skipping trade with invalid structure: {trade_data.get('uuid', 'unknown')}")
-
+                    logger.error(f"Failed to add trade: {trade_data.get('uuid', 'unknown')}")
             logger.info(f"Successfully loaded {loaded_count} trades from {len(trades_data)} records")
 
             # Optional backup save
@@ -204,13 +207,8 @@ class TradeHistory:
             return False
 
     def add_trade(self, trade_data: Dict[str, Any]) -> bool:
-        """Add new trade to history
-
-        Args:
-            trade_data: Dictionary containing trade information
-
-        Returns:
-            True if trade added successfully, False otherwise
+        """
+        Add new trade to history with automatic cost calculation
         """
         try:
             if not self._validate_trade_structure(trade_data):
@@ -222,15 +220,103 @@ class TradeHistory:
                 logger.error(f"Invalid timestamp in trade: {trade_data.get('uuid', 'unknown')}")
                 return False
 
+            # Check if trade is closed
+            status = trade_data.get('status', 'closed')
+
+            if status == 'closed':
+                # Calculate costs for closed trades
+                if 'costs' not in trade_data:
+                    costs = self._calculate_trade_costs(trade_data)
+                    trade_data['costs'] = costs
+
+                    # Calculate P&L if not provided
+                    if 'gross_pnl' not in trade_data:
+                        gross_pnl = self._calculate_gross_pnl(trade_data)
+                        trade_data['gross_pnl'] = gross_pnl
+
+                    if 'net_pnl' not in trade_data:
+                        trade_data['net_pnl'] = trade_data['gross_pnl'] - costs['total']
+            else:
+                # Open trade - no cost calculation yet
+                logger.debug(f"Open trade added without cost calculation: {trade_data.get('uuid', 'unknown')}")
+
             self.trades[timestamp] = trade_data
             self._invalidate_cache()
 
-            logger.debug(f"Added trade: {trade_data.get('uuid', 'unknown')} at {timestamp}")
+            logger.debug(f"Added trade: {trade_data.get('uuid', 'unknown')} at {timestamp}, status: {status}")
             return True
 
         except Exception as e:
             logger.error(f"Error adding trade: {e}")
             return False
+
+    def _calculate_trade_costs(self, trade_data: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Calculate costs for a trade using cost model
+
+        Args:
+            trade_data: Trade information
+
+        Returns:
+            Cost breakdown dictionary
+        """
+        # Extract required fields
+        entry_price = trade_data['entry_price']
+        exit_price = trade_data['exit_price']
+        quantity = trade_data['quantity']
+        entry_date = trade_data['entry_date']
+        exit_date = trade_data['exit_date']
+        direction = trade_data['direction']
+
+        # Parse dates if they're strings
+        if isinstance(entry_date, str):
+            entry_date = self._parse_timestamp(entry_date)
+        if isinstance(exit_date, str):
+            exit_date = self._parse_timestamp(exit_date)
+
+        # Calculate days held
+        days_held = (exit_date - entry_date).days
+
+        # Determine if short position
+        is_short = (direction == 'SHORT' or str(direction).upper() == 'SHORT')
+
+        # Use cost model to calculate
+        costs = self.cost_model.calculate_total_trade_cost(
+            entry_price=entry_price,
+            exit_price=exit_price,
+            quantity=quantity,
+            days_held=days_held,
+            is_short=is_short
+        )
+
+        return costs
+
+    def _calculate_gross_pnl(self, trade_data: Dict[str, Any]) -> float:
+        """
+        Calculate gross P&L (before costs)
+
+        Args:
+            trade_data: Trade information
+
+        Returns:
+            Gross profit/loss
+        """
+        entry_price = trade_data['entry_price']
+        exit_price = trade_data['exit_price']
+        quantity = trade_data['quantity']
+        direction = trade_data['direction']
+
+        # Determine if short position
+        is_short = (direction == 'SHORT' or str(direction).upper() == 'SHORT')
+
+        if is_short:
+            # Short: profit when price goes down
+            gross_pnl = (entry_price - exit_price) * quantity
+        else:
+            # Long: profit when price goes up
+            gross_pnl = (exit_price - entry_price) * quantity
+
+        return gross_pnl
 
     def get_position_outcomes(self, lookback_periods: Optional[int] = None) -> List[PositionOutcome]:
         """Get position outcomes for analysis
@@ -324,70 +410,79 @@ class TradeHistory:
         """Get number of closed positions"""
         return len(self._get_closed_positions())
 
+    @property
+    def all_positions(self) -> List[Dict[str, Any]]:
+        """Get all positions/trades as a list
+
+        Returns:
+            List of all trade dictionaries
+        """
+        return list(self.trades.values())
+
     def _get_closed_positions(self, lookback_periods: Optional[int] = None) -> List[Dict[str, Any]]:
-        """Get closed positions for statistics calculation
+        """Get closed trades for statistics calculation
 
         Args:
             lookback_periods: Number of recent trades to include (0 = all)
 
         Returns:
-            List of closed position dictionaries
+            List of closed trade dictionaries
         """
-        closed_positions = []
+        closed_trades = []
 
         # Get all trades in reverse chronological order for lookback
         trades_list = list(self.trades.values())
         trades_list.reverse()  # Most recent first
 
-        positions_collected = 0
-        max_positions = lookback_periods if lookback_periods and lookback_periods > 0 else float('inf')
+        trades_collected = 0
+        max_trades = lookback_periods if lookback_periods and lookback_periods > 0 else float('inf')
 
         for trade in trades_list:
-            if positions_collected >= max_positions:
+            if trades_collected >= max_trades:
                 break
 
-            for position in trade.get('positions', []):
-                if positions_collected >= max_positions:
-                    break
-
-                # Only include closed positions
-                if (position.get('status') == 'closed' and
-                        position.get('exit_value') is not None and
-                        position.get('exit_timestamp') is not None):
-                    closed_positions.append(position)
-                    positions_collected += 1
+            # Only include closed trades
+            status = trade.get('status', 'closed')
+            if status == 'closed' and trade.get('exit_price') is not None:
+                closed_trades.append(trade)
+                trades_collected += 1
 
         # Reverse to chronological order for consistent processing
-        closed_positions.reverse()
-        return closed_positions
+        closed_trades.reverse()
+        return closed_trades
 
-    def _calculate_position_outcome(self, position: Dict[str, Any]) -> PositionOutcome:
+    def _calculate_position_outcome(self, trade: Dict[str, Any]) -> PositionOutcome:
+        """Calculate outcome for a trade (new flat format)"""
         try:
-            direction = position.get('direction', 'long')  # Default to long
+            # Get values from new format
+            direction = trade.get('direction')
+            entry_price = float(trade.get('entry_price'))
+            exit_price = float(trade.get('exit_price'))
+            quantity = float(trade.get('quantity'))
 
-            entry_value = float(position.get('entry_value', 0))
-            exit_value = float(position.get('exit_value', 0))
-            amount = float(position.get('amount', 0))
+            # Get calculated values if they exist
+            gross_pnl = trade.get('gross_pnl')
+            net_pnl = trade.get('net_pnl')
+            costs = trade.get('costs', {})
+            total_fees = costs.get('total') if costs else 0
 
-            # Calculate total fees from entry and exit fees
-            entry_fees = float(position.get('entry_fees', 0))
-            exit_fees = float(position.get('exit_fees', 0)) if position.get('exit_fees') is not None else 0
-            total_fees = entry_fees + exit_fees
+            # Calculate if not already present
+            if gross_pnl is None:
+                if direction.upper() == 'SHORT':
+                    gross_pnl = (entry_price - exit_price) * quantity
+                else:
+                    gross_pnl = (exit_price - entry_price) * quantity
 
-            if direction == 'short':
-                gross_pnl = (entry_value - exit_value) * amount  # Inverted
-            else:
-                gross_pnl = (exit_value - entry_value) * amount  # Normal
+            if net_pnl is None:
+                net_pnl = gross_pnl - total_fees
 
-            net_pnl = gross_pnl - total_fees
-
-            # Determine outcome
-            if net_pnl > 0:
-                outcome = 'win'
-            elif net_pnl < 0:
-                outcome = 'loss'
-            else:
+            # Determine outcome with tolerance for break-even
+            if abs(net_pnl) < self.break_even_tolerance:
                 outcome = 'break_even'
+            elif net_pnl > 0:
+                outcome = 'win'
+            else:
+                outcome = 'loss'
 
             return PositionOutcome(
                 outcome=outcome,
@@ -396,31 +491,12 @@ class TradeHistory:
                 fees=total_fees
             )
 
+        except Exception as e:
+            logger.error(f"Error calculating position outcome: {e}")
+            return PositionOutcome(outcome='unknown', gross_pnl=0.0, net_pnl=0.0, fees=0.0)
         except (ValueError, TypeError) as e:
             logger.error(f"Error calculating position outcome: {e}")
             return PositionOutcome(outcome='error', gross_pnl=0.0, net_pnl=0.0, fees=0.0)
-
-    def _calculate_trade_fees(self, position_data):
-        """Calculate entry and exit fees from configuration"""
-        transaction_config = self.config.get_section('transaction_costs', {})
-        if 'commission_pct' not in transaction_config:
-            raise ValueError("Missing required configuration: transaction_costs.commission_pct")
-
-        commission_pct = transaction_config['commission_pct']
-
-        entry_value = position_data['entry_value']
-        amount = position_data['amount']
-        entry_trade_value = entry_value * amount
-        entry_fees = entry_trade_value * commission_pct
-
-        if position_data.get('exit_value'):
-            exit_value = position_data['exit_value']
-            exit_trade_value = exit_value * amount
-            exit_fees = exit_trade_value * commission_pct
-        else:
-            exit_fees = 0  # Open position
-
-        return entry_fees, exit_fees
 
     def _validate_trade_structure(self, trade_data: Dict[str, Any]) -> bool:
         """Validate trade data structure
@@ -434,32 +510,36 @@ class TradeHistory:
         if not self.validate_on_load:
             return True
 
-        required_trade_fields = ['uuid', 'timestamp', 'status', 'positions']
-        required_position_fields = ['name_of_position', 'amount', 'entry_value', 'currency', 'status']
+        # Basic required fields for all trades
+        basic_required = ['timestamp', 'entry_price', 'quantity',
+                          'direction', 'entry_date']
 
         try:
-            # Check trade fields
-            for field in required_trade_fields:
+            for field in basic_required:
                 if field not in trade_data:
-                    logger.warning(f"Missing required trade field: {field}")
+                    logger.warning(f"Missing required field: {field}")
                     return False
 
-            # Check positions
-            positions = trade_data.get('positions', [])
-            if not isinstance(positions, list) or not positions:
-                logger.warning("Trade must have at least one position")
-                return False
+            # Check if closed trade
+            status = trade_data.get('status', 'closed')
 
-            for position in positions:
-                for field in required_position_fields:
-                    if field not in position:
-                        logger.warning(f"Missing required position field: {field}")
+            if status == 'closed':
+                # Closed trades need exit fields
+                closed_required = ['exit_price', 'exit_date']
+                for field in closed_required:
+                    if field not in trade_data:
+                        logger.warning(f"Closed trade missing required field: {field}")
                         return False
+                    if trade_data[field] is None:
+                        logger.warning(f"Closed trade has null {field}")
+                        return False
+
+            # Open trades can have null exit fields
 
             return True
 
         except Exception as e:
-            logger.error(f"Error validating trade structure: {e}")
+            logger.error(f"Validation error: {e}")
             return False
 
     def _parse_timestamp(self, timestamp_str: str) -> Optional[datetime]:
@@ -486,12 +566,3 @@ class TradeHistory:
         """Invalidate statistics cache"""
         self._stats_cache.clear()
         self._cache_valid = False
-
-    @property
-    def all_positions(self) -> List[Dict[str, Any]]:
-        """All position records from all loaded trades"""
-        all_positions = []
-        for trade_data in self.trades.values():
-            positions = trade_data.get('positions', [])
-            all_positions.extend(positions)
-        return all_positions
