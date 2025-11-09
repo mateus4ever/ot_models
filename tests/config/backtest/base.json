@@ -1,9 +1,12 @@
 {
   "general": {
     "verbose": true,
-    "random_state": 42,
     "debug_mode": false,
     "enable_validation_checks": true
+  },
+  "file_operations": {
+    "results_dir": "results",
+    "timestamp_format": "%Y%m%d_%H%M%S"
   },
   "strategy": {
       "signals": ["trend_following.simplemovingaveragecrossover"],
@@ -20,18 +23,6 @@
     "ma_medium": 20,
     "default_rsi_period": 14,
     "default_bollinger_period": 20
-  },
-  "array_indexing": {
-    "first_index": 0,
-    "second_index": 1,
-    "third_index": 2
-  },
-  "boolean_values": {
-    "true": true,
-    "false": false
-  },
-  "regime_detection": {
-    "method": "rule_based"
   },
   "trend_duration_prediction": {
     "enabled": false,
@@ -96,10 +87,6 @@
       "technical_weight": 0.7,
       "confidence_threshold": 0.5
     }
-  },
-  "transaction_costs": {
-    "commission_pct": 0.001,
-    "slippage_pct": 0.0005
   },
   "performance_metrics": {
     "benchmark": "buy_and_hold",

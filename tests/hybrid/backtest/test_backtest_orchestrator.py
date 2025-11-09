@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from pytest_bdd import scenarios, given, when, then, parsers
 
-from src.hybrid.backtesting.backtest_orchestrator import BacktestOrchestrator
+from src.hybrid.backtesting import BacktestOrchestrator
 from src.hybrid.config.unified_config import UnifiedConfig
 
 # Load scenarios from the backtest.feature

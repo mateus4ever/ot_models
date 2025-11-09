@@ -12,7 +12,7 @@ class TradingSignal:
     """Trading signal with entry parameters"""
     symbol: str
     direction: PositionDirection
-    strength: float  # Signal strength 0.0 to 1.0
+    signal_strength: float  # Signal strength 0.0 to 1.0
     entry_price: float
     timestamp: pd.Timestamp
 

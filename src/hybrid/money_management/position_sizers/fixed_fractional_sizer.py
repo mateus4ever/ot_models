@@ -26,7 +26,7 @@ class FixedFractionalSizer(PositionSizingStrategy):
         sizer_config = mm_config['position_sizers'][sizing_type]  # Gets the nested section
 
         self.risk_per_trade = sizer_config['risk_per_trade']
-        self.max_position_size = sizer_config['max_position_size']
+        self.max_position_size = sizer_config['max_position_pct']
 
     def calculate_size(self, signal: 'TradingSignal', portfolio: 'PortfolioState',
                        stop_distance: float) -> int:

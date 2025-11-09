@@ -13,14 +13,16 @@ logger = logging.getLogger(__name__)
 class KellyCriterionSizer(PositionSizingStrategy):
     """Kelly Criterion position sizing based on configured win statistics"""
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, unified_config):
+        super().__init__(unified_config)
 
         # Static parameters from configuration
 
         self.kelly_fraction = self.config['kelly_fraction']
         self.kelly_lookback = self.config['kelly_lookback']
-        self.max_kelly_position = self.config['max_kelly_position']
+
+        # TODO: max_kelly_position must be questioned
+        self.max_kelly_position = self.config['max_position_pct']
         self.kelly_win_rate = self.config['kelly_win_rate']
         self.kelly_avg_win = self.config['kelly_avg_win']
         self.kelly_avg_loss = self.config['kelly_avg_loss']

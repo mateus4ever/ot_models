@@ -16,26 +16,6 @@
   "backtesting": {
       "initial_capital": 100000
   },
-  "trend_duration_prediction": {
-    "enabled": false,
-    "confidence_window": 5,
-    "default_duration_category": 1,
-    "model_params": {
-      "n_estimators": 10,
-      "max_depth": 3,
-      "random_state": 42
-    }
-  },
-  "volatility_prediction": {
-    "use_volatility_ml": false,
-    "forward_window": 10,
-    "feature_periods": [5, 10],
-    "model_params": {
-      "n_estimators": 10,
-      "max_depth": 3,
-      "random_state": 42
-    }
-  },
   "system_configuration": {
     "windows_compatibility": {
       "max_cores": 1

@@ -47,7 +47,7 @@ def load_configuration_file(test_context, config_directory):
     root_path = Path(__file__).parent.parent.parent.parent.parent
     config_path = root_path / config_directory
 
-    assert config_path.exists(), f"Configuration file not found: {config_path}"
+    assert config_path.exists(), f"Configuration path  not found: {config_path}"
 
     config = UnifiedConfig(config_path=str(config_path), environment="test")
 

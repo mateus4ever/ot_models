@@ -79,7 +79,7 @@ def create_trading_signal(test_context, direction, entry_price, strength):
         symbol='TEST',
         direction=signal_direction,
         entry_price=float(entry_price),
-        strength=float(strength),
+        signal_strength=float(strength),
         timestamp=pd.Timestamp.now()
     )
 

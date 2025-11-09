@@ -16,6 +16,7 @@ from pytest_bdd import scenarios, given, when, then, parsers
 import sys
 
 from src.hybrid.money_management import MoneyManager
+from src.hybrid.money_management.centralized_position_manager import CentralizedPositionManager
 from src.hybrid.money_management.money_management import PositionDirection, TradingSignal
 
 # Go up 4 levels from tests/hybrid/money_management/test_money_management.py to project root
@@ -48,60 +49,41 @@ def test_context(request):
 # GIVEN steps - Setup and preconditions
 # =============================================================================
 
-@given(parsers.parse('{config_file} is available in {config_directory} and loaded'))
-def load_configuration_file(test_context, config_file, config_directory):
-    """Load and validate configuration file from specified directory"""
+@given(parsers.parse('config files are available in {config_directory}'))
+def load_configuration_file(test_context, config_directory):
+    """Load configuration file from specified directory"""
+
     root_path = Path(__file__).parent.parent.parent.parent
     config_path = root_path / config_directory
-    full_config_path = config_path / config_file
 
-    assert full_config_path.exists(), f"Configuration file not found: {full_config_path}"
+    assert config_path.exists(), f"Configuration file not found: {config_path}"
 
     config = UnifiedConfig(config_path=str(config_path), environment="test")
 
-    test_context['mm_config'] = config
-    test_context['root_path'] = root_path
-    test_context['config_path'] = config_path
+    test_context['config'] = config
+@given('a centralized position manager is initialized from configuration')
+def create_position_manager(test_context):
+    """Create CentralizedPositionManager with initial_capital from config"""
+    unified_config = test_context['config']
+    initial_capital = unified_config.config.get('backtesting', {}).get('initial_capital')
+    position_manager = CentralizedPositionManager(unified_config)
+    position_manager.set_total_capital(initial_capital)
+    test_context['position_manager'] = position_manager
 
+@given('a MoneyManager instance is created and configured with position manager')
+def create_money_manager_with_position_manager(test_context):
+    """Create MoneyManager and inject position manager"""
+    config = test_context['config']
+    position_manager = test_context['position_manager']
 
-@given('I have money management configuration loaded')
-def step_money_management_config_loaded(test_context):
-    """Ensure configuration is loaded for initialization test"""
-    # Configuration already loaded in background steps
-    assert 'mm_config' in test_context, "money_management config not loaded"
-
-
-@given(parsers.parse('I have a MoneyManager with {sizing_type} sizing'))
-def step_money_manager_with_sizing_type(test_context, sizing_type):
-    """Create MoneyManager with specific position sizing strategy"""
-    config = test_context['mm_config']
     money_manager = MoneyManager(config)
+    money_manager.set_position_manager(position_manager)
     test_context['money_manager'] = money_manager
-    test_context['sizing_type'] = sizing_type
-
-
-@given(parsers.parse('the portfolio has {portfolio_equity:d} equity'))
-def step_portfolio_equity(test_context, portfolio_equity):
-    """Set portfolio equity from feature file parameter"""
-    money_manager = test_context['money_manager']
-    money_manager.portfolio.total_equity = portfolio_equity
-    money_manager.portfolio.available_cash = portfolio_equity
-    money_manager.portfolio.peak_equity = portfolio_equity
-    test_context['portfolio_equity'] = portfolio_equity
-
-
-@given('I have a MoneyManager initialized')
-def step_money_manager_initialized(test_context):
-    """Create basic MoneyManager instance"""
-    config = test_context['mm_config']
-    money_manager = MoneyManager(config)
-    test_context['money_manager'] = money_manager
-
 
 @given('I have a MoneyManager with risk limits')
 def step_money_manager_risk_limits(test_context):
     """Create MoneyManager with risk limits"""
-    config = test_context['mm_config']
+    config = test_context['config']
     money_manager = MoneyManager(config)
     test_context['money_manager'] = money_manager
 
@@ -125,7 +107,7 @@ def step_trading_signal_for_symbol(test_context, symbol, direction, entry_price,
     signal = TradingSignal(
         symbol=symbol,
         direction=position_direction,
-        strength=signal_strength,
+        signal_strength=signal_strength,
         entry_price=entry_price,
         timestamp=pd.Timestamp.now()
     )
@@ -143,17 +125,10 @@ def step_market_data_parameterized(test_context, volatility_percent, data_period
     })
     test_context['market_data'] = market_data
 
-@given(parsers.parse('the portfolio has {daily_pnl:d} daily PnL'))
-def step_portfolio_daily_pnl(test_context, daily_pnl):
-    """Set portfolio daily PnL"""
-    money_manager = test_context['money_manager']
-    money_manager.portfolio.daily_pnl = daily_pnl
-    test_context['expected_daily_pnl'] = daily_pnl
-
 @given('I have a MoneyManager with existing positions')
 def step_money_manager_existing_positions(test_context):
     """Create MoneyManager with some existing positions for testing"""
-    config = test_context['mm_config']
+    config = test_context['config']
     money_manager = MoneyManager(config)
     test_context['money_manager'] = money_manager
 
@@ -181,15 +156,6 @@ def step_existing_position(test_context, direction, position_size, symbol, entry
     test_context['position_size'] = position_size
     test_context['position_direction'] = direction
 
-@given(parsers.parse('the portfolio has {total_equity:d} total equity'))
-def step_portfolio_total_equity(test_context, total_equity):
-    """Set portfolio total equity"""
-    money_manager = test_context['money_manager']
-    money_manager.portfolio.total_equity = total_equity
-    money_manager.portfolio.available_cash = total_equity  # Assume all cash available initially
-    money_manager.portfolio.peak_equity = total_equity
-    test_context['initial_equity'] = total_equity
-
 @given('A MoneyManager is created for testing')
 def step_simple_test(test_context):
     print("Simple step recognized")
@@ -213,14 +179,6 @@ def step_set_position_parameters(test_context, position_size, entry_price):
         money_manager.update_position(symbol, position_size, entry_price, PositionDirection.LONG)
 
     test_context['expected_position_count'] = position_count
-
-@given(parsers.parse('the portfolio has {available_cash:d} available cash'))
-def step_portfolio_available_cash(test_context, available_cash):
-    """Set portfolio available cash"""
-    money_manager = test_context['money_manager']
-    money_manager.portfolio.available_cash = available_cash
-    test_context['expected_available_cash'] = available_cash
-
 
 @given(parsers.parse('the portfolio is currently at {current_drawdown} drawdown from peak'))
 def step_portfolio_current_drawdown(test_context, current_drawdown):
@@ -293,85 +251,53 @@ def step_config_with_unknown_component(test_context, component_type, invalid_nam
     test_context['expected_component_type'] = component_type
     test_context['invalid_component_name'] = invalid_name
 
-@given(parsers.parse('the portfolio has {drawdown_percent:f} drawdown exceeding risk limits'))
-def step_portfolio_drawdown_exceeding_limits(test_context, drawdown_percent):
-    """Set portfolio drawdown to exceed risk limits"""
-    money_manager = test_context['money_manager']
-    money_manager.portfolio.max_drawdown = drawdown_percent
-    test_context['expected_drawdown'] = drawdown_percent
+@given(parsers.parse('position manager has {capital} available capital'))
+def set_available_capital(test_context, capital):
+    """Setup position manager with specific available capital"""
+    capital = float(capital)
+    position_manager = test_context['position_manager']
+
+    # Commit capital to simulate used funds
+    used_capital = position_manager.total_capital - capital
+    if used_capital > 0:
+        position_manager.commit_position("setup_trade", used_capital, "setup_bot")
+
+    test_context['expected_available'] = capital
 
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================
 
-@when('I create a MoneyManager instance')
-def step_create_money_manager_instance(test_context):
-    """Create MoneyManager instance and capture result"""
-    try:
-        config_path = test_context['config_path']
-        config = UnifiedConfig(config_path=str(config_path))
-        money_manager = MoneyManager(config)
-        test_context['money_manager'] = money_manager
-        test_context['money_manager_created'] = True
-        test_context['creation_error'] = None
-    except Exception as e:
-        test_context['money_manager_created'] = False
-        test_context['creation_error'] = e
-
-
 @when(parsers.parse(
-    'I calculate position size for a {direction} signal at {entry_price:f} with market data length {data_length:d} and price multipliers {high_mult:f} and {low_mult:f}'))
-def step_calculate_position_size_with_market_data(test_context, direction, entry_price, data_length, high_mult,
-                                                  low_mult):
-    """Calculate position size with feature file parameters"""
+    'I calculate position size for {direction} signal at {entry_price} with {data_length} bars and price range {high_mult} to {low_mult}'))
+def calculate_position_for_signal(test_context, direction, entry_price, data_length, high_mult, low_mult):
+    """Calculate position size for given signal and market data parameters"""
+    entry_price = float(entry_price)
+    data_length = int(data_length)
+    high_mult = float(high_mult)
+    low_mult = float(low_mult)
+
     money_manager = test_context['money_manager']
 
-    # Create trading signal from feature file parameters
-    position_direction = PositionDirection.LONG if direction == 'long' else PositionDirection.SHORT
+    # Create signal
     signal = TradingSignal(
-        symbol='TEST',
-        direction=position_direction,
-        strength=1.0,
+        symbol="TEST",
+        direction=direction,
         entry_price=entry_price,
-        timestamp=pd.Timestamp.now()
+        signal_strength=1.0,
+        timestamp = pd.Timestamp.now()
     )
 
-    # Create market data using feature file parameters
+    # Create market data with specified parameters
     market_data = pd.DataFrame({
+        'close': [entry_price] * data_length,
         'high': [entry_price * high_mult] * data_length,
-        'low': [entry_price * low_mult] * data_length,
-        'close': [entry_price] * data_length
+        'low': [entry_price * low_mult] * data_length
     })
 
-    try:
-        position_size = money_manager.calculate_position_size(signal, market_data)
-        test_context['calculated_position_size'] = position_size
-        test_context['test_signal'] = signal
-        test_context['calculation_error'] = None
-    except Exception as e:
-        test_context['calculated_position_size'] = None
-        test_context['calculation_error'] = e
-
-
-@when(parsers.parse('I update position for {symbol} with {size:d} shares at {price:f} going {direction}'))
-def step_update_position(test_context, symbol, size, price, direction):
-    """Update position with feature file parameters"""
-    money_manager = test_context['money_manager']
-
-    position_direction = PositionDirection.LONG if direction == 'long' else PositionDirection.SHORT
-
-    try:
-        success = money_manager.update_position(symbol, size, price, position_direction)
-        test_context['position_update_success'] = success
-        test_context['updated_symbol'] = symbol
-        test_context['updated_size'] = size
-        test_context['updated_price'] = price
-        test_context['position_update_error'] = None
-    except Exception as e:
-        test_context['position_update_success'] = False
-        test_context['position_update_error'] = e
-
-
+    position_size = money_manager.calculate_position_size(signal, market_data)
+    test_context['calculated_position_size'] = position_size
+    test_context['signal'] = signal
 @when('I check if risk should be reduced')
 def step_check_risk_reduction(test_context):
     """Check risk reduction status"""
@@ -444,123 +370,39 @@ def step_request_portfolio_summary(test_context):
 
 
 @when(parsers.parse(
-    'I calculate position size for {symbol} {direction} signal at {entry_price:f} with desired value {signal_value:d}'))
-def step_calculate_position_size_with_desired_value(test_context, symbol, direction, entry_price, signal_value):
-    """Calculate position size for signal with desired position value"""
+    'I calculate position size for {direction} signal at {entry_price} with {data_length} bars and price range {high_mult} to {low_mult}'))
+def calculate_position_for_signal(test_context, direction, entry_price, data_length, high_mult, low_mult):
+    """Calculate position size for given signal and market data parameters"""
+    entry_price = float(entry_price)
+    data_length = int(data_length)
+    high_mult = float(high_mult)
+    low_mult = float(low_mult)
+
     money_manager = test_context['money_manager']
 
-    # Create trading signal
-    position_direction = PositionDirection.LONG if direction == 'long' else PositionDirection.SHORT
+    # Create signal
     signal = TradingSignal(
-        symbol=symbol,
-        direction=position_direction,
-        strength=1.0,
+        symbol="TEST",
+        direction=direction,
         entry_price=entry_price,
+        signal_strength=1.0,
         timestamp=pd.Timestamp.now()
     )
 
-    # Get ATR period from config to create sufficient market data
-    config = test_context['mm_config']
-    mm_config = config.get_section('money_management')
-    atr_period = mm_config['risk_managers']['atr_based']['atr_period']
-    volatility = 0.01  # 1% volatility from config if available
-
-    # Create market data with price variation for ATR calculation
+    # Create market data with specified parameters
     market_data = pd.DataFrame({
-        'high': [entry_price * (1 + volatility)] * atr_period,
-        'low': [entry_price * (1 - volatility)] * atr_period,
-        'close': [entry_price] * atr_period
+        'close': [entry_price] * data_length,
+        'high': [entry_price * high_mult] * data_length,
+        'low': [entry_price * low_mult] * data_length
     })
 
-    test_context['test_signal'] = signal
-
-    try:
-        position_size = money_manager.calculate_position_size(signal, market_data)
-
-        # Calculate what the position size should be based on available cash
-        expected_from_cash = int(money_manager.portfolio.available_cash / signal.entry_price)
-        test_context['calculated_position_size'] = position_size
-
-    except Exception as e:
-        test_context['calculated_position_size'] = None
-        test_context['calculation_error'] = e
-
-@ when(parsers.parse(
-    'I calculate position size for {symbol} {direction} signal at {entry_price:f} with strength {signal_strength:f} and {data_periods:d} periods'))
-def step_calculate_position_size_for_signal_with_params(test_context, symbol, direction, entry_price, signal_strength,
-                                                        data_periods):
-    """Calculate position size for trading signal with parameters"""
-    money_manager = test_context['money_manager']
-
-    # Create trading signal with parameters from feature file
-    position_direction = PositionDirection.LONG if direction == 'long' else PositionDirection.SHORT
-    signal = TradingSignal(
-        symbol=symbol,
-        direction=position_direction,
-        strength=signal_strength,
-        entry_price=entry_price,
-        timestamp=pd.Timestamp.now()
-    )
-
-    # Create market data with specified periods
-    market_data = pd.DataFrame({
-        'high': [entry_price] * data_periods,
-        'low': [entry_price] * data_periods,
-        'close': [entry_price] * data_periods
-    })
-
-    try:
-        position_size = money_manager.calculate_position_size(signal, market_data)
-        test_context['calculated_position_size'] = position_size
-        test_context['test_signal'] = signal
-        test_context['calculation_error'] = None
-    except Exception as e:
-        test_context['calculated_position_size'] = None
-        test_context['calculation_error'] = e
-
+    position_size = money_manager.calculate_position_size(signal, market_data)
+    test_context['calculated_position_size'] = position_size
+    test_context['signal'] = signal
 
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
-
-@then('the MoneyManager should initialize successfully')
-def step_money_manager_initializes_successfully(test_context):
-    """Verify MoneyManager was created successfully"""
-    assert test_context.get('money_manager_created') is True, "MoneyManager should be created successfully"
-    assert test_context.get('creation_error') is None, f"Creation error occurred: {test_context.get('creation_error')}"
-    assert 'money_manager' in test_context, "MoneyManager instance should be available"
-
-
-@then('the position sizing strategy should be loaded')
-def step_position_sizing_strategy_loaded(test_context):
-    """Verify position sizing strategy is loaded"""
-    money_manager = test_context['money_manager']
-    assert hasattr(money_manager, 'position_sizer'), "MoneyManager should have position_sizer"
-    assert money_manager.position_sizer is not None, "Position sizer should be initialized"
-
-
-@then('the risk management strategy should be loaded')
-def step_risk_management_strategy_loaded(test_context):
-    """Verify risk management strategy is loaded"""
-    money_manager = test_context['money_manager']
-    assert hasattr(money_manager, 'risk_manager'), "MoneyManager should have risk_manager"
-    assert money_manager.risk_manager is not None, "Risk manager should be initialized"
-
-
-@then('the portfolio should be initialized with configured capital')
-def step_portfolio_initialized_with_capital(test_context):
-    """Verify portfolio is initialized with capital from configuration"""
-    money_manager = test_context['money_manager']
-    config = test_context['mm_config']
-    mm_config = config.get_section('money_management')
-    expected_capital = mm_config['initial_capital']
-
-    assert money_manager.portfolio.total_equity == expected_capital, \
-        f"Portfolio equity should be {expected_capital}, got {money_manager.portfolio.total_equity}"
-    assert money_manager.portfolio.available_cash == expected_capital, \
-        f"Available cash should be {expected_capital}, got {money_manager.portfolio.available_cash}"
-
-
 @then('a position size should be calculated')
 def step_position_size_calculated(test_context):
     """Verify position size calculation completed"""
@@ -575,35 +417,6 @@ def step_position_size_greater_than_zero(test_context):
     position_size = test_context.get('calculated_position_size')
     assert position_size is not None, "Position size should not be None"
     assert position_size >= 0, f"Position size should be non-negative, got {position_size}"
-
-
-@then('the position size should respect portfolio constraints')
-def step_position_size_respects_constraints(test_context):
-    """Verify position size respects portfolio constraints"""
-    money_manager = test_context['money_manager']
-    position_size = test_context.get('calculated_position_size')
-    signal = test_context.get('test_signal')
-
-    if position_size > 0 and signal:
-        position_value = position_size * signal.entry_price
-        portfolio_equity = money_manager.portfolio.total_equity
-
-        # Position should not exceed available cash
-        assert position_value <= money_manager.portfolio.available_cash, \
-            f"Position value {position_value} exceeds available cash {money_manager.portfolio.available_cash}"
-
-
-@then('the position should be tracked correctly')
-def step_position_tracked_correctly(test_context):
-    """Verify position update was successful"""
-    assert test_context.get('position_update_success') is True, \
-        f"Position update failed: {test_context.get('position_update_error')}"
-
-    money_manager = test_context['money_manager']
-    symbol = test_context.get('updated_symbol')
-
-    assert symbol in money_manager.portfolio.positions, f"Position for {symbol} should be tracked"
-
 
 @then('after position change the portfolio position is updated')
 def step_portfolio_equity_updated(test_context):
@@ -660,7 +473,7 @@ def step_money_manager_not_created(test_context):
     assert test_context.get('money_manager_created') is False, \
         "MoneyManager should not be created with incomplete configuration"
 
-@then('return a valid stop loss price')
+@then('a valid stop loss price should be returned')
 def step_return_valid_stop_loss_price(test_context):
     """Verify stop loss calculation returned a valid price"""
     assert test_context.get('stop_loss_error') is None, \
@@ -672,7 +485,7 @@ def step_return_valid_stop_loss_price(test_context):
     assert stop_loss > 0, "Stop loss should be positive"
 
 
-@then(parsers.parse('the stop loss should be {stop_comparison} the entry price to limit losses'))
+@then(parsers.parse('the stop loss should be {stop_comparison} the entry price'))
 def step_stop_loss_comparison(test_context, stop_comparison):
     """Verify stop loss is positioned correctly relative to entry price"""
     signal = test_context['trading_signal']
@@ -687,21 +500,6 @@ def step_stop_loss_comparison(test_context, stop_comparison):
             f"Stop loss {stop_loss} should be above entry price {entry_price} for short positions"
     else:
         raise ValueError(f"Unknown stop_comparison: {stop_comparison}")
-@then(parsers.parse('the portfolio equity should {equity_change} from {initial_equity:d}'))
-def step_portfolio_equity_change_from_initial(test_context, equity_change, initial_equity):
-    """Verify portfolio equity changed as expected from initial value"""
-    money_manager = test_context['money_manager']
-    current_equity = money_manager.portfolio.total_equity
-
-    if equity_change == 'increase':
-        assert current_equity > initial_equity, \
-            f"Portfolio equity should increase from {initial_equity}, but got {current_equity}"
-    elif equity_change == 'decrease':
-        assert current_equity < initial_equity, \
-            f"Portfolio equity should decrease from {initial_equity}, but got {current_equity}"
-    else:
-        raise ValueError(f"Unknown equity_change: {equity_change}")
-
 
 @then(parsers.parse('the position unrealized PnL should be {pnl_direction}'))
 def step_position_unrealized_pnl_direction(test_context, pnl_direction):
@@ -724,31 +522,30 @@ def step_position_unrealized_pnl_direction(test_context, pnl_direction):
     else:
         raise ValueError(f"Unknown pnl_direction: {pnl_direction}")
 
-
-@then('the portfolio summary should reflect updated values')
-def step_portfolio_summary_reflects_updates(test_context):
-    """Verify portfolio summary includes updated market values"""
-    money_manager = test_context['money_manager']
-
-    try:
-        summary = money_manager.get_portfolio_summary()
-        test_context['portfolio_summary'] = summary
-
-        # Basic validation that summary contains expected fields
-        required_fields = ['total_equity', 'available_cash', 'positions_count', 'daily_pnl', 'total_pnl']
-        for field in required_fields:
-            assert field in summary, f"Portfolio summary should include {field}"
-            assert isinstance(summary[field], (int, float)), f"{field} should be numeric"
-
-        # Verify positions count reflects actual positions
-        actual_positions = len(money_manager.portfolio.positions)
-        assert summary['positions_count'] == actual_positions, \
-            f"Summary positions_count {summary['positions_count']} should match actual {actual_positions}"
-
-        test_context['summary_validation_error'] = None
-    except Exception as e:
-        test_context['summary_validation_error'] = e
-        raise
+# @then('the portfolio summary should reflect updated values')
+# def step_portfolio_summary_reflects_updates(test_context):
+#     """Verify portfolio summary includes updated market values"""
+#     money_manager = test_context['money_manager']
+#
+#     try:
+#         summary = money_manager.get_portfolio_summary()
+#         test_context['portfolio_summary'] = summary
+#
+#         # Basic validation that summary contains expected fields
+#         required_fields = ['total_equity', 'available_cash', 'positions_count', 'daily_pnl', 'total_pnl']
+#         for field in required_fields:
+#             assert field in summary, f"Portfolio summary should include {field}"
+#             assert isinstance(summary[field], (int, float)), f"{field} should be numeric"
+#
+#         # Verify positions count reflects actual positions
+#         actual_positions = len(money_manager.portfolio.positions)
+#         assert summary['positions_count'] == actual_positions, \
+#             f"Summary positions_count {summary['positions_count']} should match actual {actual_positions}"
+#
+#         test_context['summary_validation_error'] = None
+#     except Exception as e:
+#         test_context['summary_validation_error'] = e
+#         raise
 
 
 @then(parsers.parse('the summary should show total equity of {expected_equity:d}'))
@@ -958,3 +755,13 @@ def step_no_errors_during_calculation(test_context):
     calculation_error = test_context.get('calculation_error')
     assert calculation_error is None, \
         f"Calculation should complete without errors, but got: {calculation_error}"
+@then('the position size should not exceed available capital')
+def check_position_within_capital(test_context):
+    """Verify position value doesn't exceed available capital"""
+    position_size = test_context['calculated_position_size']
+    signal = test_context['signal']
+    available = test_context['expected_available']
+
+    position_value = position_size * signal.entry_price
+    assert position_value <= available, \
+        f"Position value ${position_value} exceeds available ${available}"

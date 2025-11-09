@@ -4,39 +4,31 @@ Feature: MoneyManager Core Service Functionality
   So that the service loads configuration and calculates position sizes correctly
 
 Background:
-  Given money_management.json is available in tests/config/money_management and loaded
+  Given config files are available in tests/config/money_management
+  And a centralized position manager is initialized from configuration
+  And a MoneyManager instance is created and configured with position manager
 
-  @money_management @initialization @core
-  Scenario: MoneyManager service initialization
-    Given I have money management configuration loaded
-    When I create a MoneyManager instance
-    Then the MoneyManager should initialize successfully
-    And the position sizing strategy should be loaded
-    And the risk management strategy should be loaded
-    And the portfolio should be initialized with configured capital
+@position_sizing
+Scenario Outline: Calculate position size with available capital
+  Given position manager has <available_capital> available capital
+  When I calculate position size for <direction> signal at <entry_price> with <data_length> bars and price range <high_mult> to <low_mult>
+  Then a position size should be calculated
+  And the position size should be greater than zero
+  And the position size should not exceed available capital
 
-  @money_management @position_sizing @core
-  Scenario Outline: Basic position size calculation
-    Given I have a MoneyManager with fixed fractional sizing
-    And the portfolio has <portfolio_equity> equity
-    When I calculate position size for a <direction> signal at <entry_price> with market data length <data_length> and price multipliers <high_mult> and <low_mult>
-    Then a position size should be calculated
-    And the position size should be greater than zero
-    And the position size should respect portfolio constraints
+  Examples:
+    | available_capital | direction | entry_price | data_length | high_mult | low_mult |
+    | 100000           | long      | 50.00       | 20          | 1.01      | 0.99     |
+    | 50000            | short     | 75.00       | 25          | 1.02      | 0.98     |
 
-    Examples:
-      | portfolio_equity | direction | entry_price | data_length | high_mult | low_mult |
-      | 100000          | long      | 50.00      | 20          | 1.01      | 0.99     |
-      | 150000          | short     | 75.00      | 25          | 1.02      | 0.98     |
 
   @money_management @stop_loss @core
   Scenario Outline: Stop loss calculation delegation
-    Given I have a MoneyManager initialized
-    And I have a trading signal for <symbol> <direction> at <entry_price> with strength <signal_strength>
+    Given I have a trading signal for <symbol> <direction> at <entry_price> with strength <signal_strength>
     And I have market data with <volatility_percent> volatility and <data_periods> periods
     When I request stop loss calculation for the signal
-    Then return a valid stop loss price
-    And the stop loss should be <stop_comparison> the entry price to limit losses
+    Then a valid stop loss price should be returned
+    And the stop loss should be <stop_comparison> the entry price
 
     Examples:
       | symbol | direction | entry_price | signal_strength | volatility_percent | data_periods | stop_comparison |
@@ -44,55 +36,6 @@ Background:
       | GBPUSD | short     | 1.2500      | 0.8            | 0.03              | 20           | above           |
       | USDJPY | long      | 110.00      | 0.6            | 0.015             | 25           | below           |
 
-  @money_management @portfolio_tracking @core
-  Scenario Outline: Basic portfolio position tracking
-    Given I have a MoneyManager initialized
-    When I update position for <symbol> with <size> shares at <price> going <direction>
-    Then the position should be tracked correctly
-    And after position change the portfolio position is updated
-    And the position should appear in current positions
-
-    Examples:
-      | symbol | size | price  | direction |
-      | EURUSD | 1000 | 1.1000 | long     |
-      | GBPUSD | 500  | 1.2500 | short    |
-
-@money_management @market_updates @core
-Scenario Outline: Market price updates affect portfolio valuation
-  Given I have a MoneyManager with existing positions
-  And the portfolio has <initial_equity> total equity
-  And I have a <direction> position of <position_size> shares in <symbol> at <entry_price>
-  When I update market prices with <symbol> at <current_price>
-  Then the portfolio equity should <equity_change> from <initial_equity>
-  And the position unrealized PnL should be <pnl_direction>
-  And the portfolio summary should reflect updated values
-
-  Examples:
-    | initial_equity | symbol | direction | position_size | entry_price | current_price | equity_change | pnl_direction |
-    | 100000        | EURUSD | long      | 1000         | 1.1000      | 1.1050        | increase      | positive      |
-    | 150000        | GBPUSD | long      | 500          | 1.2500      | 1.2450        | decrease      | negative      |
-    | 100000        | EURUSD | short     | 1500         | 1.1000      | 1.0950        | increase      | positive      |
-    | 200000        | GBPUSD | short     | 800          | 1.2500      | 1.2550        | decrease      | negative      |
-
-@money_management @portfolio_summary @core
-Scenario Outline: Portfolio summary provides complete metrics
-  Given I have a MoneyManager initialized
-  And I create <position_count> test positions
-  And each position has <position_size> shares at <entry_price>
-  And the portfolio has <total_equity> total equity
-  And the portfolio has <available_cash> available cash
-  And the portfolio has <daily_pnl> daily PnL
-  When I request the portfolio summary
-  Then the summary should show total equity of <total_equity>
-  And the summary should show available cash of <available_cash>
-  And the summary should show positions count of <position_count>
-  And the summary should show daily PnL of <daily_pnl>
-  And the summary should show position sizing strategy name
-
-  Examples:
-    | position_count | position_size | entry_price | total_equity | available_cash | daily_pnl |
-    | 2              | 1000         | 1.0         | 105000       | 25000          | 2500      |
-    | 3              | 500          | 1.5         | 98000        | 15000          | -1500     |
 
   @money_management @risk_management @core
   Scenario Outline: Risk constraint validation with specific conditions
@@ -152,6 +95,7 @@ Scenario Outline: Position sizing with risk reduction
     | drawdown_percent | symbol | direction | entry_price | signal_strength | data_periods |
     | 0.25            | EURUSD | long      | 1.1000      | 1.0            | 15           |
     | 0.30            | GBPUSD | short     | 1.2500      | 0.8            | 20           |
+
   @money_management @safety_constraints @core
   Scenario Outline: Safety constraints override strategy calculations
     Given I have a MoneyManager initialized

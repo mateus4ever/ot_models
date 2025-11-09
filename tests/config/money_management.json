@@ -1,6 +1,5 @@
 {
   "money_management": {
-    "initial_capital": 100000,
     "position_sizing": "fixed_fractional",
     "risk_management": "atr_based",
 

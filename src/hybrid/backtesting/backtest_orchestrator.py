@@ -1,4 +1,5 @@
 import logging
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Union
@@ -7,9 +8,7 @@ from typing import Dict, List, Union
 # Core imports
 import pandas as pd
 
-from src.hybrid.backtesting import ResultsFormatter
-# Backtesting engines
-from src.hybrid.backtesting.walk_forward_engine import WalkForwardBacktester, WalkForwardResultsFormatter
+from src.hybrid.backtesting.backtest_result import BacktestResult
 # Configuration and data
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data.data_manager import DataManager
@@ -43,6 +42,10 @@ class BacktestOrchestrator:
     def __init__(self, config: UnifiedConfig, project_root: Path = None):
         self.config = config
         self.project_root = project_root or Path.cwd()
+
+        file_ops = config.get_section('file_operations', {})
+        self.results_dir = file_ops.get('results_dir')
+        self.timestamp_format = file_ops.get('timestamp_format')
         self._cache_config_values()
 
     def _cache_config_values(self):
@@ -186,6 +189,7 @@ class BacktestOrchestrator:
             # Add components
             created_strategy.addPredictor("placeholder_predictor")
             created_strategy.addOptimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
+            created_strategy.addRunner("placeholder_runner")
             created_strategy.addMetric("placeholder_metric")
 
             strategy_instances.append(created_strategy)
@@ -227,16 +231,44 @@ class BacktestOrchestrator:
         }
 
     def _run_walkforward_backtest(self, df: pd.DataFrame) -> Dict:
-        """Run walk-forward backtest using specialized engine"""
-        print(f"\n2. Running walk-forward backtest with temporal isolation...")
+        """
+        Walk-Forward Optimization Backtest
 
-        walkforward_backtester = WalkForwardBacktester(self.config)
-        results = walkforward_backtester.run_walkforward_backtest(df)
+        PURPOSE:
+        Walk-forward optimization tests strategy robustness by continuously re-optimizing
+        parameters as new data becomes available, simulating real-world parameter tuning.
 
-        # Add configuration summary
-        results['config_summary'] = self._create_config_summary()
+        METHODOLOGY:
+        1. Split data into rolling windows: [Train1|Test1] [Train2|Test2] [Train3|Test3]
+        2. Optimize parameters on Train1 → test on Test1
+        3. Re-optimize on Train1+Train2 → test on Test2 (parameters may change)
+        4. Re-optimize on Train1+Train2+Train3 → test on Test3
+        5. Aggregate results across all test periods
 
-        return results
+        PREVENTS OVERFITTING:
+        - Parameters are re-optimized periodically (not fixed forever)
+        - Tests if strategy adapts well to changing market conditions
+        - Simulates realistic parameter maintenance schedule
+
+        USE CASE:
+        Essential for validating that optimized parameters remain profitable over time,
+        not just curve-fit to one specific market regime.
+
+        TEMPORAL ISOLATION:
+        Uses TemporalDataGuard to ensure training only uses past data (no look-ahead bias).
+        Uses WalkForwardRetrainingStrategy to decide WHEN to re-optimize.
+
+        STATUS: Currently being refactored to work with new BacktestEngine architecture.
+        """
+        raise NotImplementedError(
+            "Walk-forward optimization temporarily disabled during architecture refactor.\n"
+            "Will be reimplemented using:\n"
+            "  - TemporalDataGuard (prevents look-ahead bias)\n"
+            "  - WalkForwardRetrainingStrategy (retraining decisions)\n"
+            "  - BacktestEngine (executes each window)\n"
+            "  - BacktestResult (aggregates results)\n"
+            "See temporal_data_guard.py and walk_forward_retraining_strategy.py for components."
+        )
 
     def _create_config_summary(self) -> Dict:
         """Create configuration summary for results"""
@@ -267,58 +299,63 @@ class BacktestOrchestrator:
         }
 
     def _save_results(self, results: Dict):
-        """Save results using appropriate formatter"""
+        """Save results using BacktestResult"""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        if results.get('method') == 'walk_forward_temporal_isolation':
-            formatter = WalkForwardResultsFormatter(self.config)
-        else:
-            formatter = ResultsFormatter(self.config)
-
         try:
-            results_dir, timestamp = formatter.save_results(results, self.config, timestamp)
-            print(f"Results saved to: {results_dir}\\walkforward_{timestamp}.json")
+            # Convert dict results to BacktestResult if needed
+            if isinstance(results, dict) and 'results' in results:
+                # Multi-strategy results
+                for strategy_result in results['results']:
+                    if isinstance(strategy_result, BacktestResult):
+                        output_dir = Path(self.results_dir) / f"backtest_{timestamp}"
+                        output_dir.mkdir(parents=True, exist_ok=True)
+                        strategy_result.save_with_config(str(output_dir))
+                        logger.info(f"Results saved to: {output_dir}")
+
+            elif isinstance(results, BacktestResult):
+                # Single result
+                output_dir = Path(self.results_dir) / f"backtest_{timestamp}"
+                output_dir.mkdir(parents=True, exist_ok=True)
+                results.save_with_config(str(output_dir))
+                logger.info(f"Results saved to: {output_dir}")
+
+            else:
+                logger.warning(f"Unknown result type: {type(results)}")
+
         except Exception as e:
-            print(f"Warning: Could not save results: {e}")
+            logger.error(f"Could not save results: {e}")
 
     def _print_final_summary(self, start_time: datetime, results: Dict):
-        """Print final summary using appropriate formatter"""
+        """Print final backtest summary"""
         end_time = datetime.now()
         total_duration = (end_time - start_time).total_seconds()
 
-        # Print method-specific summary
-        if results.get('method') == 'walk_forward_temporal_isolation':
-            formatter = WalkForwardResultsFormatter(self.config)
-            formatter.print_walkforward_summary(results)
+        logger.info("=" * 80)
+        logger.info("BACKTEST COMPLETED")
+        logger.info("=" * 80)
+        logger.info(f"Method: {results.get('method', 'unknown')}")
+        logger.info(f"Total time: {total_duration:.1f} seconds ({total_duration / 60:.1f} minutes)")
 
-        # Print general summary
-        print(f"\n{'=' * 80}")
-        print("BACKTEST COMPLETED - TEMPORAL ISOLATION VERIFIED")
-        print(f"{'=' * 80}")
-        print(f"Total time: {total_duration:.1f} seconds ({total_duration / 60:.1f} minutes)")
-
+        # Print data statistics if available
         data_info = results.get('data_info', {})
         total_records = data_info.get('total_records', 0)
         if total_records > 0:
-            print(f"Data records: {total_records:,}")
-            print(f"Records/second: {total_records / total_duration:,.0f}")
+            logger.info(f"Data records: {total_records:,}")
+            logger.info(f"Records/second: {total_records / total_duration:,.0f}")
 
-        print(f"")
-        print("TEMPORAL GUARANTEES:")
-        print("✓ Training uses ONLY past data")
-        print("✓ No future information in signal generation")
-        print("✓ Proper walk-forward methodology")
-        print("✓ Retraining with incremental data only")
-        print("✓ Data leakage eliminated")
-        print(f"{'=' * 80}")
+        # Print strategy results summary
+        if 'results' in results:
+            num_strategies = len(results['results'])
+            logger.info(f"Strategies tested: {num_strategies}")
+
+        logger.info("=" * 80)
 
     def _handle_error(self, error: Exception, start_time: datetime):
         """Handle errors during backtesting"""
         end_time = datetime.now()
         total_duration = (end_time - start_time).total_seconds()
 
-        print(f"Error running backtest: {error}")
-        print(f"Failed after {total_duration:.1f} seconds")
-
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Backtest failed: {error}")
+        logger.error(f"Failed after {total_duration:.1f} seconds")
+        logger.error(traceback.format_exc())

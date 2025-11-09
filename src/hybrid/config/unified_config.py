@@ -127,6 +127,7 @@ class UnifiedConfig:
             "display.json",
             "files.json",
             "money_management.json",
+            "testing.json",
             "transaction_costs.json"
         ]
 
@@ -222,6 +223,7 @@ class UnifiedConfig:
 
         # Backtesting configuration
         self.backtesting = self.config.get('backtesting', {})
+        self.testing = self.config.get('testing', {})
 
         # Risk management configuration
         self.risk_management = self.config.get('risk_management', {})

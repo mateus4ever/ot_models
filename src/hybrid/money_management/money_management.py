@@ -4,6 +4,7 @@
 # Provides stable external interface regardless of internal implementation
 
 import logging
+import threading
 from typing import Dict, Any, Optional
 import pandas as pd
 
@@ -18,6 +19,7 @@ from .risk_managers.portfolio_heat_risk_manager import PortfolioHeatRiskManager
 from ..costs.transaction_costs import SimpleTransactionCostModel
 
 logger = logging.getLogger(__name__)
+
 
 class MoneyManager:
     """
@@ -46,23 +48,41 @@ class MoneyManager:
 
             self.config = mm_config
 
-            self.portfolio = PortfolioState(
-                total_equity=self.config['initial_capital'],
-                available_cash=self.config['initial_capital'],
-                positions={}
-            )
-            self.portfolio.peak_equity = self.portfolio.total_equity
+            # Position manager will be injected via set_position_manager()
+            self.position_manager = None
 
-            # Initialize strategy components
+            # Initialize strategy components (stateless calculators)
             self.position_sizer = self._create_position_sizer()
             self.risk_manager = self._create_risk_manager()
             self.cost_model = cost_model if cost_model else SimpleTransactionCostModel(config)
 
+            self.risk_reduction_factor = self.config.get('risk_reduction_factor')
+            self.position_manager = None
+
+            self.lock_timeout = self.config['lock_timeout_seconds']
+            self.default_timeout_ms = self.config['reservation_timeout_ms']
+            self.max_retries = self.config['max_retries']
+            self.retry_delay_ms = self.config['retry_delay_ms']
+            self.cleanup_interval_ms = self.config['cleanup_interval_ms']
+
             logger.info(f"MoneyManager initialized with {self.position_sizer.get_strategy_name()} "
-                        f"position sizing and initial capital ${self.portfolio.total_equity:,.2f}")
+                        f"position sizing (stateless)")
+
+
+
         except Exception as e:
             logger.error(f"Exception in constructor: {e}")
             raise
+
+    def set_position_manager(self, position_manager):
+        """
+        Inject CentralizedPositionManager for capital queries
+
+        Args:
+            position_manager: CentralizedPositionManager instance
+        """
+        self.position_manager = position_manager
+        logger.debug("Position manager injected into MoneyManager")
 
     def _create_position_sizer(self):
         """Factory method to create position sizing strategy"""
@@ -116,21 +136,33 @@ class MoneyManager:
             Position size in shares/units
         """
         try:
+            # Get portfolio state from position manager
+            if not self.position_manager:
+                logger.error("Position manager not set")
+                return 0
+
+            portfolio_state = self.position_manager.get_portfolio_state()
+
+            if portfolio_state.available_cash <= 0:
+                logger.warning(f"No available capital for {signal.symbol}")
+                return 0
+
             # Calculate stop distance from risk manager
             stop_loss_price = self.risk_manager.calculate_stop_loss(signal, market_data)
             stop_distance = abs(signal.entry_price - stop_loss_price)
 
             # Check if risk should be reduced
-            if self.risk_manager.should_reduce_risk(self.portfolio):
-                logger.warning("Risk reduction triggered - reducing position size by 50%")
-                base_size = self.position_sizer.calculate_size(signal, self.portfolio, stop_distance)
-                return int(base_size * 0.5)
+            if self.risk_manager.should_reduce_risk(portfolio_state):
+                logger.warning("Risk reduction triggered - applying risk reduction factor")
+                risk_reduction_factor = self.config.get('money_management', {}).get('risk_reduction_factor', 0.5)
+                base_size = self.position_sizer.calculate_size(signal, portfolio_state, stop_distance)
+                return int(base_size * risk_reduction_factor)
 
             # Normal position sizing
-            position_size = self.position_sizer.calculate_size(signal, self.portfolio, stop_distance)
+            position_size = self.position_sizer.calculate_size(signal, portfolio_state, stop_distance)
 
             # Additional safety checks
-            position_size = self._apply_safety_constraints(position_size, signal)
+            position_size = self._apply_safety_constraints(position_size, signal, portfolio_state)
 
             logger.debug(f"Position size calculated for {signal.symbol}: {position_size} shares")
             return position_size
@@ -263,6 +295,10 @@ class MoneyManager:
             days_held=days_held,
             is_short=is_short
         )
+
+    def set_position_manager(self, position_manager):
+        """Inject shared position manager"""
+        self.position_manager = position_manager
 
     # =============================================================================
     # PRIVATE HELPER METHODS
