@@ -5,7 +5,7 @@ import pytest
 from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.data.trade_history import TradeHistory, PositionOutcome
+from src.hybrid.positions.trade_history import TradeHistory, PositionOutcome
 # Import the classes we're testing
 from src.hybrid.money_management import PortfolioState
 from src.hybrid.money_management.position_sizers import KellyCriterionSizer

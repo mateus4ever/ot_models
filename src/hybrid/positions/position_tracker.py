@@ -27,25 +27,15 @@ Does NOT calculate P&L - provides data to PerformanceMetrics for calculations.
 """
 
 import logging
-from dataclasses import dataclass
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Dict, Optional
 from threading import RLock
+from typing import Dict, Optional
+
+from src.hybrid.positions.types import Position
+from src.hybrid.products.product_types import PositionDirection
 
 logger = logging.getLogger(__name__)
-
-@dataclass
-class OpenPosition:
-    """Data class for open position state"""
-    trade_id: str
-    symbol: str
-    direction: str  # 'long' or 'short'
-    quantity: int
-    entry_price: float
-    entry_time: datetime
-    current_price: float
-    last_update: datetime
-
 
 class PositionTracker:
     """
@@ -61,38 +51,39 @@ class PositionTracker:
         self.lock = RLock()
 
         # Track open positions
-        self.open_positions: Dict[str, OpenPosition] = {}
+        self.open_positions: Dict[str, Position] = {}
 
         logger.info("PositionTracker initialized")
+
+    @contextmanager
+    def _acquire_lock(self):
+        """Helper for lock acquisition with timeout"""
+
+        #TODO: timeout shouldn't be in money_management
+        timeout = self.config.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)
+        if not self.lock.acquire(timeout=timeout):
+            raise TimeoutError("Could not acquire lock")
+        try:
+            yield
+        finally:
+            self.lock.release()
+
+    def get_position(self, trade_id: str) -> Optional[Position]:
+        """Get current position state"""
+        with self._acquire_lock():
+            return self.open_positions.get(trade_id)
 
     def open_position(
             self,
             trade_id: str,
             symbol: str,
-            direction: str,
+            direction: PositionDirection,
             quantity: int,
             entry_price: float,
             entry_time: Optional[datetime] = None
     ) -> bool:
-        """
-        Record new open position
-
-        Args:
-            trade_id: Unique trade identifier
-            symbol: Trading symbol
-            direction: 'long' or 'short'
-            quantity: Number of shares/units
-            entry_price: Entry price
-            entry_time: Entry timestamp (None = now)
-
-        Returns:
-            True if successful
-        """
-        if not self.lock.acquire(timeout=self.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
-            logger.error(f"Lock timeout opening position {trade_id}")
-            raise TimeoutError("Could not acquire lock")
-
-        try:
+        """Record new open position"""
+        with self._acquire_lock():
             if trade_id in self.open_positions:
                 logger.warning(f"Position {trade_id} already exists")
                 return False
@@ -103,22 +94,19 @@ class PositionTracker:
 
             entry_time = entry_time or datetime.now()
 
-            self.open_positions[trade_id] = OpenPosition(
+            self.open_positions[trade_id] = Position(
                 trade_id=trade_id,
                 symbol=symbol,
                 direction=direction,
-                quantity=quantity,
+                size=quantity,
                 entry_price=entry_price,
+                current_price=entry_price,
                 entry_time=entry_time,
-                current_price=entry_price,  # Initially at entry
                 last_update=entry_time
             )
 
             logger.info(f"Opened position {trade_id}: {quantity} {symbol} @ {entry_price} ({direction})")
             return True
-
-        finally:
-            self.lock.release()
 
     def update_position_price(self, trade_id: str, current_price: float) -> bool:
         """
@@ -131,7 +119,8 @@ class PositionTracker:
         Returns:
             True if successful
         """
-        if not self.lock.acquire(timeout=self.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
+        #TODO: there should be something different than money_management
+        if not self.lock.acquire(timeout=self.config.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
             logger.error(f"Lock timeout updating position {trade_id}")
             raise TimeoutError("Could not acquire lock")
 
@@ -150,7 +139,7 @@ class PositionTracker:
         finally:
             self.lock.release()
 
-    def close_position(self, trade_id: str) -> Optional[OpenPosition]:
+    def close_position(self, trade_id: str) -> Optional[Position]:
         """
         Close position and return final state
 
@@ -160,7 +149,8 @@ class PositionTracker:
         Returns:
             Closed position data or None if not found
         """
-        if not self.lock.acquire(timeout=self.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
+        #TODO: there should be something different to money_management
+        if not self.lock.acquire(timeout=self.config.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
             logger.error(f"Lock timeout closing position {trade_id}")
             raise TimeoutError("Could not acquire lock")
 
@@ -176,33 +166,15 @@ class PositionTracker:
         finally:
             self.lock.release()
 
-    def get_position(self, trade_id: str) -> Optional[OpenPosition]:
-        """
-        Get current position state
-
-        Args:
-            trade_id: Position identifier
-
-        Returns:
-            Position snapshot or None
-        """
-        if not self.lock.acquire(timeout=self.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
-            logger.error(f"Lock timeout getting position {trade_id}")
-            raise TimeoutError("Could not acquire lock")
-
-        try:
-            return self.open_positions.get(trade_id)
-        finally:
-            self.lock.release()
-
-    def get_all_positions(self) -> Dict[str, OpenPosition]:
+    def get_all_positions(self) -> Dict[str, Position]:
         """
         Get all open positions
 
         Returns:
             Dictionary of trade_id -> position
         """
-        if not self.lock.acquire(timeout=self.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
+        #TODO: instead money_management something different.
+        if not self.lock.acquire(timeout=self.config.config.get('money_management', {}).get('lock_timeout_seconds', 0.5)):
             logger.error("Lock timeout getting all positions")
             raise TimeoutError("Could not acquire lock")
 
@@ -211,7 +183,7 @@ class PositionTracker:
         finally:
             self.lock.release()
 
-    def get_positions_by_symbol(self, symbol: str) -> Dict[str, OpenPosition]:
+    def get_positions_by_symbol(self, symbol: str) -> Dict[str, Position]:
         """
         Get all positions for specific symbol
 
@@ -256,3 +228,13 @@ class PositionTracker:
             logger.warning(f"PositionTracker reset: cleared {count} positions")
         finally:
             self.lock.release()
+
+    def on_price_update(self, current_prices: Dict[str, float]):
+        """Listener callback for DataManager price updates"""
+        with self._acquire_lock():
+            for position in self.open_positions.values():
+                if position.symbol in current_prices:
+                    position.current_price = current_prices[position.symbol]
+                    position.last_update = datetime.now()
+
+            logger.debug(f"Updated prices for {len(self.open_positions)} positions")

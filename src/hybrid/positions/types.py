@@ -1,5 +1,6 @@
 # types.py
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, Optional
 
 import pandas as pd
@@ -20,11 +21,14 @@ class TradingSignal:
 @dataclass
 class Position:
     """Current position information"""
+    trade_id: str
     symbol: str
     direction: PositionDirection
     size: int
     entry_price: float
     current_price: float
+    entry_time: datetime
+    last_update: datetime
     stop_loss: Optional[float] = None
     take_profit: Optional[float] = None
     unrealized_pnl: float = 0.0

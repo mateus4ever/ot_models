@@ -2,7 +2,7 @@
 import logging
 import pandas as pd
 from .atr_based_risk_manager import RiskManagementStrategy
-from ..types import TradingSignal, PortfolioState, PositionDirection
+from src.hybrid.positions.types import TradingSignal, PortfolioState, PositionDirection
 
 logger = logging.getLogger(__name__)
 

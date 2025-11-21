@@ -4,7 +4,7 @@ Feature: TradeHistory Basic Test
   So that I can verify the basic setup works
 
 Background:
-  Given data_management.json is available in tests/config/data and loaded
+  Given data_management.json is available in tests/config/positions and loaded
   And  I have a TradeHistory instance with base_currency "USD"
   And I have loaded trade data from "tests/data/trade/base_trade.json"
 

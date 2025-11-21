@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from . import RiskManagementStrategy
-from ..types import TradingSignal, PortfolioState, PositionDirection
+from src.hybrid.positions.types import TradingSignal, PortfolioState, PositionDirection
 
 logger = logging.getLogger(__name__)
 

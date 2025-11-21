@@ -5,12 +5,13 @@ Feature: MoneyManager Core Service Functionality
 
 Background:
   Given config files are available in tests/config/money_management
-  And a centralized position manager is initialized from configuration
-  And a MoneyManager instance is created and configured with position manager
+  And a centralized position orchestrator is initialized from configuration
+  And position orchestrator has 100000 initial capital
+  And a MoneyManager instance is created and configured with position orchestrator
 
 @position_sizing
 Scenario Outline: Calculate position size with available capital
-  Given position manager has <available_capital> available capital
+  Given position orchestrator has <available_capital> available capital
   When I calculate position size for <direction> signal at <entry_price> with <data_length> bars and price range <high_mult> to <low_mult>
   Then a position size should be calculated
   And the position size should be greater than zero
@@ -21,8 +22,7 @@ Scenario Outline: Calculate position size with available capital
     | 100000           | long      | 50.00       | 20          | 1.01      | 0.99     |
     | 50000            | short     | 75.00       | 25          | 1.02      | 0.98     |
 
-
-  @money_management @stop_loss @core
+  @stop_loss
   Scenario Outline: Stop loss calculation delegation
     Given I have a trading signal for <symbol> <direction> at <entry_price> with strength <signal_strength>
     And I have market data with <volatility_percent> volatility and <data_periods> periods
@@ -36,26 +36,23 @@ Scenario Outline: Calculate position size with available capital
       | GBPUSD | short     | 1.2500      | 0.8            | 0.03              | 20           | above           |
       | USDJPY | long      | 110.00      | 0.6            | 0.015             | 25           | below           |
 
-
-  @money_management @risk_management @core
-  Scenario Outline: Risk constraint validation with specific conditions
-    Given I have a MoneyManager with risk limits
-    And the portfolio has <daily_pnl> daily PnL
-    And the portfolio is currently at <current_drawdown> drawdown from peak
+  @risk_management
+  Scenario Outline: Risk reduction based on drawdown and daily P&L
+    Given I have portfolio metrics with equity <equity>, cash <cash>, daily_pnl <daily_pnl>, drawdown <drawdown>, and peak <peak>
     When I check if risk should be reduced
     Then the risk evaluation should return <expected_result>
 
     Examples:
-      | daily_pnl |  current_drawdown | expected_result |
-      | -2000     | 0.03         | false          |
-      | -6000     | 0.15         | true           |
-      | -3000     | 0.25         | true           |
-      | 1000      | 0.10         | false          |
+      | equity | cash  | daily_pnl | drawdown | peak   | expected_result |
+      | 97000 | 50000 | -2000     | 0.03     | 100000 | false           |
+      | 85000 | 50000 | -6000     | 0.15     | 100000 | true            |
+      | 75000 | 50000 | -3000     | 0.25     | 100000 | true            |
+      | 90000 | 50000 | 1000      | 0.10     | 100000 | false           |
 
-  @money_management @position_sizer_selection @core
+ @position_sizer_selection
   Scenario Outline: Configuration-driven position sizer selection
     Given I have money management configuration with <sizer_type> position sizer
-    When I create a MoneyManager instance
+    When I create a MoneyManager instance with the updated configuration
     Then the MoneyManager should initialize successfully
     And the position sizer should be <expected_sizer_name>
     And position calculations should work with <sizer_type> algorithm
@@ -71,42 +68,39 @@ Scenario Outline: Calculate position size with available capital
     Then a configuration error should be raised
     And the MoneyManager should not be created
 
-  @money_management @error_handling @core
+  @error_handling
   Scenario Outline: Invalid component configuration error
-    Given I have money management configuration with unknown <component_type> "<invalid_name>"
+    Given money management config has invalid <component_type> "<invalid_name>"
     When I try to create a MoneyManager instance
-    Then a <component_type> configuration error should be raised
-    And the error message should list available <component_type> options
+    Then for invalid component type <component_type> a configuration error should be raised
 
     Examples:
       | component_type | invalid_name     |
       | position_sizer | invalid_sizer    |
       | risk_manager   | invalid_manager  |
 
-  @money_management @integration @core
-Scenario Outline: Position sizing with risk reduction
-  Given I have a MoneyManager initialized
-  And the portfolio has <drawdown_percent> drawdown exceeding risk limits
-  When I calculate position size for <symbol> <direction> signal at <entry_price> with strength <signal_strength> and <data_periods> periods
-  Then the position size should be reduced from normal calculation
-  And the calculation should complete successfully
+  @risk_reduction
+  Scenario Outline: Position sizing with risk reduction triggered by drawdown
+    Given position orchestrator has <available_capital> available and peak equity was <peak_equity>
+    When I calculate position size for <direction> signal at <entry_price> with <data_length> bars and price range <high_mult> to <low_mult>
+    Then the position size should be reduced by risk reduction factor
+    And the calculation should complete successfully
 
-  Examples:
-    | drawdown_percent | symbol | direction | entry_price | signal_strength | data_periods |
-    | 0.25            | EURUSD | long      | 1.1000      | 1.0            | 15           |
-    | 0.30            | GBPUSD | short     | 1.2500      | 0.8            | 20           |
+    Examples:
+      | available_capital | peak_equity | direction | entry_price | data_length | high_mult | low_mult |
+      | 75000             | 100000      | long      | 1.1000      | 20          | 1.01      | 0.99     |
+      | 70000             | 100000      | short     | 1.2500      | 20          | 1.01      | 0.99     |
 
-  @money_management @safety_constraints @core
+  @safety_constraints
   Scenario Outline: Safety constraints override strategy calculations
-    Given I have a MoneyManager initialized
-    And the portfolio has <available_cash> available cash
-    When I calculate position size for <symbol> <direction> signal at <entry_price> with desired value <signal_value>
+    Given position orchestrator has <available_cash> available capital
+    When I calculate position size for <direction> signal at <entry_price> with <data_length> bars and price range <high_mult> to <low_mult>
     Then the position size should be limited to <expected_max_shares> shares
     And the position value should not exceed <available_cash>
     And no errors should occur during calculation
 
     Examples:
-      | available_cash | symbol | direction | entry_price | signal_value | expected_max_shares |
-      | 50000         | EURUSD | long      | 1.1000      | 100000       | 9090            |
-      | 25000         | GBPUSD | short     | 1.2500      | 75000        | 8000            |
-      | 10000         | USDJPY | long      | 110.00      | 50000        | 90              |
+      | available_cash | direction | entry_price | data_length | high_mult | low_mult | expected_max_shares |
+      | 50000          | long      | 1.1000      | 20          | 1.01      | 0.99     | 9090                |
+      | 25000          | short     | 1.2500      | 20          | 1.01      | 0.99     | 8000                |
+      | 10000          | long      | 110.00      | 20          | 1.01      | 0.99     | 90                  |

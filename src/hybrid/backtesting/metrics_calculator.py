@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 from src.hybrid.backtesting.performance_metrics import PerformanceMetrics
-from src.hybrid.data.trade_history import TradeHistory
+from src.hybrid.positions.trade_history import TradeHistory
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class MetricsCalculator:
 
     def _cache_config_values(self):
         """Cache configuration values for calculations"""
-        backtest_config = self.config.get('backtesting', {})
+        backtest_config = self.config.config.get('backtesting', {})
 
         # Risk-free rate for Sharpe calculation
         self.risk_free_rate = backtest_config.get('risk_free_rate', 0.02)

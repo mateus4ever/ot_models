@@ -12,7 +12,7 @@ from pytest_bdd import scenarios, given, parsers, then, when
 import ast
 import random
 
-from src.hybrid.money_management.centralized_position_manager import CentralizedPositionManager
+from src.hybrid.positions.centralized_position_manager import CentralizedPositionManager
 
 # Go up 4 levels from tests/hybrid/money_management/test_money_management.py to project root
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))

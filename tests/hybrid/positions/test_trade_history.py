@@ -6,7 +6,7 @@ from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
 # Import the classes we're testing
-from src.hybrid.data.trade_history import TradeHistory, PositionOutcome, TradeStatistics
+from src.hybrid.positions.trade_history import TradeHistory, TradeStatistics
 
 # Load all scenarios from the feature file
 scenarios('trade_history.feature')
@@ -71,7 +71,7 @@ def loaded_trade_data(test_context, file_path):
     'I have a position with entry_price {entry_price}, exit_price {exit_price}, quantity {quantity}, direction {direction}'))
 def create_test_position_with_cost_model(test_context, entry_price, exit_price, quantity, direction):
     """Create test position using real cost model"""
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
     # Use relative dates (same day trade)
     now = datetime.now()

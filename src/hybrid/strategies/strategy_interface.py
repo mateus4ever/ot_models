@@ -47,6 +47,9 @@ class StrategyInterface(Protocol):
         ...
 
 
-    def run(self, market_data: Dict) -> Dict:
+    def run(self) -> Dict:
         """Run complete backtest for this strategy"""
+        ...
+
+    def setPositionOrchestrator(self, position_orchestrator):
         ...

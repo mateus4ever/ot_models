@@ -3,7 +3,7 @@ import logging
 import pandas as pd
 import numpy as np
 from .fixed_fractional_sizer import PositionSizingStrategy
-from ..types import TradingSignal, PortfolioState
+from src.hybrid.positions.types import TradingSignal, PortfolioState
 
 logger = logging.getLogger(__name__)
 

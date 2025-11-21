@@ -1,11 +1,10 @@
 # position_sizers/fixed_fractional_sizer.py
 import logging
-import pandas as pd
 from typing import TYPE_CHECKING
 from .sizer_interface import PositionSizingStrategy
 
 if TYPE_CHECKING:
-    from ..types import TradingSignal, PortfolioState
+    from src.hybrid.positions.types import TradingSignal, PortfolioState
 
 logger = logging.getLogger(__name__)
 

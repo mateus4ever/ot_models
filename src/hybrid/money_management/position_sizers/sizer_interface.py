@@ -2,10 +2,10 @@
 import logging
 import pandas as pd
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Optional, Any
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from ..types import TradingSignal, PortfolioState
+    from src.hybrid.positions.types import TradingSignal, PortfolioState
 
 logger = logging.getLogger(__name__)
 

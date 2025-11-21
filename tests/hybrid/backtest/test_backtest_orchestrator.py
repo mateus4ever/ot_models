@@ -83,6 +83,8 @@ def initialize_orchestrator(test_context):
 
     root_path = Path(__file__).parent.parent.parent
     orchestrator = BacktestOrchestrator(config,project_root=root_path)
+    #TODO: this should be as parameter in feature file
+    orchestrator.position_orchestrator.set_initial_capital(100000)
 
     test_context['orchestrator'] = orchestrator
 

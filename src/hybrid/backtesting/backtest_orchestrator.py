@@ -14,6 +14,7 @@ from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data.data_manager import DataManager
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.optimization import OptimizerType, OptimizerFactory
+from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.results import Result
 from src.hybrid.signals import SignalFactory
 from src.hybrid.strategies import StrategyFactory
@@ -39,14 +40,21 @@ class BacktestOrchestrator:
     Main backtesting orchestrator - chooses appropriate backtesting method
     ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
     """
-    def __init__(self, config: UnifiedConfig, project_root: Path = None):
+
+    def __init__(self, config, project_root: Path = None):
+        """Initialize orchestrator"""
         self.config = config
         self.project_root = project_root or Path.cwd()
 
-        file_ops = config.get_section('file_operations', {})
-        self.results_dir = file_ops.get('results_dir')
-        self.timestamp_format = file_ops.get('timestamp_format')
-        self._cache_config_values()
+        # Initialize core components
+        self.data_manager = DataManager(self.config, project_root=self.project_root)
+
+        self.position_orchestrator = PositionOrchestrator(self.config)
+
+        self.money_manager = MoneyManager(self.config)
+        self.money_manager.set_position_orchestrator(self.position_orchestrator)
+
+        logger.info("BacktestOrchestrator initialized with all components")
 
     def _cache_config_values(self):
         """Cache orchestrator configuration values with validation"""
@@ -60,10 +68,6 @@ class BacktestOrchestrator:
         if not backtest_config:
             raise ConfigurationError("Missing required section: 'backtesting'")
 
-        math_config = self.config.get_section('mathematical_operations')
-        if not math_config:
-            raise ConfigurationError("Missing required section: 'mathematical_operations'")
-
         # Validate and cache with type checking
         if 'verbose' not in general_config:
             raise ConfigurationError("Missing required key: 'general.verbose'")
@@ -72,12 +76,6 @@ class BacktestOrchestrator:
         self.backtesting_method = backtest_config.get('method', 'walk_forward')
         if self.backtesting_method not in ['walk_forward', 'simple']:
             raise ConfigurationError(f"Invalid backtesting method: {self.backtesting_method}")
-
-        if 'unity' not in math_config:
-            raise ConfigurationError("Missing required key: 'mathematical_operations.unity'")
-        self.unity_value = int(math_config['unity'])
-        if self.unity_value != 1:
-            raise ConfigurationError(f"Invalid unity value: {self.unity_value}, expected 1")
 
     def _verify_data_loaded(self, data_manager: DataManager,
                             requested_markets: List[str] = None) -> List[str]:
@@ -100,17 +98,7 @@ class BacktestOrchestrator:
                                     strategies: List[Union[StrategyInterface, str]],
                                     markets: List[str] = None,
                                     execution_mode: str = "serial") -> Dict:
-        """
-        Run backtest with multiple strategies across multiple markets
-
-        Args:
-            strategies: List of strategy instances or strategy names
-            markets: List of market identifiers (e.g., ['EURUSD', 'GBPUSD'])
-            execution_mode: 'serial' or 'parallel'
-
-        Returns:
-            Comprehensive backtest results for all strategies
-        """
+        """Run backtest with multiple strategies across multiple markets"""
         logger = logging.getLogger(__name__)
         start_time = datetime.now()
 
@@ -118,36 +106,36 @@ class BacktestOrchestrator:
         logger.info(f"Strategies: {len(strategies)}, Markets: {markets or 'Auto-discover'}, Mode: {execution_mode}")
 
         try:
-            # 1. Initialize managers
-            data_manager = DataManager(self.config,project_root=self.project_root)
-            money_manager = MoneyManager(self.config)
-            logger.debug("Managers initialized successfully")
+            # Load market data and register listeners
+            self.data_manager.load_market_data()
+            self.data_manager.register_listener(self.position_orchestrator.position_tracker)
 
-            # 2. Load market data using DataManager
-            data_manager.load_market_data()
-            loaded_markets = self._verify_data_loaded(data_manager, markets)
+            loaded_markets = self._verify_data_loaded(self.data_manager, markets)
             logger.info(f"Market data loaded successfully for {len(loaded_markets)} markets")
 
-            # 3. Initialize strategies with components and dependency injection
-            # todo: optimizer_type must be derived from config.
-            strategy_instances = self._initialize_strategies(strategies, data_manager, money_manager,
-                                                             OptimizerType.SIMPLE_RANDOM)
-            logger.info(f"Initialized {len(strategy_instances)} strategies with components")
+            # Initialize strategies with dependency injection
+            strategy_instances = self._initialize_strategies(
+                strategies,
+                self.data_manager,
+                self.money_manager,
+                self.position_orchestrator,
+                OptimizerType.SIMPLE_RANDOM
+            )
+            logger.info(f"Initialized {len(strategy_instances)} strategies")
 
-            # 4. Each strategy runs its own backtest
+            # Execute strategies (no loaded_markets parameter)
             if execution_mode.lower() == "parallel":
-                results = self._execute_strategies_parallel(strategy_instances, loaded_markets)
+                results = self._execute_strategies_parallel(strategy_instances)
             else:
-                results = self._execute_strategies_serial(strategy_instances, loaded_markets)
+                results = self._execute_strategies_serial(strategy_instances)
 
-            # 5. Aggregate and analyze results
+            # Aggregate results
             aggregated_results = self._aggregate_strategy_results(results, start_time)
 
             logger.info("Multi-strategy backtest completed successfully")
             return aggregated_results
 
         except Exception as e:
-            logger.debug(f"Exception caught in orchestrator: {type(e).__name__}: {e}")
             logger.error(f"Multi-strategy backtest failed: {str(e)}", exc_info=True)
             return {
                 'error': str(e),
@@ -155,8 +143,11 @@ class BacktestOrchestrator:
                 'method': 'multi_strategy_backtest'
             }
 
-    def _initialize_strategies(self, strategies: List[Union[StrategyInterface, str]],
-                               data_manager: DataManager, money_manager: MoneyManager,
+    def _initialize_strategies(self,
+                               strategies: List[Union[StrategyInterface, str]],
+                               data_manager: DataManager,
+                               money_manager: MoneyManager,
+                               position_orchestrator: PositionOrchestrator,
                                optimizer_type: OptimizerType = None) -> List[StrategyInterface]:
         """Initialize strategy instances with dependency injection"""
         strategy_factory = StrategyFactory()
@@ -166,7 +157,7 @@ class BacktestOrchestrator:
         # Get signals from config
         signals_config = self.config.get_section('strategy', {}).get('signals', [])
 
-        # Determine optimizer type (parameter overrides config)
+        # Determine optimizer type
         if optimizer_type is None:
             opt_config = self.config.get_section('optimization', {})
             optimizer_type_str = opt_config.get('default_type', 'CACHED_RANDOM')
@@ -181,6 +172,7 @@ class BacktestOrchestrator:
             # Inject managers
             created_strategy.setMoneyManager(money_manager)
             created_strategy.setDataManager(data_manager)
+            created_strategy.setPositionOrchestrator(position_orchestrator)  # ADD THIS
 
             for signal_name in signals_config:
                 signal = signal_factory.create_signal(signal_name)
@@ -189,33 +181,39 @@ class BacktestOrchestrator:
             # Add components
             created_strategy.addPredictor("placeholder_predictor")
             created_strategy.addOptimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
-            created_strategy.addRunner("placeholder_runner")
             created_strategy.addMetric("placeholder_metric")
 
             strategy_instances.append(created_strategy)
 
         return strategy_instances
 
-    def _execute_strategies_serial(self, strategy_instances: List[StrategyInterface], market_data: Dict) -> List[
-        Result]:
+    def _execute_strategies_serial(self, strategy_instances: List[StrategyInterface]) -> List[Result]:
         """Execute strategies in serial mode"""
         results = []
 
         for strategy in strategy_instances:
-            backtest_results = strategy.run(market_data)
+            # Strategy gets data from self.data_manager (already injected)
+            backtest_results = strategy.run()
             result = Result(strategy.name, backtest_results)
             results.append(result)
+
         return results
 
-    def _execute_strategies_parallel(self, strategy_instances: List[StrategyInterface], market_data: Dict) -> List[
-        Result]:
+    def _execute_strategies_parallel(self, strategy_instances: List[StrategyInterface]) -> List[Result]:
         """Execute strategies in parallel mode"""
+        from concurrent.futures import ThreadPoolExecutor
+
         results = []
 
-        # TODO: Implement parallel execution
-        for strategy in strategy_instances:
-            result = Result(strategy.name, "placeholder_data")
-            results.append(result)
+        def run_strategy(strategy):
+            backtest_results = strategy.run()
+            return Result(strategy.name, backtest_results)
+
+        max_workers = self.config.get('backtesting', {}).get('max_parallel_workers', 4)
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [executor.submit(run_strategy, strategy) for strategy in strategy_instances]
+            results = [future.result() for future in futures]
 
         return results
 

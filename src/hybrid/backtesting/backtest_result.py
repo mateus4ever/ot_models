@@ -17,7 +17,7 @@ from typing import Dict, Any, List, Optional
 
 from src.hybrid.backtesting.metrics_calculator import MetricsCalculator
 from src.hybrid.backtesting.performance_metrics import PerformanceMetrics
-from src.hybrid.data.trade_history import TradeHistory
+from src.hybrid.positions.trade_history import TradeHistory
 
 
 @dataclass

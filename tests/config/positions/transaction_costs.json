@@ -1,0 +1,8 @@
+{
+  "transaction_costs": {
+    "commission_per_trade": 0.0,
+    "slippage_pct": 0.001,
+    "spread_pct": 0.0005,
+    "short_borrow_rate": 0.015
+  }
+}

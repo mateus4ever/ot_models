@@ -1,5 +1,5 @@
 from src.hybrid.backtesting.backtest_result import BacktestResult
-from src.hybrid.data.trade_history import TradeHistory
+from src.hybrid.positions.trade_history import TradeHistory
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.strategies import StrategyFactory
 

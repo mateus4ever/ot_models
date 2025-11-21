@@ -2,7 +2,7 @@
 import logging
 import pandas as pd
 from . import RiskManagementStrategy
-from ..types import TradingSignal, PortfolioState, PositionDirection
+from src.hybrid.positions.types import TradingSignal, PortfolioState, PositionDirection
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +55,8 @@ class ATRBasedRiskManager(RiskManagementStrategy):
         if daily_loss_pct > self.max_daily_loss:
             return True
 
-        # Calculate CURRENT drawdown (not historical max)
-        current_drawdown = (portfolio.peak_equity - portfolio.total_equity) / portfolio.peak_equity
+        # Calculate current drawdown
+        current_drawdown = self._calculate_drawdown(portfolio)
         if current_drawdown > self.max_drawdown:
             return True
 
@@ -98,3 +98,9 @@ class ATRBasedRiskManager(RiskManagementStrategy):
             atr = true_range.rolling(self.atr_period).mean().iloc[-1]
 
         return atr
+
+    def _calculate_drawdown(self, portfolio: PortfolioState) -> float:
+        """Calculate current drawdown from peak"""
+        if portfolio.peak_equity <= 0:
+            return 0.0
+        return (portfolio.peak_equity - portfolio.total_equity) / portfolio.peak_equity

@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 
 from .data_loader import FilePathLoader, FileDiscoveryLoader, DirectoryScanner
-from .trade_history import TradeHistory
+from src.hybrid.positions.trade_history import TradeHistory
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class DataManager:
     - Directory discovery (Dict with directory_path)
     """
 
-    def __init__(self, config,project_root: Path = None):
+    def __init__(self, config, project_root: Path = None):
         self.config = config
         self.project_root = project_root or Path.cwd()
         self._cached_data = {}  # Private - no external access {market_name: consolidated_dataframe}
@@ -48,6 +48,7 @@ class DataManager:
 
         # Get data_loading config section
         data_config = config.get_section('data_loading', {})
+        self._listeners = []
 
         self._loader_registry = {
             'filepath': FilePathLoader(data_config),
@@ -60,33 +61,24 @@ class DataManager:
         logger.info("Initializing DataManager as data controller with Strategy pattern support")
         self._log_initialization_info()
 
-    def _log_initialization_info(self):
-        """Log initialization information for debugging"""
-        current_file = Path(__file__).resolve()
-        project_root = current_file.parent.parent.parent.parent
+    def register_listener(self, listener):
+        """Register listener for price updates"""
+        self._listeners.append(listener)
+        logger.debug(f"Registered listener: {listener.__class__.__name__}")
 
-        logger.debug(f"DataManager file location: {current_file}")
-        logger.debug(f"Detected project root: {project_root}")
-
-        # Log config information
-        data_config = self.config.get_section('data_loading', {})
-        data_source = data_config.get('data_source', 'tests/data')
-        logger.debug(f"Configured data source: {data_source}")
-
-        # Check if data directory exists
-        if Path(data_source).is_absolute():
-            data_path = Path(data_source)
+    def unregister_listener(self, listener):
+        """Unregister listener from price updates"""
+        if listener in self._listeners:
+            self._listeners.remove(listener)
+            logger.debug(f"Unregistered listener: {listener.__class__.__name__}")
         else:
-            data_path = project_root / data_source
+            logger.warning(f"Attempted to unregister listener that wasn't registered: {listener.__class__.__name__}")
 
-        logger.debug(f"Resolved data path: {data_path}")
-        logger.debug(f"Data directory exists: {data_path.exists()}")
-
-        if data_path.exists():
-            csv_files = list(data_path.glob("*.csv"))
-            logger.info(f"Found {len(csv_files)} CSV files in data directory")
-            if csv_files:
-                logger.debug(f"Available CSV files: {[f.name for f in csv_files[:5]]}")
+    def clear_listeners(self):
+        """Clear all registered listeners"""
+        count = len(self._listeners)
+        self._listeners.clear()
+        logger.debug(f"Cleared {count} listeners")
 
     def load_market_data(self, source: Union[List[str], Dict, str, None] = None) -> bool:
         """Load market data using Strategy pattern or from configuration
@@ -310,7 +302,7 @@ class DataManager:
         self.total_records = len(market_data)
 
         # Set temporal pointer to timestamp at training window position
-        self.temporal_timestamp = market_data.index[training_window-1]  # Get actual timestamp
+        self.temporal_timestamp = market_data.index[training_window - 1]  # Get actual timestamp
         self._active_market_index = training_window  # Cache index position for performance
 
         logger.info(f"Temporal pointer initialized for {self._active_market}: training window={training_window}")
@@ -368,17 +360,7 @@ class DataManager:
         logger.debug(f"New timestamp: {new_timestamp}, cached index: {new_index}")
 
     def next(self, steps: int = 1) -> bool:
-        """Advance temporal pointer by specified steps
-
-        Args:
-            steps: Number of steps to advance (default 1)
-
-        Returns:
-            True if advancement successful, False if at end of data
-
-        Raises:
-            ValueError: If temporal pointer not initialized
-        """
+        """Advance temporal pointer by specified steps"""
         if self.temporal_timestamp is None:
             raise ValueError("Temporal pointer not initialized. Call initialize_temporal_pointer() first.")
 
@@ -401,6 +383,9 @@ class DataManager:
 
         logger.debug(f"Temporal pointer advanced from position {old_position} to {new_position} (+{steps} steps)")
         logger.debug(f"Timestamp changed from {old_timestamp} to {self.temporal_timestamp}")
+
+        # Notify listeners of price update
+        self._notify_listeners()
 
         return True
 
@@ -436,6 +421,7 @@ class DataManager:
         logger.debug(f"Temporal pointer moved backward from position {old_position} to {new_position} (-{steps} steps)")
         logger.debug(f"Timestamp changed from {old_timestamp} to {self.temporal_timestamp}")
 
+        self._notify_listeners()
         return True
 
     def get_past_data(self) -> Dict[str, pd.DataFrame]:
@@ -620,3 +606,50 @@ class DataManager:
         logger.info(
             f"Training data prepared for {self._active_market} with effective window: {self.training_window_size}")
         return True
+
+    def _log_initialization_info(self):
+        """Log initialization information for debugging"""
+        current_file = Path(__file__).resolve()
+        project_root = current_file.parent.parent.parent.parent
+
+        logger.debug(f"DataManager file location: {current_file}")
+        logger.debug(f"Detected project root: {project_root}")
+
+        # Log config information
+        data_config = self.config.get_section('data_loading', {})
+        data_source = data_config.get('data_source', 'tests/data')
+        logger.debug(f"Configured data source: {data_source}")
+
+        # Check if data directory exists
+        if Path(data_source).is_absolute():
+            data_path = Path(data_source)
+        else:
+            data_path = project_root / data_source
+
+        logger.debug(f"Resolved data path: {data_path}")
+        logger.debug(f"Data directory exists: {data_path.exists()}")
+
+        if data_path.exists():
+            csv_files = list(data_path.glob("*.csv"))
+            logger.info(f"Found {len(csv_files)} CSV files in data directory")
+            if csv_files:
+                logger.debug(f"Available CSV files: {[f.name for f in csv_files[:5]]}")
+
+
+    def _get_current_prices(self) -> Dict[str, float]:
+        """Get current prices for all loaded markets at temporal pointer"""
+        current_prices = {}
+
+        for market_id, df in self._cached_data.items():
+            if self.temporal_timestamp in df.index:
+                row = df.loc[self.temporal_timestamp]
+                # Try to get 'close' price, fallback to 'price' or first numeric column
+                price = row.get('close', row.get('price', row.iloc[0] if len(row) > 0 else 0.0))
+                current_prices[market_id] = price
+        return current_prices
+
+    def _notify_listeners(self):
+        """Notify all listeners of price update"""
+        current_prices = self._get_current_prices()
+        for listener in self._listeners:
+            listener.on_price_update(current_prices)

@@ -73,11 +73,10 @@ class BaseStrategy(StrategyInterface):
         self.execution_listeners.append(listener)
 
     # Main execution method
-    def run(self, market_data: Dict = None) -> Dict:
+    def run(self) -> Dict:
         """Run strategy on data stream (historical or live)
 
-        Args:
-            market_data: Optional market data dict (not currently used)
+        Strategy accesses data via self.data_manager which was injected.
 
         Returns:
             Dictionary with strategy results
@@ -314,10 +313,11 @@ class BaseStrategy(StrategyInterface):
         past_data = past_data_dict[market_id]
 
         # Create trading signal with specified direction
+        # TODO: signal_strength is hardcoded
         trading_signal = TradingSignal(
             symbol=market_id,
             direction=direction,  # ← Now parameterized
-            strength=1.0,
+            signal_strength=1.0,
             entry_price=current_bar['close'],
             timestamp=current_bar.name
         )
@@ -434,36 +434,43 @@ class BaseStrategy(StrategyInterface):
                 listener.on_exit(symbol, exit_price, pnl)
 
     def _calculate_final_metrics(self, trades: List[Dict]) -> Dict:
-        """Calculate final strategy metrics
+        """Calculate final strategy metrics using MetricsCalculator"""
+        from src.hybrid.backtesting.metrics_calculator import MetricsCalculator
 
-        Args:
-            trades: List of completed trades
+        # MetricsCalculator expects TradeHistory, not raw trades list
+        # Get it from position_orchestrator
+        metrics_calc = MetricsCalculator(self.config)
 
-        Returns:
-            Dictionary with strategy results
-        """
-        if not trades:
-            return {
-                'strategy': self.name,
-                'total_trades': 0,
-                'total_pnl': 0.0,
-                'win_rate': 0.0,
-                'trades': []
-            }
+        # Calculate metrics from trade_history
+        initial_capital = self.config.config.get('backtesting', {}).get('initial_capital', 100000)
 
-        total_pnl = sum(t['pnl'] for t in trades)
-        winning_trades = [t for t in trades if t['pnl'] > 0]
-        win_rate = len(winning_trades) / len(trades) if trades else 0.0
-
-        logger.info(
-            f"Strategy complete: {len(trades)} trades, "
-            f"P&L={total_pnl:.2f}, Win Rate={win_rate:.1%}"
+        performance_metrics = metrics_calc.calculate_metrics(
+            trade_history=self.position_orchestrator.trade_history,
+            equity_curve=None,  # TODO: Track equity curve during backtest
+            initial_capital=initial_capital
         )
 
-        return {
-            'strategy': self.name,
-            'total_trades': len(trades),
-            'total_pnl': total_pnl,
-            'win_rate': win_rate,
-            'trades': trades
-        }
+        # Convert to dict and add strategy name
+        results = performance_metrics.to_dict()
+        results['strategy_name'] = self.name
+
+        # Add trade details for debugging
+        results['trade_details'] = [
+            {
+                'trade_id': t.get('uuid'),
+                'type': t.get('direction'),
+                'entry': t.get('entry_price'),
+                'exit': t.get('exit_price'),
+                'pnl': t.get('net_pnl'),
+                'exit_reason': t.get('exit_reason', 'UNKNOWN')
+            }
+            for t in self.position_orchestrator.trade_history.trades.values()
+            if t.get('status') == 'closed'
+        ]
+
+        return results
+
+    def setPositionOrchestrator(self, position_orchestrator: 'PositionOrchestrator'):
+        """Set position orchestrator for position management"""
+        self.position_orchestrator = position_orchestrator
+        logger.debug(f"PositionOrchestrator set for strategy {self.__class__.__name__}")

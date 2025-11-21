@@ -4,7 +4,7 @@ Feature: Centralized Position Manager
   So that bots don't over-allocate capital and compete fairly
 
   Background:
-    Given config files are available in tests/config/money_management
+    Given config files are available in tests/config/positions
     And a centralized position manager is initialized from configuration
 
   # ============================================================================

@@ -1,9 +1,8 @@
 import logging
 import pandas as pd
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
-from src.hybrid.money_management.types import TradingSignal, PortfolioState
+from src.hybrid.positions.types import TradingSignal, PortfolioState
 
 logger = logging.getLogger(__name__)
 

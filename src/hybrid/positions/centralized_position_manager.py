@@ -420,32 +420,3 @@ class CentralizedPositionManager:
             self.committed.clear()
             logger.warning(f"Position manager reset: cleared {num_reservations} reservations "
                            f"and {num_positions} positions")
-
-    def get_portfolio_state(self) -> PortfolioState:
-        """
-        Get current portfolio state as PortfolioState DTO
-
-        Returns:
-            PortfolioState with current capital allocation
-        """
-        with self.lock:
-            available = self._get_available_capital_unlocked()
-            committed_positions = self.get_committed_positions()
-
-            # Convert committed positions to Position objects if needed
-            positions = {}
-            for trade_id, pos_data in committed_positions.items():
-                # Simple position representation - extend as needed
-                positions[trade_id] = Position(
-                    symbol=pos_data.get('symbol'),
-                    size=pos_data.get('size'),
-                    entry_price=pos_data.get('entry_price'),
-                    direction='long'  # Extend with actual direction if tracked
-                )
-
-            return PortfolioState(
-                total_equity=self.total_capital,
-                available_cash=available,
-                positions=positions,
-                peak_equity=self.total_capital  # Could track actual peak
-            )

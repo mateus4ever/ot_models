@@ -2,10 +2,10 @@
 import logging
 from typing import TYPE_CHECKING
 from .sizer_interface import PositionSizingStrategy
-from ...data.trade_history import PositionOutcome
+from src.hybrid.positions.trade_history import PositionOutcome
 
 if TYPE_CHECKING:
-    from ..types import TradingSignal, PortfolioState
+    from src.hybrid.positions.types import TradingSignal, PortfolioState
 
 logger = logging.getLogger(__name__)
 

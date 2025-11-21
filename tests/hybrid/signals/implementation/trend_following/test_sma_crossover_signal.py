@@ -11,6 +11,7 @@ from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data import DataManager
+from src.hybrid.money_management import MoneyManager
 from src.hybrid.signals.market_signal_enum import MarketSignal
 from src.hybrid.signals.signal_factory import SignalFactory
 
@@ -226,6 +227,14 @@ def process_current_price(test_context, current_price: float):
     # Generate and store the signal for assertion
     test_context['generated_signal'] = signal.generate_signal()
 
+@when('I try to create a MoneyManager instance')
+def try_create_invalid_money_manager(test_context):
+    config = test_context['config']
+    try:
+        MoneyManager(config)
+        test_context['creation_error'] = None
+    except Exception as e:
+        test_context['creation_error'] = e
 
 # =============================================================================
 # THEN steps - Assertions
@@ -255,3 +264,9 @@ def verify_signal_direction(test_context, expected_direction):
 
     assert actual_signal == expected_enum, \
         f"Expected {expected_enum} signal, but received {actual_signal}"
+
+@then(parsers.parse('a configuration error should be raised for {component_type}'))
+def check_config_error(test_context, component_type):
+    error = test_context['creation_error']
+    assert error is not None, "Expected error but MoneyManager created successfully"
+    assert component_type in str(error).lower()

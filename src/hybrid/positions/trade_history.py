@@ -419,6 +419,32 @@ class TradeHistory:
         """
         return list(self.trades.values())
 
+    def get_open_trades(self) -> List[Dict[str, Any]]:
+        """Get all open trades"""
+        open_trades = []
+        for trade in self.trades.values():
+            if trade.get('status') == 'open':
+                open_trades.append(trade)
+        return open_trades
+
+    def get_trade_by_id(self, trade_id: str) -> Optional[Dict[str, Any]]:
+        """Get trade by uuid or trade_id"""
+        for trade in self.trades.values():
+            if trade.get('uuid') == trade_id or trade.get('trade_id') == trade_id:
+                return trade
+        return None
+
+    def update_trade(self, trade_id: str, updates: Dict[str, Any]) -> bool:
+        """Update existing trade"""
+        for timestamp, trade in self.trades.items():
+            if trade.get('uuid') == trade_id or trade.get('trade_id') == trade_id:
+                trade.update(updates)
+                self._invalidate_cache()
+                logger.debug(f"Updated trade {trade_id}")
+                return True
+        logger.warning(f"Trade {trade_id} not found for update")
+        return False
+
     def _get_closed_positions(self, lookback_periods: Optional[int] = None) -> List[Dict[str, Any]]:
         """Get closed trades for statistics calculation
 
