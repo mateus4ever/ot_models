@@ -7,6 +7,7 @@ from pathlib import Path
 from sortedcontainers import SortedDict
 
 from src.hybrid.costs.transaction_costs import SimpleTransactionCostModel
+from src.hybrid.products.product_types import PositionDirection
 
 logger = logging.getLogger(__name__)
 
@@ -220,25 +221,14 @@ class TradeHistory:
                 logger.error(f"Invalid timestamp in trade: {trade_data.get('uuid', 'unknown')}")
                 return False
 
-            # Check if trade is closed
-            status = trade_data.get('status', 'closed')
+            status = trade_data.get('status')
+            # Check if trade is open
+            if status == 'open':
+                if 'entry_costs' not in trade_data:
+                    trade_data['entry_costs'] = self._calculate_entry_costs(trade_data)
 
-            if status == 'closed':
-                # Calculate costs for closed trades
-                if 'costs' not in trade_data:
-                    costs = self._calculate_trade_costs(trade_data)
-                    trade_data['costs'] = costs
-
-                    # Calculate P&L if not provided
-                    if 'gross_pnl' not in trade_data:
-                        gross_pnl = self._calculate_gross_pnl(trade_data)
-                        trade_data['gross_pnl'] = gross_pnl
-
-                    if 'net_pnl' not in trade_data:
-                        trade_data['net_pnl'] = trade_data['gross_pnl'] - costs['total']
-            else:
-                # Open trade - no cost calculation yet
-                logger.debug(f"Open trade added without cost calculation: {trade_data.get('uuid', 'unknown')}")
+            # For closed trades, finalize all costs
+            self._finalize_closed_trade(trade_data)
 
             self.trades[timestamp] = trade_data
             self._invalidate_cache()
@@ -250,6 +240,37 @@ class TradeHistory:
             logger.error(f"Error adding trade: {e}")
             return False
 
+    def _calculate_entry_costs(self, trade_data: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate costs for opening a position"""
+        if not self.cost_model:
+            raise ValueError("Cost model not set - cannot calculate entry costs")
+
+        entry_price = trade_data.get('entry_price')
+        quantity = trade_data.get('quantity')
+
+        if entry_price is None or quantity is None:
+            raise ValueError(f"Missing entry_price or quantity in trade_data: {trade_data.get('uuid')}")
+
+        return self.cost_model.calculate_entry_costs(entry_price, quantity)
+    def _finalize_closed_trade(self, trade_data: Dict[str, Any]) -> None:
+        """Calculate costs and P&L for closed trade"""
+        if trade_data.get('status') != 'closed':
+            return
+
+        # Costs may already be set (from broker in production)
+        if 'costs' not in trade_data:
+            costs = self._calculate_trade_costs(trade_data)
+            trade_data['costs'] = costs
+
+        costs = trade_data['costs']
+        total_costs = costs.get('total') if isinstance(costs, dict) else costs
+
+        # Calculate P&L
+        if 'gross_pnl' not in trade_data:
+            trade_data['gross_pnl'] = self._calculate_gross_pnl(trade_data)
+
+        if 'net_pnl' not in trade_data:
+            trade_data['net_pnl'] = trade_data['gross_pnl'] - total_costs
     def _calculate_trade_costs(self, trade_data: Dict[str, Any]) -> Dict[str, float]:
         """
         Calculate costs for a trade using cost model
@@ -278,9 +299,9 @@ class TradeHistory:
         days_held = (exit_date - entry_date).days
 
         # Determine if short position
-        is_short = (direction == 'SHORT' or str(direction).upper() == 'SHORT')
+        is_short = (direction == PositionDirection.SHORT)
 
-        # Use cost model to calculate
+        # Use cost model to ca0lculate
         costs = self.cost_model.calculate_total_trade_cost(
             entry_price=entry_price,
             exit_price=exit_price,
@@ -307,7 +328,7 @@ class TradeHistory:
         direction = trade_data['direction']
 
         # Determine if short position
-        is_short = (direction == 'SHORT' or str(direction).upper() == 'SHORT')
+        is_short = (direction == PositionDirection.SHORT)
 
         if is_short:
             # Short: profit when price goes down
@@ -435,10 +456,10 @@ class TradeHistory:
         return None
 
     def update_trade(self, trade_id: str, updates: Dict[str, Any]) -> bool:
-        """Update existing trade"""
         for timestamp, trade in self.trades.items():
             if trade.get('uuid') == trade_id or trade.get('trade_id') == trade_id:
                 trade.update(updates)
+                self._finalize_closed_trade(trade)
                 self._invalidate_cache()
                 logger.debug(f"Updated trade {trade_id}")
                 return True
@@ -494,7 +515,7 @@ class TradeHistory:
 
             # Calculate if not already present
             if gross_pnl is None:
-                if direction.upper() == 'SHORT':
+                if direction == PositionDirection.SHORT:
                     gross_pnl = (entry_price - exit_price) * quantity
                 else:
                     gross_pnl = (exit_price - entry_price) * quantity

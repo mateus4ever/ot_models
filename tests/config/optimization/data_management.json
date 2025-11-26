@@ -1,0 +1,35 @@
+{
+  "data_loading": {
+    "loader_type": "directory_scan",
+    "directory_path": "/data/eurusd",
+    "file_pattern": "*.csv",
+    "recursive": true,
+    "csv_format": {
+      "delimiter": ",",
+      "has_header": true,
+      "column_names": ["timestamp", "open", "high", "low", "close", "volume", "dividends", "stock_splits", "adj_close"],
+      "timestamp_column": "timestamp",
+      "timestamp_format": "ISO8601"
+    }
+  },
+  "trade_history": {
+    "default_lookback_periods": 0,
+    "save_backup_on_load": false,
+    "validate_on_load": true,
+    "break_even_tolerance": 0.0001,
+    "data_file_path": "/results/trade/base_trade.json"
+  },
+  "backtesting": {
+    "method": "walk_forward",
+    "initial_capital": 1000,
+    "transaction_cost": 0.001,
+    "slippage": 0.0005,
+    "print_trades": false,
+    "verbose_output": false,
+    "calculations": {
+      "position_long_value": 1,
+      "position_short_value": -1,
+      "position_neutral_value": 0
+    }
+  }
+}

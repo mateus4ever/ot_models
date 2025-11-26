@@ -2,6 +2,7 @@
 # Strategy implementations package initialization
 
 from .base_strategy import BaseStrategy
-from .hybrid_strategy import HybridStrategy
+from .chained_strategy import  ChainedStrategy
 
-__all__ = ['BaseStrategy', 'HybridStrategy']
+
+__all__ = ['BaseStrategy', 'ChainedStrategy']

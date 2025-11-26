@@ -88,7 +88,7 @@ class PositionTracker:
                 logger.warning(f"Position {trade_id} already exists")
                 return False
 
-            if direction not in ['long', 'short']:
+            if direction not in [PositionDirection.LONG, PositionDirection.SHORT]:
                 logger.error(f"Invalid direction: {direction}")
                 return False
 

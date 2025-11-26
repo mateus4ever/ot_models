@@ -9,7 +9,7 @@ from pathlib import Path
 import logging
 from typing import Dict, Any
 from src.hybrid.strategies.strategy_interface import StrategyInterface  # Changed from relative
-from src.hybrid.strategies.implementation import BaseStrategy, HybridStrategy
+from src.hybrid.strategies.implementation import BaseStrategy, ChainedStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class StrategyFactory:
         """Register default strategy types"""
 
         self._strategies['base'] = BaseStrategy
-        self._strategies['hybrid'] = HybridStrategy
+        self._strategies['chained'] = ChainedStrategy
 
     def register_strategy(self, name: str, strategy_class: type):
         """Register a new strategy type"""

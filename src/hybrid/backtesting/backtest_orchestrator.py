@@ -10,7 +10,6 @@ import pandas as pd
 
 from src.hybrid.backtesting.backtest_result import BacktestResult
 # Configuration and data
-from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data.data_manager import DataManager
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.optimization import OptimizerType, OptimizerFactory
@@ -19,7 +18,6 @@ from src.hybrid.results import Result
 from src.hybrid.signals import SignalFactory
 from src.hybrid.strategies import StrategyFactory
 from src.hybrid.strategies import StrategyInterface
-
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +153,9 @@ class BacktestOrchestrator:
         strategy_instances = []
 
         # Get signals from config
-        signals_config = self.config.get_section('strategy', {}).get('signals', [])
+        strategy_config = self.config.get_section('strategy', {})
+        entry_signal_name = strategy_config.get('entry_signal')
+        exit_signal_name = strategy_config.get('exit_signal')  # Optional
 
         # Determine optimizer type
         if optimizer_type is None:
@@ -170,18 +170,24 @@ class BacktestOrchestrator:
                 created_strategy = strategy
 
             # Inject managers
-            created_strategy.setMoneyManager(money_manager)
-            created_strategy.setDataManager(data_manager)
-            created_strategy.setPositionOrchestrator(position_orchestrator)  # ADD THIS
+            created_strategy.set_money_manager(money_manager)
+            created_strategy.set_data_manager(data_manager)
+            created_strategy.set_position_orchestrator(position_orchestrator)
 
-            for signal_name in signals_config:
-                signal = signal_factory.create_signal(signal_name)
-                created_strategy.addSignal(signal)
+            # Set entry signal (required)
+            if entry_signal_name:
+                entry_signal = signal_factory.create_signal(entry_signal_name)
+                created_strategy.add_entry_signal(entry_signal)
+            else:
+                raise ValueError("entry_signal required in strategy config")
+
+            # Set exit signal (optional)
+            if exit_signal_name:
+                exit_signal = signal_factory.create_signal(exit_signal_name)
+                created_strategy.add_exit_signal(exit_signal)
 
             # Add components
-            created_strategy.addPredictor("placeholder_predictor")
-            created_strategy.addOptimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
-            created_strategy.addMetric("placeholder_metric")
+            created_strategy.add_optimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
 
             strategy_instances.append(created_strategy)
 
@@ -219,10 +225,8 @@ class BacktestOrchestrator:
 
     def _aggregate_strategy_results(self, strategy_results: List[Result], start_time: datetime) -> Dict:
         """Aggregate results from multiple strategies"""
-
-        # TODO: Implement result aggregation logic
         return {
-            'method': self.backtesting_method,  # Add this line
+            'method': 'multi_strategy_backtest',
             'total_strategies': len(strategy_results),
             'execution_time': (datetime.now() - start_time).total_seconds(),
             'results': strategy_results

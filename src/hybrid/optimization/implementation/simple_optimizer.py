@@ -1,5 +1,11 @@
 # simple_optimizer.py
-# JAVA EQUIVALENT: public class SimpleRandomOptimizer extends BaseOptimizer implements IOptimizer
+"""
+Simple Random Optimizer - Educational baseline implementation
+
+Generates random parameter combinations and evaluates them through backtesting.
+No caching - loads full data for each iteration.
+Good for understanding optimization basics and simple parameter searches.
+"""
 
 import random
 from typing import Dict, List
@@ -10,228 +16,238 @@ from src.hybrid.config.unified_config import UnifiedConfig
 
 class SimpleRandomOptimizer(IOptimizerBase):
     """
-    Simple random parameter optimization
-    Original implementation - good for educational purposes and simple testing
+    Simple random parameter search optimizer
 
-    JAVA EQUIVALENT:
-    public class SimpleRandomOptimizer extends BaseOptimizer implements IOptimizer {
+    Generates random parameter combinations within configured ranges and evaluates
+    each through full backtest execution. No result caching or intelligent search -
+    purely random exploration of parameter space.
 
-        public SimpleRandomOptimizer(UnifiedConfig config) {
-            super(config);
-        }
-
-        @Override
-        public OptimizationType getOptimizationType() {
-            return OptimizationType.SIMPLE_RANDOM;
-        }
-
-        @Override
-        public String getDescription() {
-            return "Simple random parameter search with full data loading per iteration";
-        }
-
-        // ... implementation methods
-    }
+    Use cases:
+    - Educational baseline for understanding optimization
+    - Quick parameter space exploration
+    - Comparison benchmark for more sophisticated optimizers
     """
 
+    def __init__(self, config: UnifiedConfig, strategy):
+        """
+        Initialize optimizer with configuration and strategy
+
+        Args:
+            config: System configuration
+            strategy: Strategy instance that defines optimizable parameters
+        """
+        super().__init__(config)
+        self.strategy = strategy
+
+        # Get optimizable parameters from strategy
+        # These come from active signals, position sizers, and risk managers
+        self.param_ranges = strategy.get_optimizable_parameters()
+
+        if not self.param_ranges:
+            raise ValueError("No optimizable parameters found in strategy configuration")
+
     def get_optimization_type(self) -> OptimizerType:
-        """
-        JAVA EQUIVALENT:
-        @Override
-        public OptimizationType getOptimizationType() {
-            return OptimizationType.SIMPLE_RANDOM;
-        }
-        """
+        """Return optimizer type identifier"""
         return OptimizerType.SIMPLE_RANDOM
 
     def get_description(self) -> str:
-        """
-        JAVA EQUIVALENT:
-        @Override
-        public String getDescription() {
-            return "Simple random parameter search with full data loading per iteration";
-        }
-        """
+        """Return human-readable optimizer description"""
         return "Simple random parameter search with full data loading per iteration"
 
     def generate_random_parameters(self, n_combinations: int) -> List[Dict]:
         """
-        Generate random parameter combinations
+        Generate random parameter combinations within configured ranges
 
-        JAVA EQUIVALENT:
-        private List<Map<String, Double>> generateRandomParameters(int nCombinations) {
-            Map<String, Object> ranges = config.getSection("optimization").get("parameter_ranges");
-            List<Map<String, Double>> combinations = new ArrayList<>();
+        Creates n_combinations parameter sets where each parameter is randomly
+        sampled from its configured min/max range. Parameters are determined
+        dynamically from strategy configuration.
 
-            for (int i = 0; i < nCombinations; i++) {
-                Map<String, Double> combo = new HashMap<>();
-                combo.put("stop_loss_pct",
-                    ThreadLocalRandom.current().nextDouble(
-                        (Double) ranges.get("stop_loss_min"),
-                        (Double) ranges.get("stop_loss_max")
-                    )
-                );
-                combo.put("take_profit_pct",
-                    ThreadLocalRandom.current().nextDouble(
-                        (Double) ranges.get("take_profit_min"),
-                        (Double) ranges.get("take_profit_max")
-                    )
-                );
-                combo.put("max_position_size",
-                    ThreadLocalRandom.current().nextDouble(
-                        (Double) ranges.get("max_position_min"),
-                        (Double) ranges.get("max_position_max")
-                    )
-                );
-                combinations.add(combo);
+        Args:
+            n_combinations: Number of random parameter sets to generate
+
+        Returns:
+            List of parameter dictionaries, each containing all optimizable parameters
+
+        Example:
+            If param_ranges = {
+                'sma_fast_period': {'min': 10, 'max': 50},
+                'sma_slow_period': {'min': 50, 'max': 200}
             }
 
-            return combinations;
-        }
+            Returns: [
+                {'sma_fast_period': 23, 'sma_slow_period': 127},
+                {'sma_fast_period': 41, 'sma_slow_period': 89},
+                ...
+            ]
         """
-        ranges = self.config.get_section('optimization', {}).get('parameter_ranges', {})
         combinations = []
 
         for _ in range(n_combinations):
-            combo = {
-                'stop_loss_pct': random.uniform(ranges.get('stop_loss_min'), ranges.get('stop_loss_max')),
-                'take_profit_pct': random.uniform(ranges.get('take_profit_min'), ranges.get('take_profit_max')),
-                'max_position_size': random.uniform(ranges.get('max_position_min'), ranges.get('max_position_max'))
-            }
+            combo = {}
+
+            # Generate random value for each parameter within its range
+            for param_name, param_def in self.param_ranges.items():
+                min_val = param_def['min']
+                max_val = param_def['max']
+
+                # Generate random value within range
+                random_value = random.uniform(min_val, max_val)
+                combo[param_name] = random_value
+
             combinations.append(combo)
 
         return combinations
 
     def create_test_config(self, params: Dict) -> UnifiedConfig:
         """
-        Create test configuration with parameters
+        Create configuration with specific parameter values for testing
 
-        JAVA EQUIVALENT:
-        private UnifiedConfig createTestConfig(Map<String, Double> params) {
-            UnifiedConfig newConfig = new UnifiedConfig(config.getConfigPath());
-            newConfig.setConfig(config.getConfig().copy());
+        Takes a parameter dictionary and creates a new config with those values
+        applied to the appropriate sections (signals, risk management, position sizing).
 
-            Map<String, Object> updates = new HashMap<>();
-            Map<String, Object> riskManagement = new HashMap<>();
-            riskManagement.put("stop_loss_pct", params.get("stop_loss_pct"));
-            riskManagement.put("take_profit_pct", params.get("take_profit_pct"));
-            riskManagement.put("max_position_size", params.get("max_position_size"));
-            updates.put("risk_management", riskManagement);
+        Args:
+            params: Parameter dictionary with values to test
 
-            Map<String, Object> general = new HashMap<>();
-            general.put("verbose", false);
-            updates.put("general", general);
-
-            Map<String, Object> debugConfig = new HashMap<>();
-            debugConfig.put("trade_debug_count", 0);
-            debugConfig.put("enable_fee_debug", false);
-            debugConfig.put("enable_trade_debug", false);
-            updates.put("debug_configuration", debugConfig);
-
-            newConfig.updateConfig(updates);
-            return newConfig;
-        }
+        Returns:
+            New UnifiedConfig instance with parameters applied
         """
+        # Create new config based on current config
         new_config = UnifiedConfig(self.config.config_path)
         new_config.config = self.config.config.copy()
 
-        updates = {
-            'risk_management': {
-                'stop_loss_pct': params['stop_loss_pct'],
-                'take_profit_pct': params['take_profit_pct'],
-                'max_position_size': params['max_position_size']
-            },
-            'general': {'verbose': False},
-            'debug_configuration': {
-                'trade_debug_count': 0,
-                'enable_fee_debug': False,
-                'enable_trade_debug': False
-            }
-        }
+        # Apply parameters to appropriate config sections
+        # Parameters are prefixed by their source (signal name, 'sizer_', 'risk_')
+        updates = self._build_config_updates(params)
+
+        # Disable verbose output during optimization
+        if 'general' not in updates:
+            updates['general'] = {}
+        updates['general']['verbose'] = False
+
+        # Disable debug output during optimization
+        if 'debug_configuration' not in updates:
+            updates['debug_configuration'] = {}
+        updates['debug_configuration'].update({
+            'trade_debug_count': 0,
+            'enable_fee_debug': False,
+            'enable_trade_debug': False
+        })
+
         new_config.update_config(updates)
         return new_config
 
+    def _build_config_updates(self, params: Dict) -> Dict:
+        """
+        Build config update dictionary from parameters
+
+        Distributes parameters to their appropriate config sections based on
+        parameter name prefixes (signal names, 'sizer_', 'risk_').
+
+        Args:
+            params: Flat parameter dictionary
+
+        Returns:
+            Nested config update dictionary
+        """
+        updates = {}
+
+        for param_name, param_value in params.items():
+            # Determine which config section this parameter belongs to
+            if param_name.startswith('sizer_'):
+                # Position sizing parameter
+                if 'money_management' not in updates:
+                    updates['money_management'] = {}
+                if 'position_sizers' not in updates['money_management']:
+                    updates['money_management']['position_sizers'] = {}
+
+                # Remove prefix and apply to active sizer
+                clean_name = param_name.replace('sizer_', '')
+                active_sizer = self.config.get_section('money_management', {}).get('position_sizing')
+                if active_sizer:
+                    if active_sizer not in updates['money_management']['position_sizers']:
+                        updates['money_management']['position_sizers'][active_sizer] = {}
+                    updates['money_management']['position_sizers'][active_sizer][clean_name] = param_value
+
+            elif param_name.startswith('risk_'):
+                # Risk management parameter
+                if 'money_management' not in updates:
+                    updates['money_management'] = {}
+                if 'risk_managers' not in updates['money_management']:
+                    updates['money_management']['risk_managers'] = {}
+
+                # Remove prefix and apply to active risk manager
+                clean_name = param_name.replace('risk_', '')
+                active_risk = self.config.get_section('money_management', {}).get('risk_management')
+                if active_risk:
+                    if active_risk not in updates['money_management']['risk_managers']:
+                        updates['money_management']['risk_managers'][active_risk] = {}
+                    updates['money_management']['risk_managers'][active_risk][clean_name] = param_value
+
+            else:
+                # Signal parameter (prefixed with signal name)
+                # Find which signal this parameter belongs to
+                for signal_name in self.param_ranges.keys():
+                    if param_name.startswith(f"{signal_name}_"):
+                        if 'signals' not in updates:
+                            updates['signals'] = {}
+
+                        # Remove signal name prefix
+                        clean_name = param_name.replace(f"{signal_name}_", '')
+
+                        # Find signal in config and update
+                        # This requires navigating the signals config structure
+                        if signal_name not in updates['signals']:
+                            updates['signals'][signal_name] = {}
+                        updates['signals'][signal_name][clean_name] = param_value
+                        break
+
+        return updates
+
     def run_optimization(self, data_path: str = None, n_combinations: int = None, **kwargs) -> Dict:
         """
-        Run simple random optimization
+        Execute random parameter search optimization
 
-        JAVA EQUIVALENT:
-        @Override
-        public OptimizationResult runOptimization(String dataPath, Integer nCombinations, Map<String, Object> kwargs) {
-            // Import here to avoid circular dependency - equivalent to dynamic import
-            HybridStrategyBacktest backtest = new HybridStrategyBacktest();
+        Generates random parameter combinations and evaluates each through
+        full backtest execution. No caching - each iteration loads and processes
+        complete dataset.
 
-            if (nCombinations == null) {
-                nCombinations = config.getSection("optimization")
-                    .get("defaults")
-                    .getOrDefault("n_combinations", 10);
-            }
+        Args:
+            data_path: Path to market data for backtesting
+            n_combinations: Number of random combinations to test (default from config)
+            **kwargs: Additional arguments (unused, for interface compatibility)
 
-            System.out.println("Running " + getDescription());
-            System.out.println("Combinations: " + nCombinations);
-
-            List<Map<String, Double>> paramCombinations = generateRandomParameters(nCombinations);
-            List<OptimizationResult> results = new ArrayList<>();
-
-            for (int i = 0; i < paramCombinations.size(); i++) {
-                Map<String, Double> params = paramCombinations.get(i);
-                System.out.println("Testing combination " + (i+1) + "/" + nCombinations + "...");
-
-                try {
-                    UnifiedConfig testConfig = createTestConfig(params);
-                    BacktestResult backtestResults = backtest.runHybridStrategyBacktest(
-                        dataPath, testConfig, false
-                    );
-
-                    if (backtestResults != null && backtestResults.containsKey("backtest")) {
-                        double fitness = calculateFitness(backtestResults.get("backtest"));
-                        OptimizationResult result = new OptimizationResult(
-                            params, fitness,
-                            backtestResults.get("backtest").get("total_return"),
-                            backtestResults.get("backtest").get("sharpe_ratio"),
-                            backtestResults.get("backtest").get("num_trades")
-                        );
-                        results.add(result);
-                    } else {
-                        results.add(new OptimizationResult(params, severePenalty, 0, 0, 0));
-                    }
-
-                } catch (Exception e) {
-                    System.out.println("Error in combination " + (i+1) + ": " + e.getMessage());
-                    results.add(new OptimizationResult(params, severePenalty, 0, 0, 0));
-                }
-            }
-
-            List<OptimizationResult> validResults = results.stream()
-                .filter(r -> r.getFitness() != severePenalty)
-                .sorted(Comparator.comparing(OptimizationResult::getFitness).reversed())
-                .collect(Collectors.toList());
-
-            return new OptimizationSummary(
-                getOptimizationType().getValue(),
-                results.size(),
-                validResults.size(),
-                validResults.isEmpty() ? null : validResults.get(0),
-                validResults
-            );
-        }
+        Returns:
+            Dictionary containing:
+                - optimizer_type: Type of optimizer used
+                - total_combinations: Total combinations tested
+                - valid_results: Number of successful backtests
+                - best_result: Best performing parameter set
+                - all_results: All results sorted by fitness
         """
-        # Import here to avoid circular dependency
-
+        # Get number of combinations from config if not provided
         if n_combinations is None:
-            n_combinations = self.config.get_section('optimization', {}).get('defaults', {}).get('n_combinations', 10)
+            opt_config = self.config.get_section('optimization', {})
+            defaults = opt_config.get('defaults', {})
+            n_combinations = defaults.get('n_combinations', 10)
 
         print(f"Running {self.get_description()}")
-        print(f"Combinations: {n_combinations}")
+        print(f"Testing {n_combinations} random parameter combinations")
+        print(f"Optimizing {len(self.param_ranges)} parameters: {list(self.param_ranges.keys())}")
 
+        # Generate random parameter combinations
         param_combinations = self.generate_random_parameters(n_combinations)
         results = []
 
+        # Evaluate each combination
         for i, params in enumerate(param_combinations):
-            print(f"Testing combination {i + 1}/{n_combinations}...")
+            print(f"\nTesting combination {i + 1}/{n_combinations}...")
+            print(f"Parameters: {params}")
 
             try:
+                # Create config with these parameters
                 test_config = self.create_test_config(params)
+
+                # Run backtest (commented out - needs backtest integration)
                 # backtest_results = run_hybrid_strategy_backtest(
                 #     data_path=data_path,
                 #     config=test_config,
@@ -240,6 +256,7 @@ class SimpleRandomOptimizer(IOptimizerBase):
                 backtest_results = None
 
                 if backtest_results and 'backtest' in backtest_results:
+                    # Calculate fitness from backtest results
                     fitness = self.calculate_fitness(backtest_results['backtest'])
                     results.append({
                         'params': params,
@@ -249,10 +266,13 @@ class SimpleRandomOptimizer(IOptimizerBase):
                         'trades': backtest_results['backtest'].get('num_trades', 0)
                     })
                 else:
+                    # Backtest failed - apply severe penalty
                     results.append({
                         'params': params,
                         'fitness': self.severe_penalty,
-                        'return': 0, 'sharpe': 0, 'trades': 0
+                        'return': 0,
+                        'sharpe': 0,
+                        'trades': 0
                     })
 
             except Exception as e:
@@ -260,9 +280,12 @@ class SimpleRandomOptimizer(IOptimizerBase):
                 results.append({
                     'params': params,
                     'fitness': self.severe_penalty,
-                    'return': 0, 'sharpe': 0, 'trades': 0
+                    'return': 0,
+                    'sharpe': 0,
+                    'trades': 0
                 })
 
+        # Filter valid results and sort by fitness
         valid_results = [r for r in results if r['fitness'] != self.severe_penalty]
         valid_results.sort(key=lambda x: x['fitness'], reverse=True)
 

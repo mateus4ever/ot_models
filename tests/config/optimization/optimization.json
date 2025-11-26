@@ -1,0 +1,12 @@
+{
+  "optimization": {
+    "defaults": {
+      "n_combinations": 100,
+      "n_workers": 16
+    },
+    "checkpointing": {
+      "checkpoint_interval": 50,
+      "checkpoint_time_interval": 300
+    }
+  }
+}

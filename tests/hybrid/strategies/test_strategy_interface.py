@@ -157,11 +157,11 @@ def step_inject_dependencies_into_strategy(test_context):
     strategy = test_context['strategy']
 
     # Check setMoneyManager signature
-    money_manager_sig = inspect.signature(strategy.setMoneyManager)
+    money_manager_sig = inspect.signature(strategy.set_money_manager)
     params = list(money_manager_sig.parameters.keys())
 
     # Check setDataManager signature
-    data_manager_sig = inspect.signature(strategy.setDataManager)
+    data_manager_sig = inspect.signature(strategy.set_data_manager)
     data_params = list(data_manager_sig.parameters.keys())
 
     test_context['injection_signatures'] = {

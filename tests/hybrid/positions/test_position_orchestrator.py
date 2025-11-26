@@ -11,6 +11,7 @@ from pytest_bdd import scenarios, given, parsers, then, when
 
 from src.hybrid.data import DataManager
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
+from src.hybrid.products.product_types import PositionDirection
 
 # Go up 4 levels from tests/hybrid/money_management/test_money_management.py to project root
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -113,7 +114,7 @@ def open_test_position(test_context, symbol, entry_price):
     success = orchestrator.position_tracker.open_position(
         trade_id="test_trade_001",
         symbol=symbol,
-        direction="long",
+        direction=PositionDirection.LONG,
         quantity=1000,
         entry_price=entry_price
     )
@@ -139,7 +140,7 @@ def setup_open_position(test_context, trade_id, symbol, entry_price):
     success = orchestrator.open_position(
         trade_id=trade_id,
         symbol=symbol,
-        direction='long',
+        direction=PositionDirection.LONG,
         quantity=1000,
         entry_price=entry_price,
         capital_required=entry_price * 1000
@@ -163,7 +164,7 @@ def setup_open_position_with_price(test_context, trade_id,
     success = orchestrator.open_position(
         trade_id=trade_id,
         symbol=symbol,
-        direction='long',
+        direction=PositionDirection.LONG,
         quantity=quantity,
         entry_price=entry_price,
         capital_required=entry_price * quantity
@@ -218,7 +219,7 @@ def setup_position_with_unrealized_pnl(test_context, pnl):
     success = orchestrator.open_position(
         trade_id='pnl_test_001',
         symbol='EURUSD',
-        direction='long',
+        direction=PositionDirection.LONG,
         quantity=quantity,
         entry_price=entry_price,
         capital_required=entry_price * quantity
@@ -250,8 +251,11 @@ def open_position_via_orchestrator(test_context, trade_id, symbol, direction, qu
     entry_price = float(entry_price)
     capital = float(capital)
 
+    # Convert string to enum
+    direction_enum = PositionDirection[direction.upper()]  # 'long' -> PositionDirection.LONG
+
     orchestrator = test_context['orchestrator']
-    success = orchestrator.open_position(trade_id, symbol, direction, quantity, entry_price, capital)
+    success = orchestrator.open_position(trade_id, symbol, direction_enum, quantity, entry_price, capital)
 
     assert success, f"Failed to open position {trade_id}"
     test_context['last_trade_id'] = trade_id

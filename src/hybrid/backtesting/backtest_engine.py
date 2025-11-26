@@ -19,8 +19,8 @@ class BacktestEngine:
 
         # 2. Create and setup strategy
         strategy = StrategyFactory.create_strategy(self.config)
-        strategy.setDataManager(self.data_manager)  # Shared
-        strategy.setMoneyManager(money_manager)  # Thread-local
+        strategy.set_data_manager(self.data_manager)  # Shared
+        strategy.set_money_manager(money_manager)  # Thread-local
         strategy.setTradeHistory(trade_history)  # Thread-local
         strategy.setPositionManager(self.position_manager)  # Shared
 

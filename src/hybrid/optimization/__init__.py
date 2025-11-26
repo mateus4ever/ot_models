@@ -1,79 +1,26 @@
-# __init__.py
-# JAVA EQUIVALENT: Public API exports (like public class declarations in a package)
-
+# src/hybrid/optimization/__init__.py
 """
 Optimization package for trading strategy parameter tuning
 
-JAVA EQUIVALENT:
-package com.trading.optimization;
-
-// Public API exports
-public class OptimizerFactory { ... }
-public enum OptimizationType { ... }
-public interface IOptimizer { ... }
-public class SimpleRandomOptimizer implements IOptimizer { ... }
-public class CachedRandomOptimizer implements IOptimizer { ... }
-public class BayesianOptimizer implements IOptimizer { ... }
-
-// Static utility methods
-public static OptimizationResult runOptimization(OptimizationType type, ...);
+Public API: Core interfaces and types only.
+Implementations are imported directly when needed.
 """
 
-# Core interfaces and types
+# Core interfaces and types - no heavy dependencies
 from .optimization_interface import IOptimizer, IOptimizerBase
 from .optimizer_type import OptimizerType
 
-# Concrete implementations
-from src.hybrid.optimization.implementation.simple_optimizer import SimpleRandomOptimizer
-from src.hybrid.optimization.implementation.cached_optimizer import CachedRandomOptimizer
-from src.hybrid.optimization.implementation.bayesian_optimizer import BayesianOptimizer
-
-# Factory and main functions
-from .optimizer_factory import (
-    OptimizerFactory,
-    run_optimization,
-    run_fast_optimization,  # Legacy
-    run_optimized_fast_optimization,  # Legacy
-    run_bayesian_optimization  # Legacy
-)
-
-# Import from other modules for backward compatibility
-# JAVA EQUIVALENT: import com.trading.optimization.fitness.*;
-try:
-    from .fitness import FitnessCalculator, PerformanceClassification
-    from .robustness import RobustnessAnalyzer
-
-    FITNESS_AVAILABLE = True
-except ImportError:
-    FITNESS_AVAILABLE = False
-
-# Public API - what other modules can import
-# JAVA EQUIVALENT: public class declarations
+# Public API
 __all__ = [
-    # Core interfaces and types
     'IOptimizer',
     'IOptimizerBase',
     'OptimizerType',
-
-    # Concrete implementations
-    'SimpleRandomOptimizer',
-    'CachedRandomOptimizer',
-    'BayesianOptimizer',
-
-    # Factory and main entry points
-    'OptimizerFactory',
-    'run_optimization',  # Main factory-based function
-
-    # Legacy functions for backward compatibility
-    'run_fast_optimization',
-    'run_optimized_fast_optimization',
-    'run_bayesian_optimization'
 ]
 
-# Add fitness classes if available
-if FITNESS_AVAILABLE:
-    __all__.extend([
-        'FitnessCalculator',
-        'PerformanceClassification',
-        'RobustnessAnalyzer'
-    ])
+# Users import implementations directly when needed:
+#   from src.hybrid.optimization.implementation.simple_optimizer import SimpleRandomOptimizer
+#   from src.hybrid.optimization.implementation.cached_optimizer import CachedRandomOptimizer
+#   from src.hybrid.optimization.implementation.bayesian_optimizer import BayesianOptimizer
+#   from src.hybrid.optimization.factory import OptimizerFactory
+#   from src.hybrid.optimization.fitness import FitnessCalculator
+#   from src.hybrid.optimization.robustness import RobustnessAnalyzer

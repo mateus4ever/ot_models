@@ -6,8 +6,7 @@ from typing import Dict, List
 from src.hybrid.optimization.optimization_interface import IOptimizerBase
 from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.hybrid_strategy import HybridStrategy
-
+from src.hybrid.strategies.implementation import ChainedStrategy
 
 class CachedRandomOptimizer(IOptimizerBase):
     """
@@ -93,7 +92,7 @@ class CachedRandomOptimizer(IOptimizerBase):
         print(f"✓ Data loaded: {len(self.cached_data)} records")
 
 
-        self.cached_strategy = HybridStrategy(self.config)
+        self.cached_strategy = ChainedStrategy(self.config)
         training_results = self.cached_strategy.train(self.cached_data)
         print(f"✓ ML training completed in {training_results.get('training_time', 0):.1f}s")
 

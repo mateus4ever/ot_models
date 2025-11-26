@@ -15,6 +15,7 @@ from src.hybrid.positions.centralized_position_manager import CentralizedPositio
 from src.hybrid.positions.position_tracker import PositionTracker
 from src.hybrid.positions.trade_history import TradeHistory
 from src.hybrid.positions.types import PortfolioState
+from src.hybrid.products.product_types import PositionDirection
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class PositionOrchestrator:
             self,
             trade_id: str,
             symbol: str,
-            direction: str,
+            direction: PositionDirection ,
             quantity: int,
             entry_price: float,
             capital_required: float
@@ -123,7 +124,7 @@ class PositionOrchestrator:
             'trade_id': trade_id,
             'timestamp': datetime.now().isoformat() + 'Z',
             'symbol': symbol,
-            'direction': direction.upper(),
+            'direction': direction,
             'quantity': quantity,
             'entry_price': entry_price,
             'entry_date': datetime.now().isoformat() + 'Z',
@@ -140,29 +141,25 @@ class PositionOrchestrator:
         """Update position with current market price"""
         return self.position_tracker.update_position_price(trade_id, current_price)
 
-    def close_position(self, trade_id: str, exit_price: float) -> bool:
+    def close_position(self, trade_id: str, exit_price: float, exit_reason: str = 'signal') -> bool:
         """Close position across all components"""
-        # 1. Get position details
         position = self.position_tracker.get_position(trade_id)
         if not position:
             logger.warning(f"Position {trade_id} not found")
             return False
 
-        # 2. Close in tracker
         closed_position = self.position_tracker.close_position(trade_id)
-
-        # 3. Release capital
         self.position_manager.release_position(trade_id)
 
-        # 4. Update history with exit data
         updates = {
             'exit_price': exit_price,
             'exit_date': datetime.now().isoformat() + 'Z',
-            'status': 'closed'
+            'status': 'closed',
+            'exit_reason': exit_reason
         }
         self.trade_history.update_trade(trade_id, updates)
 
-        logger.info(f"Closed position {trade_id} @ {exit_price}")
+        logger.info(f"Closed position {trade_id} @ {exit_price} ({exit_reason})")
         return True
 
     def reset(self) -> None:

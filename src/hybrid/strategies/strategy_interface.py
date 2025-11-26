@@ -18,38 +18,44 @@ class StrategyInterface(Protocol):
     metrics: list
     verificators: list
 
-    def setMoneyManager(self, money_manager: Any) -> None:
+    def set_money_manager(self, money_manager: Any) -> None:
         """Inject MoneyManager dependency"""
         ...
 
-    def setDataManager(self, data_manager: Any) -> None:
+    def set_data_manager(self, data_manager: Any) -> None:
         """Inject DataManager dependency"""
         ...
 
-    def addSignal(self, signal: Any) -> None:
+    def add_entry_signal(self, signal: Any) -> None:
         """Add signal generator to strategy"""
         ...
 
-    def addOptimizer(self, optimization: Any) -> None:
+    def add_exit_signal(self, signal: Any) -> None:
+        """Add signal generator to strategy"""
+        ...
+
+    def add_optimizer(self, optimization: Any) -> None:
         """Add optimization component to strategy"""
         ...
 
-    def addPredictor(self, predictor: Any) -> None:
+    def add_predictor(self, predictor: Any) -> None:
         """Add predictor component to strategy"""
         ...
 
-    def addMetric(self, metric: Any) -> None:
+    def add_metric(self, metric: Any) -> None:
         """Add metric component to strategy"""
         ...
 
-    def addVerificator(self, verificator: Any) -> None:
+    def add_verificator(self, verificator: Any) -> None:
         """Add verificator component to strategy"""
         ...
-
 
     def run(self) -> Dict:
         """Run complete backtest for this strategy"""
         ...
 
-    def setPositionOrchestrator(self, position_orchestrator):
+    def set_position_orchestrator(self, position_orchestrator):
+        ...
+
+    def get_optimizable_parameters(self) -> Dict:
         ...

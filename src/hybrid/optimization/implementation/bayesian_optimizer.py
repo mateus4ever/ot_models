@@ -7,7 +7,7 @@ from datetime import datetime
 from src.hybrid.optimization.optimization_interface import IOptimizerBase
 from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.hybrid_strategy import HybridStrategy
+from src.hybrid.strategies.implementation import ChainedStrategy
 
 # Bayesian optimization imports
 try:
@@ -116,7 +116,7 @@ class BayesianOptimizer(IOptimizerBase):
 
         # Train base strategy ONCE on training data (for ML models only)
         # This strategy will be used as a template for generating fresh signals
-        self.base_trained_strategy = HybridStrategy(self.config)
+        self.base_trained_strategy = ChainedStrategy(self.config)
         print("Training base ML models on historical data...")
         training_results = self.base_trained_strategy.train(self.cached_train_data)
         training_time_key = 'training_time'

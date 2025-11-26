@@ -7,18 +7,35 @@ from src.hybrid.optimization.optimizer_type import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
 
 
+
 class IOptimizer(Protocol):
     """
-    Python equivalent of Java interface:
 
-    public interface IOptimizer {
-        public OptimizationResult runOptimization(String dataPath, int combinations);
-        public OptimizationType getOptimizationType();
-        public String getDescription();
-    }
+    === OPTIMIZATION DESIGN NOTES ===
+Date: Saturday morning session
 
-    In Python, Protocol provides structural typing (duck typing with type safety)
-    Similar to Java interface but without 'implements' keyword
+1. RESULT VISUALIZATION
+   - Plateau detection (robust) vs Peak detection (overfitted)
+   - Heatmap/3D surface for 2-3 parameters
+   - For 10+ parameters: sensitivity analysis, clustering, correlation matrix
+
+2. SIGNAL COMBINATION OPTIMIZATION
+   - Not just parameter values, but which signals to combine
+   - Combinatorial search across signal sets
+   - Each combination tested with parameter ranges
+
+3. REFRESH MECHANISM
+   - Time-based: scheduled re-optimization (monthly)
+   - Performance-based: trigger when live deviates X% from backtest
+   - Regime-based: trigger when market conditions change (volatility, trend)
+
+4. ARCHITECTURE REQUIREMENTS
+   - Strategy must expose optimizable parameters
+   - Strategy must accept different signal combinations
+   - Results must be storable/comparable
+   - Optimizer lives outside strategy (separate orchestrator)
+
+
     """
 
     def run_optimization(self, data_path: str = None, n_combinations: int = None, **kwargs) -> Dict:
