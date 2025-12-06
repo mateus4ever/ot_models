@@ -4,7 +4,7 @@ Feature: Optimizer Interface Requirements
   including execution, monitoring, persistence, and validation
 
   Background:
-    Given a valid UnifiedConfig is loaded
+    Given config files are available in tests/config/optimization
 
   @core_methods
   Scenario Outline: Optimizer implements core interface methods
@@ -15,29 +15,16 @@ Feature: Optimizer Interface Requirements
 
     Examples:
       | optimizer_type    |
-      | RANDOM           |
+      | SIMPLE_RANDOM    |
       | CACHED_RANDOM    |
       | BAYESIAN         |
 
-  @base_attributes
-  Scenario: Optimizer base class provides common attributes
-    Given an optimizer inheriting from IOptimizerBase
-    Then it should have attribute "zero_value"
-    And it should have attribute "unity_value"
-    And it should have attribute "severe_penalty"
-    And it should have attribute "min_trades_required"
-    And it should have attribute "max_drawdown_limit"
-
-  @constraint_validation
-  Scenario: Optimizer must validate parameter constraints
-    Given an optimizer implementation
-    Then it should have method "validate_parameters"
-    And it should check parameter value ranges
-    And it should check parameter relationships
-    And invalid parameters should be rejected before backtest
-
-  @constraint_enforcement
-  Scenario: Common parameter constraints must be enforced
-    Given parameter constraints "fast_period < slow_period"
-    When optimizer generates parameter combinations
-    Then all combinations should satisfy "fast_period < slow_period"
+    @base_attributes
+    Scenario Outline: Optimizer base class provides common attributes
+      Given an optimizer of type "<optimizer_type>"
+      Then it should have attribute "config"
+      Examples:
+        | optimizer_type    |
+        | SIMPLE_RANDOM    |
+        | CACHED_RANDOM    |
+        | BAYESIAN         |

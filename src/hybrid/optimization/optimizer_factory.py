@@ -2,6 +2,8 @@
 # JAVA EQUIVALENT: public class OptimizerFactory { ... }
 
 from typing import Dict, List
+
+from .implementation.simple_optimizer import SimpleRandomOptimizer
 from .optimizer_type import OptimizerType
 from .optimization_interface import IOptimizer
 from src.hybrid.optimization.implementation.cached_optimizer import CachedRandomOptimizer
@@ -12,57 +14,17 @@ from src.hybrid.config.unified_config import UnifiedConfig
 class OptimizerFactory:
     """
     Factory class for creating optimizer instances
-
-    JAVA EQUIVALENT:
-    public class OptimizerFactory {
-        public static IOptimizer createOptimizer(OptimizationType type, UnifiedConfig config) throws IllegalArgumentException {
-            switch (type) {
-                case SIMPLE_RANDOM:
-                    return new SimpleRandomOptimizer(config);
-                case CACHED_RANDOM:
-                    return new CachedRandomOptimizer(config);
-                case BAYESIAN:
-                    if (!SKOPT_AVAILABLE) {
-                        throw new RuntimeException("scikit-optimize is required for Bayesian optimization");
-                    }
-                    return new BayesianOptimizer(config);
-                default:
-                    throw new IllegalArgumentException("Unsupported optimizer type: " + type);
-            }
-        }
-
-        public static List<OptimizationType> getAvailableOptimizers() { ... }
-        public static Map<OptimizationType, String> getOptimizerDescriptions() { ... }
-    }
     """
 
     @staticmethod
-    def create_optimizer(optimizer_type: OptimizerType, config: UnifiedConfig) -> IOptimizer:
+    def create_optimizer(optimizer_type: OptimizerType, config: UnifiedConfig, strategy) -> IOptimizer:
         """
         Factory method to create optimizer instances
-
-        JAVA EQUIVALENT:
-        public static IOptimizer createOptimizer(OptimizationType optimizerType, UnifiedConfig config)
-                throws IllegalArgumentException {
-
-            switch (optimizerType) {
-                case SIMPLE_RANDOM:
-                    return new SimpleRandomOptimizer(config);
-                case CACHED_RANDOM:
-                    return new CachedRandomOptimizer(config);
-                case BAYESIAN:
-                    if (!SKOPT_AVAILABLE) {
-                        throw new RuntimeException("scikit-optimize is required for Bayesian optimization");
-                    }
-                    return new BayesianOptimizer(config);
-                default:
-                    throw new IllegalArgumentException("Unsupported optimizer type: " + optimizerType);
-            }
-        }
 
         Args:
             optimizer_type: Type of optimizer to create
             config: Configuration object
+            strategy: Strategy instance for parameter extraction
 
         Returns:
             IOptimizer: Instance of the requested optimizer
@@ -72,16 +34,14 @@ class OptimizerFactory:
             ImportError: If required dependencies are missing
         """
         if optimizer_type == OptimizerType.SIMPLE_RANDOM:
-            # Import here to avoid circular dependency
-            from src.hybrid.optimization.implementation.simple_optimizer import SimpleRandomOptimizer
-            return SimpleRandomOptimizer(config)
+             return SimpleRandomOptimizer(config, strategy)
         elif optimizer_type == OptimizerType.CACHED_RANDOM:
-            return CachedRandomOptimizer(config)
+            return CachedRandomOptimizer(config, strategy)
         elif optimizer_type == OptimizerType.BAYESIAN:
             if not SKOPT_AVAILABLE:
                 raise ImportError(
                     "scikit-optimize is required for Bayesian optimization. Install with: pip install scikit-optimize")
-            return BayesianOptimizer(config)
+            return BayesianOptimizer(config, strategy)
         else:
             raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
 

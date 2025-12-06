@@ -27,7 +27,7 @@ class BayesianOptimizer(IOptimizerBase):
     This eliminates "signal leakage" where pre-computed signals ignore optimization parameters
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: UnifiedConfig, strategy):
         super().__init__(config)
         self.cached_train_data = None
         self.cached_test_data = None
@@ -60,8 +60,7 @@ class BayesianOptimizer(IOptimizerBase):
         math_config = self.config.get_section('mathematical_operations', {})
 
         default_n_calls = bayesian_defaults.get('n_calls', defaults_config.get('n_combinations'))
-        default_n_initial_points = bayesian_defaults.get('n_initial_points', default_n_calls // bayesian_defaults.get(
-            'initial_points_divisor'))
+        default_n_initial_points = bayesian_defaults.get('n_initial_points', default_n_calls)
 
         default_config = {
             'n_calls': bayesian_defaults.get('n_calls', defaults_config.get('n_combinations')),

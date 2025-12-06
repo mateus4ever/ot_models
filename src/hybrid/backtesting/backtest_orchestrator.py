@@ -12,7 +12,8 @@ from src.hybrid.backtesting.backtest_result import BacktestResult
 # Configuration and data
 from src.hybrid.data.data_manager import DataManager
 from src.hybrid.money_management import MoneyManager
-from src.hybrid.optimization import OptimizerType, OptimizerFactory
+from src.hybrid.optimization import OptimizerType
+from src.hybrid.optimization.optimizer_factory import OptimizerFactory
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.results import Result
 from src.hybrid.signals import SignalFactory
@@ -141,6 +142,28 @@ class BacktestOrchestrator:
                 'method': 'multi_strategy_backtest'
             }
 
+    def run_optimization(self):
+        # 1. Define factory (encapsulates all wiring logic)
+        def create_strategy_with_params(params):
+            config = self._create_config_with_params(params)
+            strategy = self._create_and_wire_strategy(config)
+            return strategy
+
+        # 2. Inject factory into optimizer
+        optimizer_orchestrator = OptimizationOrchestrator(
+            strategy_factory=create_strategy_with_params,
+            base_config=self.config
+        )
+
+        # 3. Run optimization
+        best_params = optimizer_orchestrator.optimize(
+            n_combinations=100,
+            n_workers=16
+        )
+
+        # 4. Use best params
+        final_strategy = create_strategy_with_params(best_params)
+        return final_strategy.run()
     def _initialize_strategies(self,
                                strategies: List[Union[StrategyInterface, str]],
                                data_manager: DataManager,
@@ -328,7 +351,9 @@ class BacktestOrchestrator:
         except Exception as e:
             logger.error(f"Could not save results: {e}")
 
+    #todo: this is outdated
     def _print_final_summary(self, start_time: datetime, results: Dict):
+
         """Print final backtest summary"""
         end_time = datetime.now()
         total_duration = (end_time - start_time).total_seconds()

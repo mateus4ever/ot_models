@@ -1,7 +1,7 @@
 {
   "data_loading": {
     "loader_type": "directory_scan",
-    "directory_path": "/data/stock",
+    "directory_path": "/data/eurusd",
     "file_pattern": "*.csv",
     "recursive": true,
     "csv_format": {

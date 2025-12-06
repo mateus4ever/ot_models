@@ -57,8 +57,7 @@
         "parameters": {
           "period": 14,
           "oversold_threshold": 30,
-          "overbought_threshold": 70,
-          "buffer_multiplier": 3
+          "overbought_threshold": 70
         },
         "optimizable_parameters": {
           "period": {"type": "integer", "min": 7, "max": 21},

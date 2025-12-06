@@ -17,18 +17,18 @@ class KellyCriterionSizer(PositionSizingStrategy):
         super().__init__(unified_config)
 
         # Static parameters from configuration
-
-        self.kelly_fraction = self.config['kelly_fraction']
-        self.kelly_lookback = self.config['kelly_lookback']
+        # TODO: check how to insert optimized parameters
+        self.kelly_fraction = self.config['parameters']['kelly_fraction']
+        self.kelly_lookback = self.config['parameters']['kelly_lookback']
 
         # TODO: max_kelly_position must be questioned
-        self.max_kelly_position = self.config['max_position_pct']
-        self.kelly_win_rate = self.config['kelly_win_rate']
-        self.kelly_avg_win = self.config['kelly_avg_win']
-        self.kelly_avg_loss = self.config['kelly_avg_loss']
+        self.max_kelly_position = self.config['parameters']['max_position_pct']
+        self.kelly_win_rate = self.config['parameters']['kelly_win_rate']
+        self.kelly_avg_win = self.config['parameters']['kelly_avg_win']
+        self.kelly_avg_loss = self.config['parameters']['kelly_avg_loss']
 
         # Trade history integration parameters
-        self.min_trades_threshold = self.config.get('kelly_min_trades_threshold')
+        self.min_trades_threshold = self.config['parameters']['kelly_min_trades_threshold']
         self.trade_outcomes = []
 
         if self.kelly_lookback <= 0:

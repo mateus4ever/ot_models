@@ -1,0 +1,31 @@
+{
+  "general": {
+    "verbose": true,
+    "debug_mode": false,
+    "enable_validation_checks": true
+  },
+  "file_operations": {
+    "results_dir": "results",
+    "timestamp_format": "%Y%m%d_%H%M%S"
+  },
+  "strategy": {
+    "entry_signal": "trend_following.simplemovingaveragecrossover",
+    "exit_signal": "momentum.rsi",
+    "predictors": [],
+    "metrics": []
+  },
+  "system_configuration": {
+    "windows_compatibility": {
+      "max_cores": 1
+    },
+    "logging": {
+      "level": "INFO",
+      "format": "%(asctime)s - %(levelname)s - %(message)s"
+    }
+  },
+  "debug_configuration": {
+    "enable_trade_debug": false,
+    "enable_position_debug": false,
+    "print_trade_details": false
+  }
+}

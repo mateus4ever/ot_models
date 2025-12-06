@@ -12,6 +12,7 @@ import logging
 
 from pytest_bdd import scenarios, given, when, then, parsers
 
+from src.hybrid.config.unified_config import UnifiedConfig
 # Import the system under test
 from src.hybrid.strategies.strategy_factory import StrategyFactory
 
@@ -24,38 +25,33 @@ logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(me
 
 # Test fixtures and shared state
 @pytest.fixture
-def test_context():
-    """Shared test context for storing state between steps"""
-    return {}
-
-
-# Mock config for testing
-class MockConfig:
-    """Mock configuration for strategy creation testing"""
-
-    def __init__(self):
-        self.data = {
-            'strategy': {
-                'name': 'test_strategy',
-                'parameters': {'param1': 'value1', 'param2': 'value2'}
-            }
-        }
-
-    def get_section(self, section, default=None):
-        return self.data.get(section, default or {})
+def test_context(request):
+    """A per-scenario context dict with scenario name pre-attached."""
+    ctx = {}
+    scenario = getattr(request.node._obj, "__scenario__", None)
+    if scenario:
+        ctx["scenario_name"] = scenario.name
+    else:
+        ctx["scenario_name"] = request.node.name
+    return ctx
 
 
 # =============================================================================
 # GIVEN steps - Setup
 # =============================================================================
 
-@given('the system has proper directory structure')
-def step_system_directory_structure(test_context):
-    """Verify basic directory structure exists"""
+@given(parsers.parse('config files are available in {config_directory}'))
+def load_configuration_file(test_context, config_directory):
+    """Load configuration file from specified directory"""
+
     root_path = Path(__file__).parent.parent.parent.parent
-    assert (root_path / 'src').exists(), "src directory missing"
-    assert (root_path / 'tests').exists(), "tests directory missing"
-    test_context['root_path'] = root_path
+    config_path = root_path / config_directory
+
+    assert config_path.exists(), f"Configuration file not found: {config_path}"
+
+    unified_config = UnifiedConfig(config_path=str(config_path), environment="test")
+
+    test_context['unified_config'] = unified_config
 
 
 @given('I have a StrategyFactory instance')
@@ -87,12 +83,6 @@ def step_factory_properly_initialized(test_context):
     test_context['factory_initialized'] = True
 
 
-@given('I have a valid configuration object')
-def step_have_valid_configuration(test_context):
-    """Create a valid configuration object for testing"""
-    test_context['config'] = MockConfig()
-
-
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================
@@ -121,18 +111,14 @@ def step_create_strategy_with_config(test_context, strategy_name):
     """Create a strategy with configuration using the factory"""
     logger = logging.getLogger(__name__)
     factory = test_context['factory']
-    config = test_context.get('config')
-
-    if not config:
-        step_have_valid_configuration(test_context)
-        config = test_context['config']
+    unified_config = test_context.get('unified_config')
 
     try:
-        strategy = factory.create_strategy(strategy_name, config)
+        strategy = factory.create_strategy(strategy_name, unified_config)
         test_context['created_strategy'] = strategy
         test_context['creation_error'] = None
         test_context['strategy_name'] = strategy_name
-        test_context['used_config'] = config
+        test_context['used_config'] = unified_config
         logger.debug(f"Successfully created strategy with config: {strategy_name}")
 
     except Exception as e:
@@ -238,15 +224,15 @@ def step_strategy_implements_interface(test_context):
     strategy = test_context.get('created_strategy')
 
     # Check if strategy has required attributes and methods (duck typing for Protocol)
-    required_attributes = ['name', 'money_manager', 'data_manager', 'signals',
-                           'optimizations', 'predictors', 'runners', 'metrics', 'verificators']
+    required_attributes = ['name', 'money_manager', 'data_manager', 'entry_signal', 'exit_signal',
+                           'optimizers', 'predictors', 'runners', 'metrics']
 
     for attr in required_attributes:
         assert hasattr(strategy, attr), f"Strategy missing required attribute: {attr}"
 
-    required_methods = ['setMoneyManager', 'setDataManager', 'addSignal', 'addOptimizer',
-                        'addPredictor', 'addRunner', 'addMetric', 'addVerificator',
-                        'initialize', 'generate_signals', 'execute_trades', 'run_backtest']
+    required_methods = ['set_money_manager', 'set_data_manager', 'add_entry_signal', 'add_exit_signal', 'add_optimizer',
+                        'add_predictor', 'add_metric', 'add_execution_listener',
+                        'run', 'get_optimizable_parameters']
 
     for method in required_methods:
         assert hasattr(strategy, method), f"Strategy missing required method: {method}"

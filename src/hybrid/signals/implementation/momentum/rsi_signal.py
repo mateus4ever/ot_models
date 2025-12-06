@@ -40,7 +40,7 @@ class RSISignal(SignalInterface):
                    - overbought_threshold: RSI level for overbought condition (default 70)
                    - buffer_multiplier: Historical data buffer size multiplier (default 3)
         """
-        self.rsi_config = config.get_section('signals')['momentum']['rsi']
+        self.rsi_config = config.get_section('signals')['momentum']['rsi']['parameters']
 
         # Load configurable parameters
         self.period = self.rsi_config['period']

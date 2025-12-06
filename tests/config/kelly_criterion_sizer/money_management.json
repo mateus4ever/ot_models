@@ -12,48 +12,218 @@
 
     "position_sizers": {
       "fixed_fractional": {
-        "risk_per_trade": 0.02,
-        "max_position_pct": 0.1
+        "parameters": {
+          "risk_per_trade": 0.02,
+          "max_position_pct": 0.1
+        },
+        "optimizable_parameters": {
+          "risk_per_trade": {
+            "type": "continuous",
+            "min": 0.005,
+            "max": 0.05,
+            "step": 0.005,
+            "default": 0.02,
+            "description": "Risk per trade as fraction of capital"
+          },
+          "max_position_pct": {
+            "type": "continuous",
+            "min": 0.05,
+            "max": 0.25,
+            "step": 0.05,
+            "default": 0.1,
+            "description": "Maximum position size as percentage of capital"
+          }
+        }
       },
       "kelly_criterion": {
-        "position_sizing_tolerance": 0.01,
-        "kelly_fraction": 0.25,
-        "kelly_lookback": 50,
-        "kelly_win_rate": 0.55,
-        "kelly_avg_win": 120.0,
-        "kelly_avg_loss": 100.0,
-        "kelly_min_trades_threshold": 30,
-        "max_position_pct": 0.2
+        "parameters": {
+          "position_sizing_tolerance": 0.01,
+          "kelly_fraction": 0.25,
+          "kelly_lookback": 50,
+          "kelly_win_rate": 0.55,
+          "kelly_avg_win": 120.0,
+          "kelly_avg_loss": 100.0,
+          "kelly_min_trades_threshold": 30,
+          "max_position_pct": 0.1
+        },
+        "optimizable_parameters": {
+          "kelly_fraction": {
+            "type": "continuous",
+            "min": 0.1,
+            "max": 0.5,
+            "step": 0.05,
+            "default": 0.25,
+            "description": "Fraction of Kelly criterion to use"
+          },
+          "kelly_lookback": {
+            "type": "integer",
+            "min": 20,
+            "max": 100,
+            "step": 10,
+            "default": 50,
+            "description": "Lookback period for Kelly calculation"
+          },
+          "max_position_pct": {
+            "type": "continuous",
+            "min": 0.05,
+            "max": 0.25,
+            "step": 0.05,
+            "default": 0.1
+          }
+        }
       },
       "volatility_based": {
-        "max_position_pct": 0.1,
-        "target_volatility": 0.15,
-        "volatility_lookback": 20,
-        "base_risk_per_trade": 0.02,
-        "min_risk_per_trade": 0.005,
-        "max_risk_per_trade": 0.05,
-        "volatility_annualization_factor": 252
+        "parameters": {
+          "max_position_pct": 0.1,
+          "target_volatility": 0.15,
+          "volatility_lookback": 20,
+          "base_risk_per_trade": 0.02,
+          "min_risk_per_trade": 0.005,
+          "max_risk_per_trade": 0.05,
+          "volatility_annualization_factor": 252
+        },
+        "optimizable_parameters": {
+          "target_volatility": {
+            "type": "continuous",
+            "min": 0.10,
+            "max": 0.25,
+            "step": 0.05,
+            "default": 0.15,
+            "description": "Target portfolio volatility"
+          },
+          "volatility_lookback": {
+            "type": "integer",
+            "min": 10,
+            "max": 50,
+            "step": 5,
+            "default": 20,
+            "description": "Lookback period for volatility calculation"
+          },
+          "base_risk_per_trade": {
+            "type": "continuous",
+            "min": 0.01,
+            "max": 0.05,
+            "step": 0.005,
+            "default": 0.02
+          },
+          "max_position_pct": {
+            "type": "continuous",
+            "min": 0.05,
+            "max": 0.25,
+            "step": 0.05,
+            "default": 0.1
+          }
+        }
       }
     },
 
     "risk_managers": {
       "atr_based": {
-        "stop_loss_atr_multiplier": 2.0,
-        "max_daily_loss": 0.05,
-        "max_drawdown": 0.20,
-        "atr_period": 14,
-        "starting_atr": 0.000890,
-        "calculation_tolerance": 0.00001
+        "parameters": {
+          "stop_loss_atr_multiplier": 2.5,
+          "max_daily_loss": 0.05,
+          "max_drawdown": 0.20,
+          "atr_period": 14,
+          "starting_atr": 0.000890,
+          "calculation_tolerance": 0.00001
+        },
+        "optimizable_parameters": {
+          "stop_loss_atr_multiplier": {
+            "type": "continuous",
+            "min": 1.5,
+            "max": 4.0,
+            "step": 0.5,
+            "default": 2.5,
+            "description": "ATR multiplier for stop loss distance"
+          },
+          "atr_period": {
+            "type": "integer",
+            "min": 7,
+            "max": 21,
+            "step": 7,
+            "default": 14,
+            "description": "Period for ATR calculation"
+          },
+          "max_daily_loss": {
+            "type": "continuous",
+            "min": 0.02,
+            "max": 0.10,
+            "step": 0.01,
+            "default": 0.05,
+            "description": "Maximum daily loss as fraction of capital"
+          },
+          "max_drawdown": {
+            "type": "continuous",
+            "min": 0.10,
+            "max": 0.30,
+            "step": 0.05,
+            "default": 0.20,
+            "description": "Maximum drawdown before stopping trading"
+          }
+        }
       },
       "volatility_based": {
-        "volatility_multiplier": 2.0,
-        "max_daily_loss": 0.05,
-        "max_drawdown": 0.20
+        "parameters": {
+          "volatility_multiplier": 2.0,
+          "max_daily_loss": 0.05,
+          "max_drawdown": 0.20
+        },
+        "optimizable_parameters": {
+          "volatility_multiplier": {
+            "type": "continuous",
+            "min": 1.0,
+            "max": 3.0,
+            "step": 0.5,
+            "default": 2.0,
+            "description": "Volatility multiplier for stop distance"
+          },
+          "max_daily_loss": {
+            "type": "continuous",
+            "min": 0.02,
+            "max": 0.10,
+            "step": 0.01,
+            "default": 0.05
+          },
+          "max_drawdown": {
+            "type": "continuous",
+            "min": 0.10,
+            "max": 0.30,
+            "step": 0.05,
+            "default": 0.20
+          }
+        }
       },
       "portfolio_heat": {
-        "max_portfolio_heat": 0.06,
-        "heat_reduction_threshold": 0.80,
-        "atr_period": 14
+        "parameters": {
+          "max_portfolio_heat": 0.06,
+          "heat_reduction_threshold": 0.80,
+          "atr_period": 14
+        },
+        "optimizable_parameters": {
+          "max_portfolio_heat": {
+            "type": "continuous",
+            "min": 0.03,
+            "max": 0.10,
+            "step": 0.01,
+            "default": 0.06,
+            "description": "Maximum total portfolio heat (sum of position risks)"
+          },
+          "heat_reduction_threshold": {
+            "type": "continuous",
+            "min": 0.60,
+            "max": 0.90,
+            "step": 0.10,
+            "default": 0.80,
+            "description": "Heat level at which to start reducing positions"
+          },
+          "atr_period": {
+            "type": "integer",
+            "min": 7,
+            "max": 21,
+            "step": 7,
+            "default": 14
+          }
+        }
       }
     },
 

@@ -23,11 +23,12 @@ class ATRBasedRiskManager(RiskManagementStrategy):
         risk_config = self.config['risk_managers']['atr_based']
 
         # NO DEFAULTS - fail if missing from config
-        self.atr_multiplier = risk_config['stop_loss_atr_multiplier']
-        self.max_daily_loss = risk_config['max_daily_loss']
-        self.max_drawdown = risk_config['max_drawdown']
-        self.atr_period = risk_config['atr_period']
-        self.starting_atr = risk_config['starting_atr']
+        # TODO: check how to insert optimized parameters
+        self.atr_multiplier = risk_config['parameters']['stop_loss_atr_multiplier']
+        self.max_daily_loss = risk_config['parameters']['max_daily_loss']
+        self.max_drawdown = risk_config['parameters']['max_drawdown']
+        self.atr_period = risk_config['parameters']['atr_period']
+        self.starting_atr = risk_config['parameters']['starting_atr']
 
     def calculate_stop_loss(self, signal: TradingSignal, market_data: pd.DataFrame) -> float:
         """Calculate stop loss using ATR"""

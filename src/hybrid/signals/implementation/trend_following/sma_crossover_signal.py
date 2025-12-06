@@ -40,7 +40,7 @@ class SimpleMovingAverageCrossover(SignalInterface):
                    - buffer_multiplier: Historical data buffer size multiplier (default 3)
                    - crossover_confirmation: Periods to confirm crossover (default 1)
         """
-        self.simplemovingaveragecrossover_config = config.get_section('signals')['trend_following']['simplemovingaveragecrossover']
+        self.simplemovingaveragecrossover_config = config.get_section('signals')['trend_following']['simplemovingaveragecrossover']['parameters']
 
         # Load configurable parameters
         self.fast_period = self.simplemovingaveragecrossover_config['fast_period']

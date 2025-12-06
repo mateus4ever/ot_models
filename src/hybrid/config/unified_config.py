@@ -127,6 +127,7 @@ class UnifiedConfig:
             "display.json",
             "files.json",
             "money_management.json",
+            "optimization.json",
             "testing.json",
             "transaction_costs.json"
         ]

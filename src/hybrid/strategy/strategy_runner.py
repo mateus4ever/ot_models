@@ -4,7 +4,7 @@ from src.hybrid.money_management import MoneyManager
 from src.hybrid.strategies import StrategyFactory
 
 
-class BacktestEngine:
+class StrategyRunner:
     def __init__(self, config, data_manager, position_manager):
         self.config = config
         self.data_manager = data_manager  # Shared

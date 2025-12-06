@@ -45,6 +45,7 @@ class BaseStrategy(StrategyInterface):
         self.entry_signal = None  # Single entry trigger
         self.exit_signal = None  # Single exit condition (besides stop)
         self.predictors = []
+        #todo: remove it
         self.optimizers = []
         self.runners = []
         self.metrics = []
@@ -72,6 +73,7 @@ class BaseStrategy(StrategyInterface):
     def add_predictor(self, predictor):
         self.predictors.append(predictor)
 
+    # todo: remove it
     def add_optimizer(self, optimizer):
         self.optimizers.append(optimizer)
 

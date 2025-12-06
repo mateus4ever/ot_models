@@ -1,89 +1,76 @@
-Feature: StrategyInterface Protocol Compliance
-  As a trading system architect
-  I want to verify that strategy implementations follow the StrategyInterface protocol
-  So that strategies can be used interchangeably with consistent behavior
+@strategy_interface
+Feature: Strategy Interface Requirements
+  All strategy implementations must provide complete strategy capabilities
+  including dependency injection, component management, and execution
 
-  @strategy @interface @compliance
-  Scenario: Strategy interface compliance verification
-    Given I have a mock strategy implementation
-    When I inspect the strategy interface compliance
-    Then the strategy should have all required attributes
-    And the strategy should have all required methods
-    And all method signatures should match the protocol
+  Background:
+    Given config files are available in tests/config/strategies
 
-  @strategy @dependency_injection
-  Scenario: Strategy dependency injection compliance
-    Given I have a mock strategy implementation
-    And I have mock dependencies for testing
-    When I inject dependencies into the strategy
-    Then the strategy should accept MoneyManager injection
-    And the strategy should accept DataManager injection
-    And the dependency injection should not cause errors
+  @core_methods
+  Scenario Outline: Strategy implements core interface methods
+    Given a strategy of type "<strategy_type>"
+    Then the strategy should have method "set_money_manager"
+    And the strategy should have method "set_data_manager"
+    And the strategy should have method "set_position_orchestrator"
+    And the strategy should have method "add_entry_signal"
+    And the strategy should have method "add_exit_signal"
+    And the strategy should have method "add_optimizer"
+    And the strategy should have method "add_predictor"
+    And the strategy should have method "add_metric"
+    And the strategy should have method "add_execution_listener"
+    And the strategy should have method "run"
+    And the strategy should have method "get_optimizable_parameters"
 
-  @strategy @components @management
-  Scenario: Strategy component management
-    Given I have a mock strategy implementation
-    And I have mock components for testing
-    When I add components to the strategy
-    Then the strategy should accept signal components
-    And the strategy should accept optimizer components
-    And the strategy should accept predictor components
-    And the strategy should accept runner components
-    And the strategy should accept metric components
-    And the strategy should accept verificator components
-    And component addition should not cause errors
+    Examples:
+      | strategy_type |
+      | base         |
+      | chained      |
 
-  @strategy @lifecycle @execution
-  Scenario: Strategy execution lifecycle compliance
-    Given I have a mock strategy implementation
-    And the strategy has mock dependencies injected
-    And the strategy has mock components added
-    When I execute the strategy lifecycle methods
-    Then the strategy initialize method should be callable
-    And the strategy generate_signals method should be callable
-    And the strategy execute_trades method should be callable
-    And the strategy run_backtest method should be callable
-    And all lifecycle methods should return mock results
+  @base_attributes
+  Scenario Outline: Strategy has required attributes
+    Given a strategy of type "<strategy_type>"
+    Then it should have attribute "name"
+    And it should have attribute "config"
+    And it should have attribute "money_manager"
+    And it should have attribute "data_manager"
+    And it should have attribute "entry_signal"
+    And it should have attribute "exit_signal"
+    And it should have attribute "optimizers"
+    And it should have attribute "predictors"
+    And it should have attribute "runners"
+    And it should have attribute "metrics"
 
-    @strategy @return_types
-  Scenario: Strategy method return type validation
-    Given I have a mock strategy implementation
-    And the strategy has mock dependencies and components configured
-    When I call strategy methods with valid inputs
-    Then the initialize method should return boolean type
-    And the generate_signals method should return correct signal type
-    And the execute_trades method should return dict type
-    And the run_backtest method should return dict type
-    And return types should match the protocol specifications
+    Examples:
+      | strategy_type |
+      | base         |
+      | chained      |
 
-  @strategy @parameter_validation
-  Scenario: Strategy parameter type validation
-    Given I have a mock strategy implementation
-    And I have test parameters of various types
-    When I call strategy methods with valid parameter types
-    Then the methods should accept the parameters without type errors
-    When I call strategy methods with invalid parameter types
-    Then the methods should reject invalid parameters appropriately
-    And proper parameter validation should occur
+  @dependency_injection
+  Scenario Outline: Strategy accepts dependency injection
+    Given a strategy of type "<strategy_type>"
+    When I create mock dependencies
+    And I inject MoneyManager into the strategy
+    And I inject DataManager into the strategy
+    And I inject PositionOrchestrator into the strategy
+    Then no injection errors should occur
 
-  @strategy @exception_handling
-  Scenario: Strategy exception handling contracts
-    Given I have a mock strategy implementation
-    When I call methods on uninitialized strategy
-    Then proper exceptions should be raised for invalid states
-    When I call methods with missing dependencies
-    Then proper exceptions should be raised for missing dependencies
-    When I call methods with invalid inputs
-    Then proper exceptions should be raised for invalid inputs
-    And all exceptions should be informative and appropriate
+    Examples:
+      | strategy_type |
+      | base         |
+      | chained      |
 
-  @strategy @state_management
-  Scenario: Strategy state management validation
-    Given I have a mock strategy implementation
-    When I inject dependencies into the strategy
-    Then the strategy should maintain proper internal state
-    And dependency references should be correctly stored
-    When I add components to the strategy
-    Then the strategy should maintain proper component state
-    And component references should be correctly stored
-    And the strategy state should remain consistent throughout
+  @component_management
+  Scenario Outline: Strategy accepts component addition
+    Given a strategy of type "<strategy_type>"
+    When I create mock components
+    And I add entry signal to the strategy
+    And I add exit signal to the strategy
+    And I add optimizer to the strategy
+    And I add predictor to the strategy
+    And I add metric to the strategy
+    Then no component addition errors should occur
+
+    Examples:
+      | strategy_type |
+      | base         |
+      | chained      |

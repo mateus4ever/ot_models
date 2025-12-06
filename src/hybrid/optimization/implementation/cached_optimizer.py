@@ -30,7 +30,7 @@ class CachedRandomOptimizer(IOptimizerBase):
     }
     """
 
-    def __init__(self, config: UnifiedConfig):
+    def __init__(self, config: UnifiedConfig, strategy):
         """
         JAVA EQUIVALENT:
         public CachedRandomOptimizer(UnifiedConfig config) {
@@ -135,38 +135,6 @@ class CachedRandomOptimizer(IOptimizerBase):
         }
         new_config.update_config(updates)
         return new_config
-
-    # def run_single_backtest(self, params: Dict) -> Dict:
-    #     """
-    #     Run single backtest with cached data
-    #
-    #     JAVA EQUIVALENT:
-    #     private BacktestResult runSingleBacktest(Map<String, Double> params) {
-    #         try {
-    #             UnifiedConfig testConfig = createOptimizedConfig(params);
-    #             BacktestEngine backtestEngine = new BacktestEngine(testConfig);
-    #             Map<String, Object> backtestResults = backtestEngine.runBacktest(cachedData, cachedSignals);
-    #
-    #             return new BacktestResult(backtestResults, true);
-    #         } catch (Exception e) {
-    #             return new BacktestResult(new HashMap<>(), false, e.getMessage());
-    #         }
-    #     }
-    #     """
-    #     try:
-    #         test_config = self.create_optimized_config(params)
-    #         backtest_results = backtest_engine.run_backtest(self.cached_data, self.cached_signals)
-    #
-    #         return {
-    #             'backtest': backtest_results,
-    #             'success': True
-    #         }
-    #     except Exception as e:
-    #         return {
-    #             'backtest': {},
-    #             'success': False,
-    #             'error': str(e)
-    #         }
 
     def generate_random_parameters(self, n_combinations: int) -> List[Dict]:
         """

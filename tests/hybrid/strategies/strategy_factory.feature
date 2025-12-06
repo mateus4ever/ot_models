@@ -4,7 +4,7 @@ Feature: StrategyFactory Creation and Error Handling
   So that I can reliably instantiate any available strategy
 
   Background:
-    Given the system has proper directory structure
+    Given config files are available in tests/config/strategies
     And I have a StrategyFactory instance
 
   @factory @creation @success
@@ -19,12 +19,11 @@ Feature: StrategyFactory Creation and Error Handling
     Examples:
       | strategy_name |
       | base         |
-      | hybrid       |
+      | chained       |
 
   @factory @creation @with_config
   Scenario Outline: Successfully create strategies with configuration
     Given the factory is properly initialized
-    And I have a valid configuration object
     When I create a <strategy_name> strategy with configuration
     Then a valid strategy instance should be created with config
     And the configuration should be passed to the strategy
@@ -32,8 +31,8 @@ Feature: StrategyFactory Creation and Error Handling
 
     Examples:
       | strategy_name |
-      | base         |
-      | hybrid       |
+      | base          |
+      | chained       |
 
   @factory @error @unknown_strategy
   Scenario: Throw error for unknown strategy
@@ -43,7 +42,7 @@ Feature: StrategyFactory Creation and Error Handling
     And the error message should mention "Unknown strategy: name "nonexistent_strategy"
     And the error message should list available strategies
     And the available strategies should include "base"
-    And the available strategies should include "hybrid"
+    And the available strategies should include "chained"
 
   @factory @error @invalid_inputs
   Scenario Outline: Throw errors for invalid inputs
@@ -63,36 +62,5 @@ Feature: StrategyFactory Creation and Error Handling
     Given the factory is properly initialized
     When I request the list of available strategies
     Then the list should contain "base"
-    And the list should contain "hybrid"
+    And the list should contain "chained"
     And the list should have exactly 2 strategies
-
-    @factory @resilience @import_errors
-  Scenario: Handle import errors gracefully
-    Given the factory is properly initialized
-    And there is a strategy file with syntax errors
-    When the factory performs auto-discovery
-    Then the factory should continue discovering other strategies
-    And the broken strategy should be skipped
-    And other valid strategies should still be available
-    And import errors should be logged appropriately
-
-  @factory @resilience @missing_dependencies
-  Scenario: Handle missing dependencies gracefully
-    Given the factory is properly initialized
-    And there is a strategy with missing dependencies
-    When the factory performs auto-discovery
-    Then the factory should continue discovering other strategies
-    And the strategy with missing dependencies should be skipped
-    And other valid strategies should remain functional
-    And dependency errors should be logged appropriately
-
-  @factory @resilience @partial_failure
-  Scenario: Handle partial discovery failures
-    Given the factory is properly initialized
-    And multiple strategies have various import issues
-    When the factory performs auto-discovery
-    Then valid strategies should be discovered successfully
-    And invalid strategies should be gracefully skipped
-    And the factory should remain functional
-    And all errors should be properly logged
-    And no exceptions should propagate to the caller

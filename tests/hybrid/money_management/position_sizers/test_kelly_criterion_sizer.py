@@ -287,7 +287,7 @@ def verify_risk_budget_calculation(test_context):
     actual_risk_budget = position_size * stop_distance
 
     mm_config = config.get_section('money_management')
-    tolerance = mm_config['position_sizers']['kelly_criterion']['position_sizing_tolerance']
+    tolerance = mm_config['position_sizers']['kelly_criterion']['parameters']['position_sizing_tolerance']
 
     assert abs(actual_risk_budget - expected_risk_budget) < tolerance, \
         f"Risk budget mismatch: expected {expected_risk_budget}, got {actual_risk_budget}"
@@ -342,7 +342,7 @@ def verify_win_rate_approximate(test_context, expected_win_rate):
     # Get tolerance from config
     mm_config = config.get_section('money_management')
     kelly_config = mm_config['position_sizers']['kelly_criterion']
-    tolerance = kelly_config['position_sizing_tolerance']
+    tolerance = kelly_config['parameters']['position_sizing_tolerance']
 
     win_rate, _, _ = sizer._get_current_statistics()
     expected = float(expected_win_rate)
@@ -359,7 +359,7 @@ def verify_avg_win_approximate(test_context, expected_avg_win):
 
     mm_config = config.get_section('money_management')
     kelly_config = mm_config['position_sizers']['kelly_criterion']
-    tolerance = kelly_config['position_sizing_tolerance']
+    tolerance = kelly_config['parameters']['position_sizing_tolerance']
 
     _, avg_win, _ = sizer._get_current_statistics()
     expected = float(expected_avg_win)
@@ -376,7 +376,7 @@ def verify_avg_loss_approximate(test_context, expected_avg_loss):
 
     mm_config = config.get_section('money_management')
     kelly_config = mm_config['position_sizers']['kelly_criterion']
-    tolerance = kelly_config['position_sizing_tolerance']
+    tolerance = kelly_config['parameters']['position_sizing_tolerance']
 
     _, _, avg_loss = sizer._get_current_statistics()
     expected = float(expected_avg_loss)

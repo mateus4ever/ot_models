@@ -1,27 +1,83 @@
 {
   "signals": {
+    "training_window": 50,
+
     "trend_following": {
       "simplemovingaveragecrossover": {
-        "fast_period": 10,
-        "slow_period": 30,
-        "buffer_multiplier": 3,
-        "crossover_confirmation": 1
+        "parameters": {
+          "fast_period": 20,
+          "slow_period": 50,
+          "buffer_multiplier": 3,
+          "crossover_confirmation": 1
+        },
+        "optimizable_parameters": {
+          "fast_period": {
+            "type": "integer",
+            "min": 5,
+            "max": 50,
+            "step": 5
+          },
+          "slow_period": {
+            "type": "integer",
+            "min": 20,
+            "max": 200,
+            "step": 10,
+            "constraints": ["slow_period > fast_period"]
+          }
+        }
+      },
+      "kama": {
+        "parameters": {
+          "fast_period": 2,
+          "slow_period": 30
+        },
+        "optimizable_parameters": {
+          "fast_period": {"type": "integer", "min": 2, "max": 10},
+          "slow_period": {"type": "integer", "min": 20, "max": 50}
+        }
       }
     },
+
     "mean_reversion": {
       "bollinger": {
-        "period": 20,
-        "std_dev": 2.0,
-        "buffer_multiplier": 3
+        "parameters": {
+          "period": 20,
+          "std_dev": 2.0,
+          "buffer_multiplier": 3
+        },
+        "optimizable_parameters": {
+          "period": {"type": "integer", "min": 10, "max": 50},
+          "std_dev": {"type": "continuous", "min": 1.5, "max": 3.0}
+        }
       }
     },
+
     "momentum": {
       "rsi": {
-        "period": 14,
-        "oversold_threshold": 30,
-        "overbought_threshold": 70,
-        "buffer_multiplier": 3
+        "parameters": {
+          "period": 14,
+          "oversold_threshold": 30,
+          "overbought_threshold": 70,
+          "buffer_multiplier": 3
+        },
+        "optimizable_parameters": {
+          "period": {"type": "integer", "min": 7, "max": 21},
+          "oversold_threshold": {"type": "integer", "min": 20, "max": 35},
+          "overbought_threshold": {"type": "integer", "min": 65, "max": 80}
+        }
       }
-    }
+    },
+
+    "filters": {
+    "TODO": "Not yet implemented - will contain volatility filters, regime filters, etc.",
+    "enabled": false,
+    "planned": [
+      "volatility_filter",
+      "regime_filter",
+      "time_of_day_filter",
+      "spread_filter"
+    ]
+  }
+
   }
 }

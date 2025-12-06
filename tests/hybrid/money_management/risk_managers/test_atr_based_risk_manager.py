@@ -89,15 +89,23 @@ def create_trading_signal(test_context, direction, entry_price, strength):
 @given(parsers.parse('ATR multiplier is {multiplier}'))
 def set_atr_multiplier(test_context, multiplier):
     """Override ATR multiplier in configuration"""
-    config = test_context['unified_config']
+    unified_config = test_context['unified_config']
 
-    # Get the money_management section
-    mm_config = config.config['money_management']
+    # Use update_config to properly update nested values
+    updates = {
+        'money_management': {
+            'risk_managers': {
+                'atr_based': {
+                    'parameters': {
+                        'stop_loss_atr_multiplier': float(multiplier)
+                    }
+                }
+            }
+        }
+    }
 
-    # Override the ATR multiplier
-    mm_config['risk_managers']['atr_based']['stop_loss_atr_multiplier'] = float(multiplier)
-
-    test_context['atr_multiplier'] = float(multiplier)
+    unified_config.update_config(updates)
+    test_context['unified_config'] = unified_config
 
 
 @given(parsers.parse('market data is loaded from {data_file}'))
@@ -180,20 +188,47 @@ def set_portfolio_peak_equity(test_context, peak_equity):
     portfolio = test_context['portfolio']
     portfolio.peak_equity = float(peak_equity)
 
+
 @given(parsers.parse('max daily loss threshold is {max_daily_loss}'))
 def set_max_daily_loss_threshold(test_context, max_daily_loss):
     """Override max daily loss threshold in config"""
-    config = test_context['unified_config']
-    risk_config = config.get_section('money_management')['risk_managers']['atr_based']
-    risk_config['max_daily_loss'] = float(max_daily_loss)
+    unified_config = test_context['unified_config']
+
+    updates = {
+        'money_management': {
+            'risk_managers': {
+                'atr_based': {
+                    'parameters': {
+                        'max_daily_loss': float(max_daily_loss)
+                    }
+                }
+            }
+        }
+    }
+
+    unified_config.update_config(updates)
+    test_context['unified_config'] = unified_config
 
 
 @given(parsers.parse('max drawdown threshold is {max_drawdown}'))
 def set_max_drawdown_threshold(test_context, max_drawdown):
     """Override max drawdown threshold in config"""
-    config = test_context['unified_config']
-    risk_config = config.get_section('money_management')['risk_managers']['atr_based']
-    risk_config['max_drawdown'] = float(max_drawdown)
+    unified_config = test_context['unified_config']
+
+    updates = {
+        'money_management': {
+            'risk_managers': {
+                'atr_based': {
+                    'parameters': {
+                        'max_drawdown': float(max_drawdown)
+                    }
+                }
+            }
+        }
+    }
+
+    unified_config.update_config(updates)
+    test_context['unified_config'] = unified_config
 
 # ============================================================================
 # WHEN STEPS - Actions
@@ -256,7 +291,7 @@ def verify_stop_loss(test_context, expected_stop_loss):
     """Verify calculated stop loss matches expected value"""
     config = test_context['unified_config']
     risk_config = config.get_section('money_management')['risk_managers']['atr_based']
-    tolerance = risk_config['calculation_tolerance']
+    tolerance = risk_config['parameters']['calculation_tolerance']
 
     calculated = test_context['calculated_stop_loss']
     expected = float(expected_stop_loss)
@@ -272,7 +307,7 @@ def verify_atr_value(test_context, expected_atr):
     """Verify calculated ATR matches expected value"""
     config = test_context['unified_config']
     risk_config = config.get_section('money_management')['risk_managers']['atr_based']
-    tolerance = risk_config['calculation_tolerance']
+    tolerance = risk_config['parameters']['calculation_tolerance']
 
     calculated = test_context['calculated_atr']
     expected = float(expected_atr)

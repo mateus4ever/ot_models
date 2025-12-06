@@ -7,6 +7,21 @@
     "checkpointing": {
       "checkpoint_interval": 50,
       "checkpoint_time_interval": 300
+    },
+    "fitness": {
+      "metrics": [
+        {"name": "total_return", "weight": 1.0, "direction": "maximize"},
+        {"name": "sharpe_ratio", "weight": 0.5, "direction": "maximize"},
+        {"name": "max_drawdown", "weight": 0.3, "direction": "minimize"},
+        {"name": "num_trades", "weight": 0.1, "direction": "maximize"}
+      ],
+      "penalties": {
+        "severe_penalty": -1000,
+        "conditions": [
+          {"metric": "num_trades", "operator": "<", "threshold": 10},
+          {"metric": "max_drawdown", "operator": ">", "threshold": 0.30}
+        ]
+      }
     }
   }
 }
