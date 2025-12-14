@@ -1,20 +1,32 @@
 # src/hybrid/optimization/fitness.py
 """
 Fitness Calculator for optimization
-Calculates fitness scores from metrics using configurable weights and penalties
+
+Converts backtest metrics into a single score for comparing parameter combinations.
+The optimizer uses this score to decide which parameters are "better".
 """
 
 from typing import Dict
 from src.hybrid.config.unified_config import UnifiedConfig
 
+
 class FitnessCalculator:
     """
-    Calculate fitness scores for optimization
+    Calculate fitness scores for optimization.
 
-    Uses config-driven approach:
-    - Metrics list defines which metrics to use and their weights
-    - Direction (maximize/minimize) controls contribution
-    - Penalty conditions trigger severe_penalty when violated
+    Purpose:
+        Backtest produces many metrics (return, drawdown, win_rate, etc.)
+        Optimizer needs ONE number to compare parameter combinations.
+        FitnessCalculator combines metrics into that single score.
+
+    How it works:
+        - Each metric has a weight (importance)
+        - Each metric has a direction (maximize profit, minimize drawdown)
+        - Penalty conditions punish unacceptable results (e.g., >50% drawdown)
+
+    Example:
+        metrics = {'total_return': 0.15, 'max_drawdown': 0.25, 'win_rate': 0.55}
+        fitness = calculator.calculate(metrics)  # Returns single score like 7.3
     """
 
     def __init__(self, config: UnifiedConfig):

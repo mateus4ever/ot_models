@@ -5,7 +5,6 @@
     "max_retries": 3,
     "retry_delay_ms": 50,
     "cleanup_interval_ms": 500,
-    "initial_capital": 100000,
     "position_sizing": "fixed_fractional",
     "risk_management": "atr_based",
     "risk_reduction_factor": 0.5,

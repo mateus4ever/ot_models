@@ -13,6 +13,9 @@ import logging
 from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
+from src.hybrid.data import DataManager
+from src.hybrid.money_management import MoneyManager
+from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 # Import the system under test
 from src.hybrid.strategies.strategy_factory import StrategyFactory
 
@@ -22,6 +25,9 @@ scenarios('strategy_factory.feature')
 # Set up debug logging for tests
 logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(levelname)s - %(message)s')
 
+
+#TODO: only create_strategy_shared used. check if there must be a handling of the objects
+#TODO: there should be a crate_strategy_isolated too
 
 # Test fixtures and shared state
 @pytest.fixture
@@ -34,6 +40,14 @@ def test_context(request):
     else:
         ctx["scenario_name"] = request.node.name
     return ctx
+
+# At module level in test file, after imports
+def _create_strategy_dependencies(config):
+    """Helper to create strategy dependencies - reduces boilerplate"""
+    data_manager = DataManager(config)
+    money_manager = MoneyManager(config)
+    position_orchestrator = PositionOrchestrator(config)
+    return data_manager, money_manager, position_orchestrator
 
 
 # =============================================================================
@@ -77,7 +91,8 @@ def step_factory_properly_initialized(test_context):
         factory = test_context['factory']
 
     # Verify factory has basic functionality
-    assert hasattr(factory, 'create_strategy'), "Factory should have create_strategy method"
+    assert hasattr(factory, 'create_strategy_isolated'), "Factory should have create_strategy_isolated method"
+    assert hasattr(factory, 'create_strategy_shared'), "Factory should have create_strategy_shared method"
     assert hasattr(factory, 'get_available_strategies'), "Factory should have get_available_strategies method"
 
     test_context['factory_initialized'] = True
@@ -93,8 +108,12 @@ def step_create_strategy(test_context, strategy_name):
     logger = logging.getLogger(__name__)
     factory = test_context['factory']
 
+    config = test_context['unified_config']
+
+    dm, mm, po = _create_strategy_dependencies(config)
+
     try:
-        strategy = factory.create_strategy(strategy_name)
+        strategy = factory.create_strategy_shared(strategy_name, config, dm, mm, po)
         test_context['created_strategy'] = strategy
         test_context['creation_error'] = None
         test_context['strategy_name'] = strategy_name
@@ -111,14 +130,18 @@ def step_create_strategy_with_config(test_context, strategy_name):
     """Create a strategy with configuration using the factory"""
     logger = logging.getLogger(__name__)
     factory = test_context['factory']
-    unified_config = test_context.get('unified_config')
+
+    config = test_context.get('unified_config')
+
+    dm, mm, po = _create_strategy_dependencies(config)
 
     try:
-        strategy = factory.create_strategy(strategy_name, unified_config)
+        strategy = factory.create_strategy_shared(strategy_name, config, dm, mm, po)
+
         test_context['created_strategy'] = strategy
         test_context['creation_error'] = None
         test_context['strategy_name'] = strategy_name
-        test_context['used_config'] = unified_config
+        test_context['used_config'] = config
         logger.debug(f"Successfully created strategy with config: {strategy_name}")
 
     except Exception as e:
@@ -136,8 +159,13 @@ def step_try_create_strategy_with_name(test_context, strategy_name):
     # Remove quotes if present
     strategy_name = strategy_name.strip('"\'')
 
+    config = test_context.get('unified_config')
+
+    dm, mm, po = _create_strategy_dependencies(config)
+
     try:
-        strategy = factory.create_strategy(strategy_name)
+        strategy = factory.create_strategy_shared(strategy_name, config, dm, mm, po)
+
         test_context['created_strategy'] = strategy
         test_context['creation_error'] = None
         test_context['strategy_name'] = strategy_name
@@ -165,8 +193,12 @@ def step_try_create_strategy_with_invalid_input(test_context, invalid_input):
     else:
         strategy_name = invalid_input
 
+    config = test_context.get('unified_config')
+
+    dm, mm, po = _create_strategy_dependencies(config)
+
     try:
-        strategy = factory.create_strategy(strategy_name)
+        strategy = factory.create_strategy_shared(strategy_name, config, dm, mm, po)
         test_context['created_strategy'] = strategy
         test_context['creation_error'] = None
 

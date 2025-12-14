@@ -3,7 +3,7 @@ Feature: Optimizer Factory
   Factory for creating and managing optimizer instances
 
   Background:
-    Given config files are available in tests/config/strategies
+    Given config files are available in tests/config/optimization
 
   @factory_creation
   Scenario Outline: Create optimizer by type

@@ -13,10 +13,9 @@ from src.hybrid.backtesting.backtest_result import BacktestResult
 from src.hybrid.data.data_manager import DataManager
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.optimization import OptimizerType
-from src.hybrid.optimization.optimizer_factory import OptimizerFactory
+from src.hybrid.optimization.optimization_coordinator import OptimizationCoordinator
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.results import Result
-from src.hybrid.signals import SignalFactory
 from src.hybrid.strategies import StrategyFactory
 from src.hybrid.strategies import StrategyInterface
 
@@ -33,6 +32,8 @@ class ConfigurationError(Exception):
     def __init__(self, message: str, config_section: str = None):
         super().__init__(message)
         self.config_section = config_section
+
+
 
 class BacktestOrchestrator:
     """
@@ -112,17 +113,16 @@ class BacktestOrchestrator:
             loaded_markets = self._verify_data_loaded(self.data_manager, markets)
             logger.info(f"Market data loaded successfully for {len(loaded_markets)} markets")
 
-            # Initialize strategies with dependency injection
+            # Initialize strategies with shared dependencies
             strategy_instances = self._initialize_strategies(
                 strategies,
                 self.data_manager,
                 self.money_manager,
-                self.position_orchestrator,
-                OptimizerType.SIMPLE_RANDOM
+                self.position_orchestrator
             )
             logger.info(f"Initialized {len(strategy_instances)} strategies")
 
-            # Execute strategies (no loaded_markets parameter)
+            # Execute strategies
             if execution_mode.lower() == "parallel":
                 results = self._execute_strategies_parallel(strategy_instances)
             else:
@@ -142,75 +142,68 @@ class BacktestOrchestrator:
                 'method': 'multi_strategy_backtest'
             }
 
-    def run_optimization(self):
-        # 1. Define factory (encapsulates all wiring logic)
-        def create_strategy_with_params(params):
-            config = self._create_config_with_params(params)
-            strategy = self._create_and_wire_strategy(config)
-            return strategy
+    def run_optimization(self, n_combinations: int = None, n_workers: int = None):
+        """
+        Run optimization using factory pattern
 
-        # 2. Inject factory into optimizer
-        optimizer_orchestrator = OptimizationOrchestrator(
-            strategy_factory=create_strategy_with_params,
-            base_config=self.config
+        Args:
+            n_combinations: Number of parameter combinations (None = use config default)
+            n_workers: Number of parallel workers (None = use config default)
+        """
+        strategy_factory = StrategyFactory()
+
+        # Create optimizer orchestrator
+        # todo: OptimizationService will be added later
+        optimizer_orchestrator = OptimizationCoordinator(self.config)
+
+        # Run optimization with factory method
+        results = optimizer_orchestrator.optimize(
+            strategy_factory=lambda params: strategy_factory.create_strategy_with_params(
+                strategy_name='base',
+                base_config=self.config,
+                params=params
+            ),
+            optimizer_type=OptimizerType.SIMPLE_RANDOM,
+            n_combinations=n_combinations,
+            n_workers=n_workers
         )
 
-        # 3. Run optimization
-        best_params = optimizer_orchestrator.optimize(
-            n_combinations=100,
-            n_workers=16
+        # Get best params and create final strategy
+        best_params = results['best_result']['params']
+        final_strategy = strategy_factory.create_strategy_with_params(
+            strategy_name='base',
+            base_config=self.config,
+            params=best_params
         )
 
-        # 4. Use best params
-        final_strategy = create_strategy_with_params(best_params)
         return final_strategy.run()
+
     def _initialize_strategies(self,
                                strategies: List[Union[StrategyInterface, str]],
                                data_manager: DataManager,
                                money_manager: MoneyManager,
-                               position_orchestrator: PositionOrchestrator,
-                               optimizer_type: OptimizerType = None) -> List[StrategyInterface]:
-        """Initialize strategy instances with dependency injection"""
+                               position_orchestrator: PositionOrchestrator) -> List[StrategyInterface]:
+        """Initialize strategy instances using factory with shared dependencies"""
         strategy_factory = StrategyFactory()
-        signal_factory = SignalFactory(self.config)
         strategy_instances = []
 
-        # Get signals from config
-        strategy_config = self.config.get_section('strategy', {})
-        entry_signal_name = strategy_config.get('entry_signal')
-        exit_signal_name = strategy_config.get('exit_signal')  # Optional
-
-        # Determine optimizer type
-        if optimizer_type is None:
-            opt_config = self.config.get_section('optimization', {})
-            optimizer_type_str = opt_config.get('default_type', 'CACHED_RANDOM')
-            optimizer_type = OptimizerType[optimizer_type_str]
-
         for strategy in strategies:
+            # Get strategy name
             if isinstance(strategy, str):
-                created_strategy = strategy_factory.create_strategy(strategy, self.config)
+                strategy_name = strategy
             else:
-                created_strategy = strategy
+                # Already an instance - just add to list
+                strategy_instances.append(strategy)
+                continue
 
-            # Inject managers
-            created_strategy.set_money_manager(money_manager)
-            created_strategy.set_data_manager(data_manager)
-            created_strategy.set_position_orchestrator(position_orchestrator)
-
-            # Set entry signal (required)
-            if entry_signal_name:
-                entry_signal = signal_factory.create_signal(entry_signal_name)
-                created_strategy.add_entry_signal(entry_signal)
-            else:
-                raise ValueError("entry_signal required in strategy config")
-
-            # Set exit signal (optional)
-            if exit_signal_name:
-                exit_signal = signal_factory.create_signal(exit_signal_name)
-                created_strategy.add_exit_signal(exit_signal)
-
-            # Add components
-            created_strategy.add_optimizer(OptimizerFactory.create_optimizer(optimizer_type, self.config))
+            # Use factory to create strategy with shared dependencies
+            created_strategy = strategy_factory.create_strategy_shared(
+                strategy_name=strategy_name,
+                config=self.config,
+                data_manager=data_manager,
+                money_manager=money_manager,
+                position_orchestrator=position_orchestrator
+            )
 
             strategy_instances.append(created_strategy)
 

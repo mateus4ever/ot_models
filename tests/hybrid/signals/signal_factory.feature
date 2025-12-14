@@ -4,7 +4,7 @@ Feature: SignalFactory Creation and Error Handling
   So that I can reliably instantiate any available signal with namespaced organization
 
   Background:
-    Given config files are available in tests/config
+    Given config files are available in tests/config/signals
     And  I have a SignalFactory instance
 
   @factory @creation @success

@@ -1,9 +1,5 @@
 # tests/hybrid/test_strategy_factory.py
-"""
-pytest-bdd test runner for StrategyFactory creation and error handling
-Tests factory's core responsibility: create strategies successfully and handle errors properly
-ZERO MOCKS - Real strategy factory with actual strategy creation
-"""
+
 from pathlib import Path
 
 import pytest
@@ -48,12 +44,14 @@ def load_configuration_file(test_context, config_directory):
 
     root_path = Path(__file__).parent.parent.parent.parent
     config_path = root_path / config_directory
+    test_root = Path(__file__).parent.parent.parent
 
     assert config_path.exists(), f"Configuration file not found: {config_path}"
 
     unified_config = UnifiedConfig(config_path=str(config_path), environment="test")
 
     test_context['unified_config'] = unified_config
+    test_context['test_root'] = test_root
 
 @given(parsers.parse('optimizer type "{optimizer_type}"'))
 def step_given_optimizer_type(test_context, optimizer_type):
@@ -64,8 +62,6 @@ def step_given_optimizer_type(test_context, optimizer_type):
 def step_given_invalid_optimizer_type(test_context, invalid_type):
     """Store invalid optimizer type"""
     test_context['invalid_optimizer_type'] = invalid_type
-
-
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================
@@ -77,9 +73,14 @@ def step_create_optimizer_using_factory(test_context):
     optimizer_type = test_context['optimizer_type']
     optimizer_type_enum = OptimizerType[optimizer_type]
 
+    initial_capital = config.config['testing']['initial_capital']
+    test_root = test_context['test_root']
+
     factory = OptimizerFactory()
+
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config, initial_capital,test_root)
 
     try:
         optimizer = factory.create_optimizer(optimizer_type_enum, config, strategy)
@@ -95,10 +96,13 @@ def step_attempt_create_optimizer(test_context):
     """Attempt to create optimizer with invalid type"""
     config = test_context['unified_config']
     invalid_type = test_context['invalid_optimizer_type']
+    initial_capital = config.config['testing']['initial_capital']
+    test_root = test_context['test_root']
 
     factory = OptimizerFactory()
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config, initial_capital,test_root)
 
     try:
         optimizer = factory.create_optimizer(invalid_type, config, strategy)
@@ -138,9 +142,12 @@ def step_try_create_optimizer_with_invalid_input(test_context, invalid_input):
     else:
         optimizer_type = invalid_input
 
+    initial_capital = config.config['testing']['initial_capital']
+    test_root = test_context['test_root']
     factory = OptimizerFactory()
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config,initial_capital,test_root)
 
     try:
         optimizer = factory.create_optimizer(optimizer_type, config, strategy)

@@ -4,7 +4,6 @@
 
 from typing import Protocol, Any, Dict
 
-
 class StrategyInterface(Protocol):
     """Protocol defining the interface for all trading strategies"""
 

@@ -3,6 +3,10 @@ Feature: StrategyFactory Creation and Error Handling
   I want the StrategyFactory to create all implemented strategies successfully
   So that I can reliably instantiate any available strategy
 
+  # NOTE: create_strategy_shared() is tested via BacktestOrchestrator tests
+  # NOTE: create_strategy_isolated() and create_strategy_with_params() are tested via OptimizationCoordinator tests
+  # These integration tests provide sufficient coverage for factory methods
+
   Background:
     Given config files are available in tests/config/strategies
     And I have a StrategyFactory instance
@@ -18,7 +22,7 @@ Feature: StrategyFactory Creation and Error Handling
 
     Examples:
       | strategy_name |
-      | base         |
+      | base          |
       | chained       |
 
   @factory @creation @with_config

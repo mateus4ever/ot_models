@@ -27,6 +27,7 @@ from typing import Dict
 
 import pandas as pd
 
+from src.hybrid.backtesting import MetricsCalculator
 from src.hybrid.money_management import PositionDirection, TradingSignal
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.products.product_types import ProductFactory
@@ -490,7 +491,6 @@ class BaseStrategy(StrategyInterface):
 
     def _calculate_final_metrics(self) -> Dict:
         """Calculate final strategy metrics from trade history"""
-        from src.hybrid.backtesting.metrics_calculator import MetricsCalculator
 
         metrics_calc = MetricsCalculator(self.config)
         initial_capital = self.position_orchestrator.position_manager.total_capital

@@ -76,8 +76,10 @@ def step_create_sma_signal_configured(test_context, fast_period, slow_period):
         'signals': {
             'trend_following': {
                 'simplemovingaveragecrossover': {
-                    'fast_period': fast_period,
-                    'slow_period': slow_period
+                    'parameters': {
+                        'fast_period': fast_period,
+                        'slow_period': slow_period
+                    }
                 }
             }
         }

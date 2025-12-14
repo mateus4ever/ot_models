@@ -4,6 +4,9 @@
     "debug_mode": false,
     "enable_validation_checks": true
   },
+  "backtesting": {
+      "initial_capital": 100000
+  },
   "file_operations": {
     "results_dir": "results",
     "timestamp_format": "%Y%m%d_%H%M%S"

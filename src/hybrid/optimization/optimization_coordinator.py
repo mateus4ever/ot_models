@@ -8,11 +8,49 @@ import logging
 from typing import Dict, List, Callable
 from multiprocessing import Pool
 from datetime import datetime
+
+from src.hybrid.optimization.fitness import FitnessCalculator
 from src.hybrid.optimization.optimizer_factory import OptimizerFactory
 from src.hybrid.optimization import OptimizerType
 from src.hybrid.config.unified_config import UnifiedConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _worker_function(args):
+    """Worker function for multiprocessing (must be picklable)"""
+    params, strategy_factory, config = args
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Create strategy with params
+        strategy = strategy_factory(params)
+
+        # Run strategy
+        metrics = strategy.run()
+
+        # Calculate fitness
+        fitness_calculator = FitnessCalculator(config)
+        fitness = fitness_calculator.calculate_fitness(metrics)
+
+        return {
+            'params': params,
+            'fitness': fitness,
+            'metrics': metrics,
+            'success': True
+        }
+
+    except Exception as e:
+        logger.error(f"Worker failed for params {params}: {e}")
+        fitness_calculator = FitnessCalculator(config)
+        return {
+            'params': params,
+            'fitness': fitness_calculator.severe_penalty,
+            'metrics': {},
+            'success': False,
+            'error': str(e)
+        }
 
 
 class OptimizationCoordinator:
@@ -95,50 +133,14 @@ class OptimizationCoordinator:
 
         return aggregated
 
-    def _distribute_work(self,
-                         strategy_factory: Callable,
-                         param_combinations: List[Dict],
-                         n_workers: int) -> List[Dict]:
+    def _distribute_work(self, strategy_factory, param_combinations, n_workers):
         """Distribute parameter evaluation across worker pool"""
-
-        # Create fitness calculator (can be shared - thread-safe)
-        from src.hybrid.optimization.fitness import FitnessCalculator
-        fitness_calculator = FitnessCalculator(self.config)
-
-        def worker_function(params):
-            """Worker that evaluates single parameter set"""
-            try:
-                # Create strategy with params (factory handles all wiring)
-                strategy = strategy_factory(params)
-
-                # Run strategy
-                metrics = strategy.run()
-
-                # Calculate fitness
-                fitness = fitness_calculator.calculate_fitness(metrics)
-
-                # TODO: Calculate robustness
-
-                return {
-                    'params': params,
-                    'fitness': fitness,
-                    'metrics': metrics,
-                    'success': True
-                }
-
-            except Exception as e:
-                logger.error(f"Worker failed for params {params}: {e}")
-                return {
-                    'params': params,
-                    'fitness': fitness_calculator.severe_penalty,
-                    'metrics': {},
-                    'success': False,
-                    'error': str(e)
-                }
+                # Prepare arguments for workers
+        worker_args = [(params, strategy_factory, self.config) for params in param_combinations]
 
         # Use multiprocessing pool
         with Pool(n_workers) as pool:
-            results = pool.map(worker_function, param_combinations)
+            results = pool.map(_worker_function, worker_args)
 
         return results
 

@@ -38,7 +38,7 @@ class BollingerSignal(SignalInterface):
                    - std_dev: Standard deviation multiplier (default from config)
                    - buffer_multiplier: Historical data buffer size multiplier (default from config)
         """
-        self.bollinger_config = config.get_section('signals')['mean_reversion']['bollinger']
+        self.bollinger_config = config.get_section('signals')['mean_reversion']['bollinger']['parameters']
 
         # Load configurable parameters
         self.period = self.bollinger_config['period']

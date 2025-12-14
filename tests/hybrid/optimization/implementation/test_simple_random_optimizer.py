@@ -43,14 +43,16 @@ def test_context(request):
 def load_configuration_file(test_context, config_directory):
     """Load configuration file from specified directory"""
 
-    root_path = Path(__file__).parent.parent.parent.parent.parent
-    config_path = root_path / config_directory
+    config_path = Path(__file__).parent.parent.parent.parent.parent / config_directory
+    test_root = Path(__file__).parent.parent.parent.parent
 
     assert config_path.exists(), f"Configuration file not found: {config_path}"
 
     config = UnifiedConfig(config_path=str(config_path), environment="test")
 
     test_context['config'] = config
+    test_context['test_root'] = test_root
+
 
 @given('optimization configuration is set')
 def step_optimization_config_set(test_context):
@@ -64,12 +66,12 @@ def step_optimization_config_set(test_context):
 def step_given_simple_optimizer(test_context):
     """Create SimpleRandomOptimizer with base strategy"""
     config = test_context['config']
-
+    initial_capital = config.config['testing']['initial_capital']
     # Create factory instance first
     strategy_factory = StrategyFactory()
-
     # Create base strategy (no dependencies needed for parameter extraction)
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config,initial_capital,test_context['test_root'])
 
     # Create optimizer with strategy
     optimizer = SimpleRandomOptimizer(config, strategy)
@@ -84,10 +86,12 @@ def step_given_simple_optimizer(test_context):
 def step_create_simple_optimizer(test_context):
     """Create SimpleRandomOptimizer instance"""
     config = test_context['config']
+    initial_capital =config.config['testing']['initial_capital']
 
     # Create factory instance
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config,initial_capital,test_context['test_root'])
 
     optimizer = SimpleRandomOptimizer(config, strategy)
     test_context['optimizer'] = optimizer

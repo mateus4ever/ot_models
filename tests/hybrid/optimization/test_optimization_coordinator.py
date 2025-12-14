@@ -4,25 +4,19 @@ pytest-bdd test runner for StrategyFactory creation and error handling
 Tests factory's core responsibility: create strategies successfully and handle errors properly
 ZERO MOCKS - Real strategy factory with actual strategy creation
 """
+import logging
 from pathlib import Path
 
 import pytest
-import logging
-# Only when you need project root path:
-
 from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.data import DataManager
-from src.hybrid.money_management import MoneyManager
 from src.hybrid.optimization import OptimizerType
 from src.hybrid.optimization.optimization_coordinator import OptimizationCoordinator
-from src.hybrid.optimization.optimizer_factory import OptimizerFactory
-from src.hybrid.positions.position_orchestrator import PositionOrchestrator
-from src.hybrid.positions.trade_history import TradeHistory
-from src.hybrid.signals import SignalFactory
 # Import the system under test
-from src.hybrid.strategies.strategy_factory import StrategyFactory
+from src.hybrid.strategies.strategy_factory import StrategyFactoryCallable
+
+# Only when you need project root path:
 
 # Load scenarios from the strategy_factory.feature
 scenarios('optimization_coordinator.feature')
@@ -69,69 +63,58 @@ def step_create_optimization_coordinator(test_context):
     test_context['coordinator'] = coordinator
 
 
-@given(parsers.parse('data_management config points to {data_path}'))
-def set_data_management_source(test_context, data_path):
-    """Set data source in data_management config"""
-    config = test_context['config']
+@given(parsers.parse('data source is set to {data_path}'))
+def step_set_data_source(test_context, data_path):
+    """Set data source path in config"""
+
+    # Set project root for resolving relative paths
+    test_root = Path(__file__).parent.parent.parent
+    test_context['test_root'] = test_root
 
 
-    update_payload = {
-        'data_loading': {
-            'directory_path': data_path
-        }
-    }
+@given(parsers.parse('initial capital is set to {capital}'))
+def step_set_initial_capital(test_context, capital):
+    """Set initial capital for optimization"""
+    test_context['initial_capital'] = float(capital)
 
-    config.update_config(update_payload)
-
-@given('a strategy instance')
-def step_create_strategy(test_context):
-    """Create fully-wired strategy"""
+@given('a strategy factory function')
+def step_create_strategy_factory_function(test_context):
     config = test_context['unified_config']
+    initial_capital = test_context['initial_capital']
+    test_root = test_context['test_root']
 
-    # Create dependencies
-    data_manager = DataManager(config)
-    money_manager = MoneyManager(config)
-    position_orchestrator = PositionOrchestrator(config)
-
-    # Create strategy
-    strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
-
-    # Create and wire signals
-    signal_factory = SignalFactory(config)
-    entry_signal = signal_factory.create_signal(config.get_section('strategy', {}).get('entry_signal'), config)
-    exit_signal = signal_factory.create_signal(config.get_section('strategy', {}).get('exit_signal'), config)
-
-    strategy.add_entry_signal(entry_signal)
-    strategy.add_exit_signal(exit_signal)
-
-    # Wire other dependencies
-    strategy.set_data_manager(data_manager)
-    strategy.set_money_manager(money_manager)
-    strategy.set_position_orchestrator(position_orchestrator)
-
-    test_context['strategy'] = strategy
-    #todo: the optimize parameters must be obtained from the strategy.
+    factory = StrategyFactoryCallable(config, 'base', initial_capital,test_root)
+    test_context['strategy_factory'] = factory
 
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================
 
 @when(parsers.parse('I run optimization with {optimizer_type} optimizer'))
-def step_run_optimization(test_context, optimizer_type):
-    """Run optimization with specified optimizer type"""
-    from src.hybrid.optimization import OptimizerType
+def step_run_optimization_with_params(test_context, optimizer_type, datatable):
+    """Run optimization with parameters from table"""
 
     coordinator = test_context['coordinator']
     strategy_factory = test_context['strategy_factory']
-
-    # Get optimizer type enum
     optimizer_enum = OptimizerType[optimizer_type]
 
-    # Store for later steps
-    test_context['optimizer_type'] = optimizer_enum
-    test_context['optimization_started'] = True
+    # Extract parameters from table
+    params = {}
+    for row in datatable[1:]:  # Skip header
+        param_name = row[0]
+        param_value = int(row[1])
+        params[param_name] = param_value
 
+    # Run optimization
+    results = coordinator.optimize(
+        strategy_factory=strategy_factory,
+        optimizer_type=optimizer_enum,
+        n_combinations=params.get('n_combinations'),
+        n_workers=params.get('n_workers')
+    )
+
+    test_context['optimization_results'] = results
+    test_context['n_combinations'] = params.get('n_combinations')
 
 @when(parsers.parse('n_combinations is {n_combinations:d}'))
 def step_set_n_combinations(test_context, n_combinations):
@@ -139,10 +122,10 @@ def step_set_n_combinations(test_context, n_combinations):
     test_context['n_combinations'] = n_combinations
 
 
-@when(parsers.parse('n_workers is {n_workers:d}'))
+@when(parsers.parse('n_workers is {n_workers}'))
 def step_set_n_workers(test_context, n_workers):
     """Set number of workers"""
-    test_context['n_workers'] = n_workers
+    test_context['n_workers'] = int(n_workers)
 
     # Now run the optimization with all parameters
     coordinator = test_context['coordinator']
@@ -216,14 +199,47 @@ def step_verify_results_aggregated(test_context):
 
 @then('best result should be identified')
 def step_verify_best_result(test_context):
-    """Verify best result was identified"""
+    """Verify best result was identified and is actually the best"""
     results = test_context['optimization_results']
 
     assert 'best_result' in results, "Results should include best_result"
 
     if results['valid_results'] > 0:
+
         best = results['best_result']
         assert best is not None, "Should have best result when valid results exist"
         assert 'params' in best, "Best result should have params"
         assert 'fitness' in best, "Best result should have fitness"
         assert 'metrics' in best, "Best result should have metrics"
+
+        # Verify it's actually the best
+        all_results = results['all_results']
+        best_fitness = best['fitness']
+
+        # Check that no other result has better fitness
+        for result in all_results:
+            if result['success']:
+                assert result['fitness'] <= best_fitness, \
+                    f"Found result with better fitness ({result['fitness']}) than best ({best_fitness})"
+
+        # Verify parameters are different from defaults
+        assert best['params'], "Best result should have non-empty params"
+
+        # Verify metrics are realistic
+        metrics = best['metrics']
+        assert 'total_trades' in metrics, "Should have total_trades"
+        assert 'total_pnl' in metrics, "Should have total_pnl"
+        assert 'win_rate' in metrics, "Should have win_rate"
+
+        # Verify diversity - not all results identical
+        unique_trade_counts = set()
+        unique_pnls = set()
+        for result in all_results:
+            if result['success']:
+                unique_trade_counts.add(result['metrics']['total_trades'])
+                unique_pnls.add(float(result['metrics']['total_pnl']))
+
+        assert len(unique_trade_counts) > 1, \
+            f"All results have identical trade counts: {unique_trade_counts} - parameters not being applied!"
+        assert len(unique_pnls) > 1, \
+            f"All results have identical P&L: {unique_pnls} - parameters not being applied!"

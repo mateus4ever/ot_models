@@ -48,18 +48,25 @@ def load_configuration_file(test_context, config_directory):
 
     root_path = Path(__file__).parent.parent.parent.parent
     config_path = root_path / config_directory
+    test_root = Path(__file__).parent.parent.parent
 
     assert config_path.exists(), f"Configuration file not found: {config_path}"
 
     config = UnifiedConfig(config_path=str(config_path), environment="test")
     test_context['config'] = config
+    test_context['test_root'] = test_root
+
 @given(parsers.parse('an optimizer of type "{optimizer_type}"'))
 def step_create_optimizer_by_type(test_context, optimizer_type):
     """Create optimizer instance by type name"""
 
     config = test_context['config']
+    initial_capital = config.config['testing']['initial_capital']
+    test_root = test_context['test_root']
+
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy('base', config)
+    strategy = strategy_factory.create_strategy_isolated(
+        'base', config,initial_capital,test_root)
 
     # Create optimizer directly based on type
     if optimizer_type == "SIMPLE_RANDOM":

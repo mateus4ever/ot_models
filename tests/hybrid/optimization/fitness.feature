@@ -12,7 +12,7 @@ Feature: Fitness Calculator
       | total_return  | 0.20  |
       | sharpe_ratio  | 2.0   |
       | max_drawdown  | 0.10  |
-      | num_trades    | 50    |
+      | total_trades    | 50    |
     And a FitnessCalculator instance
     When I calculate fitness
     Then metric weights should come from config
@@ -25,7 +25,7 @@ Feature: Fitness Calculator
   Scenario Outline: Apply penalties when conditions violated
     Given metrics with values:
       | metric        | value      |
-      | num_trades    | <trades>   |
+      | total_trades    | <trades>   |
       | total_return  | <return>   |
       | max_drawdown  | <drawdown> |
     And a FitnessCalculator instance
@@ -54,7 +54,7 @@ Scenario: Metrics are maximized or minimized correctly
     | total_return  | 0.20  |
     | sharpe_ratio  | 2.0   |
     | max_drawdown  | 0.10  |
-    | num_trades    | 50    |
+    | total_trades    | 50    |
   And a FitnessCalculator instance
   When I calculate fitness
   Then the score should be 6.17 with the deviation of 0.01

@@ -15,6 +15,9 @@ import inspect
 from typing import get_type_hints, get_origin, get_args
 
 from src.hybrid.config.unified_config import UnifiedConfig
+from src.hybrid.data import DataManager
+from src.hybrid.money_management import MoneyManager
+from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.strategies import StrategyFactory
 from src.hybrid.strategies.strategy_interface import StrategyInterface
 
@@ -35,6 +38,13 @@ def test_context(request):
     else:
         ctx["scenario_name"] = request.node.name
     return ctx
+
+def _create_strategy_dependencies(config):
+    """Helper to create strategy dependencies - reduces boilerplate"""
+    data_manager = DataManager(config)
+    money_manager = MoneyManager(config)
+    position_orchestrator = PositionOrchestrator(config)
+    return data_manager, money_manager, position_orchestrator
 
 
 
@@ -59,10 +69,11 @@ def load_configuration_file(test_context, config_directory):
 def step_create_strategy_by_type(test_context, strategy_type):
     """Create strategy instance by type name"""
     config = test_context['unified_config']
+    dm, mm, po = _create_strategy_dependencies(config)
 
     # Create strategy using factory
     strategy_factory = StrategyFactory()
-    strategy = strategy_factory.create_strategy(strategy_type, config)
+    strategy = strategy_factory.create_strategy_shared(strategy_type, config, dm, mm, po)
 
     test_context['strategy'] = strategy
     test_context['strategy_type'] = strategy_type
