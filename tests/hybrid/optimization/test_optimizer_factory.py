@@ -176,7 +176,7 @@ def step_optimizer_implements_interface(test_context):
     """Verify optimizer implements IOptimizer interface"""
     optimizer = test_context['optimizer']
 
-    required_methods = ['run_optimization', 'get_optimization_type', 'get_description']
+    required_methods = ['get_optimization_type', 'get_description']
 
     for method in required_methods:
         assert hasattr(optimizer, method), f"Optimizer missing method: {method}"

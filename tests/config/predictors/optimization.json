@@ -1,0 +1,40 @@
+{
+  "optimization": {
+    "defaults": {
+      "n_combinations": 100,
+      "n_workers": 16
+    },
+    "checkpointing": {
+      "checkpoint_interval": 50,
+      "checkpoint_time_interval": 300
+    },
+    "fitness": {
+      "metrics": [
+        {"name": "total_return", "weight": 1.0, "direction": "maximize"},
+        {"name": "sharpe_ratio", "weight": 0.5, "direction": "maximize"},
+        {"name": "max_drawdown", "weight": 0.3, "direction": "minimize"},
+        {"name": "total_trades", "weight": 0.1, "direction": "maximize"}
+      ],
+      "penalties": {
+        "severe_penalty": -1000,
+        "conditions": [
+          {"metric": "total_trades", "operator": "<", "threshold": 10},
+          {"metric": "max_drawdown", "operator": ">", "threshold": 0.30}
+        ]
+      }
+    },
+    "robustness": {
+      "cv_threshold_robust": 0.10,
+      "cv_threshold_sensitive": 0.30,
+      "top_performers_percentile": 0.10,
+      "stability_window_size": 10,
+      "high_robustness_threshold": 0.80,
+      "moderate_robustness_threshold": 0.50,
+      "moderate_std_multiplier": 2.0,
+      "top_n_for_gradient": 20,
+      "gradient_threshold_flat": 1.0,
+      "gradient_threshold_steep": 2.0,
+      "poor_robustness_threshold": 0.30
+    }
+  }
+}

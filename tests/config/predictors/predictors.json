@@ -1,0 +1,106 @@
+{
+    "volatility_prediction": {
+        "simple": {
+            "parameters": {
+                "lookback_period": 20,
+                "threshold_multiplier": 1.5
+            },
+            "optimizable_parameters": {
+                "lookback_period": {
+                    "type": "integer",
+                    "min": 5,
+                    "max": 60,
+                    "step": 5,
+                    "default": 20,
+                    "description": "Lookback window for volatility calculation"
+                },
+                "threshold_multiplier": {
+                    "type": "continuous",
+                    "min": 1.1,
+                    "max": 3.0,
+                    "step": 0.1,
+                    "default": 1.5,
+                    "description": "Multiplier to determine HIGH_VOL threshold"
+                }
+            }
+        },
+        "ml": {
+            "parameters": {
+                "max_cache_size": 100000,
+                "forward_window": 5,
+                "high_vol_percentile": 75,
+                "feature_periods": [
+                    5,
+                    10,
+                    20,
+                    60
+                ],
+                "model_params": {
+                    "n_estimators": 100,
+                    "max_depth": 10,
+                    "random_state": 42
+                },
+                "feature_generation": {
+                    "vol_window": 20,
+                    "threshold_multiplier": 1.5,
+                    "min_samples": 100,
+                    "momentum_period": 10,
+                    "volume_ma_period": 20,
+                    "return_ma_period": 10,
+                    "skip_initial_rows": 60,
+                    "default_volume": 1.0,
+                    "gap_shift_periods": 1,
+                    "default_close_position": 0.5,
+                    "volume_default_ratio": 1.0,
+                    "consecutive_window": 5,
+                    "min_periods_for_ratio": 2,
+                    "min_periods_for_long_ratio": 3,
+                    "mid_period_index": 1,
+                    "reverse_sort_flag": true
+                }
+            },
+            "optimizable_parameters": {
+                "forward_window": {
+                    "type": "integer",
+                    "min": 1,
+                    "max": 20,
+                    "step": 1,
+                    "default": 5,
+                    "description": "Bars ahead to predict volatility"
+                },
+                "vol_window": {
+                    "type": "integer",
+                    "min": 10,
+                    "max": 60,
+                    "step": 5,
+                    "default": 20,
+                    "description": "Historical volatility window"
+                },
+                "threshold_multiplier": {
+                    "type": "continuous",
+                    "min": 1.1,
+                    "max": 3.0,
+                    "step": 0.1,
+                    "default": 1.5,
+                    "description": "Multiplier for HIGH_VOL classification"
+                },
+                "n_estimators": {
+                    "type": "integer",
+                    "min": 50,
+                    "max": 300,
+                    "step": 50,
+                    "default": 100,
+                    "description": "Number of trees in RandomForest"
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "min": 5,
+                    "max": 20,
+                    "step": 5,
+                    "default": 10,
+                    "description": "Maximum tree depth"
+                }
+            }
+        }
+    }
+}

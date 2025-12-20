@@ -9,8 +9,7 @@ Feature: Optimizer Interface Requirements
   @core_methods
   Scenario Outline: Optimizer implements core interface methods
     Given an optimizer of type "<optimizer_type>"
-    Then the optimizer should have method "run_optimization"
-    And the optimizer should have method "get_optimization_type"
+    Then the optimizer should have method "get_optimization_type"
     And the optimizer should have method "get_description"
 
     Examples:

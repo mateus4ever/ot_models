@@ -1,3 +1,6 @@
+from typing import Dict
+
+
 class OptimizationEvaluator:
     def __init__(self, fitness_calculator, robustness_analyzer):
         self.fitness_calculator = fitness_calculator
