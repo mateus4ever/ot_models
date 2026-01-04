@@ -55,7 +55,6 @@ def load_configuration_file(test_context, config_directory):
     test_context['root_path'] = root_path
     test_context['config_path'] = config_path
 
-
 @given(parsers.parse('With the configuration I have a Kelly Criterion sizer'))
 def create_kelly_sizer_with_statistics(test_context):
     """Create Kelly sizer with specific statistics for testing"""

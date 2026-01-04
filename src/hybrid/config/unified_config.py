@@ -70,6 +70,7 @@ class UnifiedConfig:
             if config_file.exists():
                 return str(config_file)
 
+        #todo: do they make sense?
         # Fallback paths
         fallback_paths = [
             "config",  # Directory
@@ -128,8 +129,9 @@ class UnifiedConfig:
             "files.json",
             "money_management.json",
             "optimization.json",
+            "predictors.json",
+            "transaction_costs.json",
             "testing.json",
-            "transaction_costs.json"
         ]
 
         # Load base configuration files

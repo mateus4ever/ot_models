@@ -13,14 +13,13 @@ FIXED: UnifiedConfig access patterns throughout
 CORRECTED: File path to match actual project structure
 """
 
-import pandas as pd
+import logging
+from typing import Tuple, Dict
+
 import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
-from typing import Tuple, Dict, Optional
-import logging
-from src.hybrid.config.unified_config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +88,6 @@ class VolatilityPredictor:
 
         # General settings
         self.verbose = general_config['verbose']
-        self.train_test_split = general_config['train_test_split']
-        self.random_state = general_config['random_state']
 
         # Feature generation settings
         self.vol_window = feature_config['vol_window']
@@ -110,6 +107,19 @@ class VolatilityPredictor:
         self.mid_period_index = feature_config['mid_period_index']
         self.reverse_sort_flag = feature_config['reverse_sort_flag']
         self.max_cache_size = ml_params['max_cache_size']
+
+        self.prediction_target = feature_config.get('prediction_target', 'current_regime')
+        self.use_time_features = feature_config.get('use_time_features')
+        self.use_efficiency_ratio = feature_config.get('use_efficiency_ratio')
+        self.efficiency_ratio_periods = feature_config.get('efficiency_ratio_periods')
+
+        # Add session overlap
+        self.use_session_overlap = feature_config.get('use_session_overlap')
+        if self.use_session_overlap:
+            self.session_overlap_config = feature_config.get('session_overlap', {})
+            self.overlap_start_hour = self.session_overlap_config.get('overlap_start_utc')
+            self.overlap_end_hour = self.session_overlap_config.get('overlap_end_utc')
+            self.data_timezone = self.session_overlap_config.get('data_timezone')
 
     def _get_incremental_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -187,8 +197,19 @@ class VolatilityPredictor:
             self.return_ma_period,
             self.consecutive_window
         )
-
         return max_period * 2
+
+    def _add_session_features(self, features, df):
+        """Add session overlap binary feature"""
+        if not self.use_session_overlap:
+            return
+
+        # Use cached attribute, not dict access
+        if self.data_timezone != 'UTC':
+            raise ValueError(f"Session overlap currently only supports UTC data, got {self.data_timezone}")
+
+        hour = df.index.hour
+        features['session_overlap'] = ((hour >= self.overlap_start_hour) & (hour < self.overlap_end_hour)).astype(int)
 
     def _fallback_full_computation(self, df: pd.DataFrame) -> pd.DataFrame:
         """Fallback to full feature computation when incremental fails"""
@@ -212,7 +233,33 @@ class VolatilityPredictor:
         features = pd.DataFrame(index=df.index)
         returns = df['close'].pct_change()
 
-        # Historical volatility features - look BACKWARD only
+        # Core features
+        self._add_volatility_features(features, returns)
+        self._add_price_range_features(features, df)
+        self._add_return_features(features, returns)
+        self._add_gap_features(features, df)
+        self._add_momentum_features(features, df)
+        self._add_volume_features(features, df)
+
+        # Optional features (config-driven)
+        if self.use_time_features:
+            self._add_time_features(features, df)
+
+        if self.use_efficiency_ratio:
+            self._add_efficiency_ratio_features(features, df)
+
+        if self.use_session_overlap:
+            self._add_session_features(features, df)  # ← Swap the order
+
+        # Store feature names AFTER all features added
+        self.feature_names = features.columns.tolist()
+
+        # Clean and finalize
+        return self._finalize_features(features)
+
+    def _add_volatility_features(self, features: pd.DataFrame, returns: pd.Series):
+        """Historical volatility and ratios"""
+        # Historical volatility - look BACKWARD only
         for period in self.feature_periods:
             features[f'vol_{period}'] = returns.shift(1).rolling(period).std()
 
@@ -229,10 +276,12 @@ class VolatilityPredictor:
             features['vol_ratio_long'] = features[f'vol_{mid_period}'] / features[f'vol_{long_period}'].replace(0,
                                                                                                                 np.nan)
 
-        # Historical price range features
+    def _add_price_range_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Price range and position features"""
         prev_high = df['high'].shift(1)
         prev_low = df['low'].shift(1)
         prev_close = df['close'].shift(1)
+        prev_open = df['open'].shift(1)
 
         price_range = prev_high - prev_low
         features['high_low'] = price_range / prev_close
@@ -244,31 +293,34 @@ class VolatilityPredictor:
             self.default_close_position
         )
 
-        # Historical return features
-        historical_returns = returns.shift(1)
-        features['abs_return'] = historical_returns.abs()
-        features['return_magnitude_ma'] = features['abs_return'].rolling(self.return_ma_period).mean()
-
-        # Gap features
-        gap = (df['open'].shift(1) - df['close'].shift(1 + self.gap_shift_periods)) / df['close'].shift(
-            1 + self.gap_shift_periods)
-        features['overnight_gap'] = gap.fillna(0)
-        features['gap_magnitude'] = features['overnight_gap'].abs()
-
-        # Momentum
-        features[f'momentum_{self.momentum_period}'] = (
-                df['close'].shift(1) / df['close'].shift(1 + self.momentum_period) - 1
-        ).fillna(0)
-
         # Intraday range
-        prev_open = df['open'].shift(1)
         features['intraday_range'] = np.where(
             prev_open > 0,
             price_range / prev_open,
             0
         )
 
-        # Volume ratio
+    def _add_return_features(self, features: pd.DataFrame, returns: pd.Series):
+        """Return magnitude features"""
+        historical_returns = returns.shift(1)
+        features['abs_return'] = historical_returns.abs()
+        features['return_magnitude_ma'] = features['abs_return'].rolling(self.return_ma_period).mean()
+
+    def _add_gap_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Overnight gap features"""
+        gap = (df['open'].shift(1) - df['close'].shift(1 + self.gap_shift_periods)) / df['close'].shift(
+            1 + self.gap_shift_periods)
+        features['overnight_gap'] = gap.fillna(0)
+        features['gap_magnitude'] = features['overnight_gap'].abs()
+
+    def _add_momentum_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Momentum features"""
+        features[f'momentum_{self.momentum_period}'] = (
+                df['close'].shift(1) / df['close'].shift(1 + self.momentum_period) - 1
+        ).fillna(0)
+
+    def _add_volume_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Volume ratio features"""
         if 'volume' in df.columns and df['volume'].sum() > 0:
             prev_volume = df['volume'].shift(1)
             vol_ma = prev_volume.rolling(self.volume_ma_period).mean()
@@ -276,16 +328,38 @@ class VolatilityPredictor:
         else:
             features['volume_ratio'] = self.default_volume
 
-        # Store feature names
-        self.feature_names = features.columns.tolist()
+    def _add_time_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Cyclical time encoding - 'The Heartbeat'"""
+        hour = df.index.hour
+        day_of_week = df.index.dayofweek
 
-        # Clean NaN values
+        features['hour_sin'] = np.sin(2 * np.pi * hour / 24)
+        features['hour_cos'] = np.cos(2 * np.pi * hour / 24)
+        features['day_sin'] = np.sin(2 * np.pi * day_of_week / 7)
+        features['day_cos'] = np.cos(2 * np.pi * day_of_week / 7)
+
+        logger.debug("Time features added")
+
+    def _add_efficiency_ratio_features(self, features: pd.DataFrame, df: pd.DataFrame):
+        """Efficiency Ratio (Kaufman) - trend quality measure"""
+        for period in self.efficiency_ratio_periods:
+            # Net change over period
+            net_change = abs(df['close'] - df['close'].shift(period))
+
+            # Sum of absolute individual changes
+            abs_changes = abs(df['close'].diff())
+            path_length = abs_changes.rolling(period).sum()
+
+            # Efficiency ratio (avoid division by zero)
+            er = net_change / path_length.replace(0, np.nan)
+            features[f'efficiency_ratio_{period}'] = er.shift(1).fillna(0)  # shift(1) for no lookahead
+
+        logger.debug("Efficiency Ratio features added")
+
+    def _finalize_features(self, features: pd.DataFrame) -> pd.DataFrame:
+        """Clean NaN values and skip initial rows"""
         features_clean = features.ffill().bfill().fillna(0)
-
-        # Skip initial rows
-        features_final = features_clean.iloc[self.skip_initial_rows:]
-
-        return features_final
+        return features_clean.iloc[self.skip_initial_rows:]
 
     def predict_volatility(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -321,102 +395,64 @@ class VolatilityPredictor:
     def create_volatility_labels(self, df: pd.DataFrame) -> np.ndarray:
         """
         Create labels using FUTURE information (what we want to predict)
-        CRITICAL FIX: Labels at time t represent future volatility from t+1 to t+forward_window
+        Labels at time t represent future volatility from t+1 to t+forward_window
         """
         returns = df['close'].pct_change()
 
         # Calculate FUTURE volatility that we want to predict
-        # At time t, we want to predict volatility from t+1 to t+forward_window
         future_vol = returns.shift(-self.forward_window).rolling(self.forward_window).std()
 
         # Calculate historical volatility threshold for comparison
-        # Use data available up to time t-1 to determine what's "high" volatility
-        historical_vol = returns.shift(self.default_consecutive_value).rolling(self.vol_window).std()
+        historical_vol = returns.shift(1).rolling(self.vol_window).std()
         vol_threshold = historical_vol * self.vol_threshold_multiplier
 
-        # Label = future volatility higher than historical threshold
-        labels = (future_vol > vol_threshold).astype(int)
+        if self.prediction_target == 'regime_change':
+            # Use longer-term median as stable threshold
+            long_term_vol = returns.rolling(self.vol_window).std()
+            stable_threshold = long_term_vol.rolling(200).median() * self.vol_threshold_multiplier
+
+            current_vol = returns.shift(1).rolling(self.vol_window).std()
+            future_vol = returns.shift(-self.forward_window).rolling(self.forward_window).std()
+
+            current_regime = (current_vol > stable_threshold).astype(int)
+            future_regime = (future_vol > stable_threshold).astype(int)
+            labels = (current_regime != future_regime).astype(int)
+        else:
+            # Default: predict current regime (HIGH/LOW)
+            labels = (future_vol > vol_threshold).astype(int)
 
         # Fill NaN values (at the end due to future shift)
-        labels = pd.Series(labels, index=df.index).fillna(self.default_fill_value).astype(int)
-
-        if self.verbose:
-            valid_labels = labels[~np.isnan(labels)]
-            if len(valid_labels) > self.zero_threshold:
-                high_vol_pct = np.mean(valid_labels) * self.percentage_multiplier
-                logger.debug("Future volatility labels: {high_vol_pct:.1f}% high volatility periods")
+        labels = pd.Series(labels, index=df.index).fillna(0).astype(int)
 
         return labels.values
 
     def train(self, df: pd.DataFrame) -> Dict[str, float]:
-        """
-        Train with proper temporal separation - FIXED DATA LEAKAGE
-        """
-        if self.verbose:
-            logger.debug("Training Volatility Predictor with temporal isolation...")
-
+        """Train on provided historical data."""
         features_df = self.create_volatility_features(df)
         labels = self.create_volatility_labels(df)
 
-        # Align features and labels
         min_len = min(len(features_df), len(labels))
         features_df = features_df.iloc[:min_len]
         labels = labels[:min_len]
 
-        # Remove rows where we can't calculate future labels (end of dataset)
-        # This ensures we don't train on incomplete future information
         valid_mask = ~np.isnan(labels)
         features_df = features_df[valid_mask]
         labels = labels[valid_mask]
 
         if len(features_df) < self.min_samples:
-            if self.verbose:
-                logger.debug("Insufficient data for volatility prediction (need {self.min_samples}, got {len(features_df)})")
+            logger.warning(f"Insufficient data: need {self.min_samples}, got {len(features_df)}")
             return {}
 
-        # CRITICAL: Temporal train/test split to prevent leakage
-        # Training data must come BEFORE test data in time
-        split_idx = int(len(features_df) * self.train_test_split)
-
-        X_train = features_df.iloc[:split_idx]
-        X_test = features_df.iloc[split_idx:]
-        y_train = labels[:split_idx]
-        y_test = labels[split_idx:]
-
-        if self.verbose:
-            logger.debug("Temporal split: Train={len(X_train)}, Test={len(X_test)}")
-            train_high_vol = np.mean(y_train) * self.percentage_multiplier
-            test_high_vol = np.mean(y_test) * self.percentage_multiplier
-            logger.debug("Train high vol: {train_high_vol:.1f}%, Test high vol: {test_high_vol:.1f}%")
-
-        # Scale and train
-        X_train_scaled = self.scaler.fit_transform(X_train)
-        X_test_scaled = self.scaler.transform(X_test)
-
-        self.model.fit(X_train_scaled, y_train)
-
-        # Evaluate on temporally separated test set
-        y_pred = self.model.predict(X_test_scaled)
-        accuracy = accuracy_score(y_test, y_pred)
-
-        # Calculate metrics
-        high_vol_pct = np.mean(y_test) * self.percentage_multiplier
-
-        if self.verbose:
-            logger.debug("Volatility Prediction Accuracy (temporal test): {accuracy:.3f}")
-            logger.debug("High volatility periods in test: {high_vol_pct:.1f}%")
-            logger.debug("TEMPORAL ISOLATION: Features use only past data, labels are future targets")
+        X_scaled = self.scaler.fit_transform(features_df)
+        self.model.fit(X_scaled, labels)
 
         self.is_trained = True
-
-        # Clear cache after training
         self.clear_cache()
 
         return {
-            'accuracy': accuracy,
-            'n_samples': len(X_test),
-            'high_vol_pct': high_vol_pct,
-            'n_features': len(self.feature_names)
+            'n_samples': len(features_df),
+            'n_features': len(self.feature_names),
+            'high_vol_pct': np.mean(labels) * 100
         }
 
     def get_feature_importance(self) -> Dict[str, float]:

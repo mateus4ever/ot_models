@@ -182,19 +182,16 @@ class BaseStrategy(StrategyInterface):
             return {'error': 'training_window not found in signals config'}
 
         training_window = signals_config['training_window']
-
-        active_market_data = self.data_manager._active_market_data
-        self.data_manager.initialize_temporal_pointer(active_market_data, training_window)
+        self.data_manager.initialize_temporal_pointer(training_window)
 
         data_config = self.config.get_section('data_management', {})
         markets_config = data_config.get('markets', {})
         market_config = markets_config.get(market_id, {})
-        #todo: this must be configured
+        # todo: this must be configured
         product_type = market_config.get('product_type', 'cfd')
 
         self.product = ProductFactory.create_product(product_type)
         logger.info(f"Market {market_id} using product: {product_type}")
-
 
         # Get past data for training
         past_data_dict = self.data_manager.get_past_data()

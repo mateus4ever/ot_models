@@ -721,3 +721,14 @@ def step_loading_fails_gracefully(test_context):
     """Verify loading fails gracefully"""
     invalid_success = test_context.get('invalid_load_success')
     assert invalid_success is False, "Loading from invalid directory should fail"
+
+@then(parsers.parse('average accuracy should exceed {threshold}%'))
+def then_avg_accuracy_exceeds(test_context, threshold):
+    avg_accuracy = test_context['avg_accuracy']
+    assert avg_accuracy > float(threshold) / 100, f"Avg accuracy {avg_accuracy:.1%} should exceed {threshold}%"
+
+
+@then(parsers.parse('accuracy standard deviation should be below {threshold}%'))
+def then_std_accuracy_below(test_context, threshold):
+    std_accuracy = test_context['std_accuracy']
+    assert std_accuracy < float(threshold) / 100, f"Std accuracy {std_accuracy:.1%} should be below {threshold}%"

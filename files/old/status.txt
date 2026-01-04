@@ -1,0 +1,51 @@
+After one hour still doing sthing. We need to improve1:30 PMIdentified optimization strategies to accelerate prolonged test execution.The user says the tests are taking over an hour, which is way too long. The Scenario Outline with 4 examples means 4 full validation runs × ~8 minutes each = ~32 minutes expected. But it's taking over an hour.
+Let me think about what could be optimized:
+
+Reduce chunk size or training window - but this affects validation quality
+Reduce number of examples - just test baseline vs all_features (2 instead of 4)
+Use smaller dataset - but this affects validation quality
+Cache the data loading - data is loaded fresh for each scenario
+Parallelize - run scenarios in parallel
+
+The quickest wins:
+
+Reduce examples to 2: baseline vs all_features (skip intermediate configs)
+Reduce validation size: smaller training window or fewer chunks
+Data caching: load data once, reuse across scenarios
+
+Let me suggest practical options.One hour is too long. Options:
+
+Option 1: Reduce examples (fastest fix)
+gherkin  Examples:
+    | config_name      | time_features | efficiency_ratio |
+    | baseline         | disabled      | disabled         |
+    | all_features     | enabled       | enabled          |
+2 runs instead of 4. ~16 min total.
+
+Option 2: Smaller validation window
+gherkinWhen I run chunked validation with 5000 training window and 2500 per chunk
+Faster but less robust.
+
+Option 3: Separate tag for quick comparison
+gherkin@validation @slow @comparison @quick
+Scenario Outline: Quick comparison <config_name>
+  ...
+  When I run chunked validation with 5000 training window and 2500 per chunk
+  ...
+  Examples:
+    | config_name      | time_features | efficiency_ratio |
+    | baseline         | disabled      | disabled         |
+    | all_features     | enabled       | enabled          |
+
+@validation @slow @comparison @full
+Scenario Outline: Full comparison <config_name>
+  ...
+  When I run chunked validation with 10000 training window and 5000 per chunk
+  ...
+  Examples:
+    | config_name      | time_features | efficiency_ratio |
+    | baseline         | disabled      | disabled         |
+    | time_only        | enabled       | disabled         |
+    | efficiency_only  | disabled      | enabled          |
+    | all_features     | enabled       | enabled          |
+Run quick during development, full overnight.

@@ -86,6 +86,7 @@ def step_create_strategy_factory_function(test_context):
     factory = StrategyFactoryCallable(config, 'base', initial_capital,test_root)
     test_context['strategy_factory'] = factory
 
+
 # =============================================================================
 # WHEN steps - Actions
 # =============================================================================

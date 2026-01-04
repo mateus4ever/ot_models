@@ -1,0 +1,174 @@
+# Trading System - Current State
+**Last updated:** December 13, 2025
+
+---
+
+## Big Picture
+
+### The 10-Year Plan
+**Timeline:** Now → Retirement (2035)
+
+**Goal:** Learn to manage retirement capital effectively
+
+**Two Options at Retirement:**
+1. Monthly pension (dies with you, €0 inheritance)
+2. Lump sum payout (€400k-500k, full inheritance)
+
+**Choice:** Lump sum + self-management = better for heirs
+
+**But requires:** Deep understanding of investing + risk management
+
+### The Two-Track Approach
+
+**Track 1: Portfolio Management (75% capital)**
+- Quality dividend stocks
+- Long-term holdings
+- Capital preservation for inheritance
+
+**Track 2: Active Trading (20% capital)**
+- Bot-managed tactical positions
+- Volatility strategies, technical signals
+- Enhancement of returns
+
+**Track 3: Cash Reserve (5% capital)**
+- Emergency fund
+- Opportunity fund for market crashes
+
+### Timeline
+- Years 1-5: Learn without serious capital at risk
+- Years 5-7: Validate with small capital (€10k-30k)
+- Years 7-10: Scale up if working, prepare for lump sum
+- Retirement: Execute if confident, or take pension if not ready
+
+### 5-Year Checkpoint
+**By Year 5, must validate:**
+1. Can identify quality stocks?
+2. Can generate 4-6% annually?
+3. Does bot help manage risk?
+4. Can handle volatility emotionally?
+
+**If NO to any:** Either extend learning timeline or take pension (both valid)
+
+---
+
+## Design Principles
+
+### No Legacy Until Production
+- Nothing in production = no legacy to support
+- Clean refactoring without constraints
+- Add complexity only when proven necessary
+
+### Fail Hard
+- No silent failures
+- Crash with clear error messages
+- No default values hiding missing configuration
+
+### No Hardcoded Values
+- All parameters from configuration
+- Makes changes possible without code modification
+
+### Delete Over Accumulate
+- Remove dead code immediately
+- Each code line is a potential bug source
+
+### Stability Over Performance
+- Prefer robust plateau over sharp peak
+- Quality is non-negotiable
+
+---
+
+## Architecture Decisions
+
+### Optimizer at Orchestrator Level
+Optimizer lives in Orchestrator, not Strategy.
+
+**Rationale:**
+- Optimizer should optimize EVERYTHING (strategy + money management + risk)
+- Better separation of concerns
+
+```
+Orchestrator
+    ├─ Optimizer (optimizes entire system)
+    │   ├─ Strategy parameters
+    │   ├─ Money management parameters
+    │   └─ Risk management parameters
+    ├─ Strategies (use optimized parameters)
+    └─ MoneyManager (uses optimized parameters)
+```
+
+### Optimizer Must Detect Plateaus
+**Problem:** Optimizer finds "best" parameters, but sharp peaks = overfitting
+
+**Requirement:** RobustnessAnalyzer must distinguish:
+- PLATEAU: Parameters 18-22 all perform well → safe
+- PEAK: Only parameter 20 works → overfitting risk
+
+---
+
+## Current System Status
+
+### Test Suite
+- **169 tests passing**
+- **42% code coverage**
+
+### Optimization Framework
+Three analyzers with distinct purposes:
+
+| Analyzer | Purpose |
+|----------|---------|
+| **FitnessCalculator** | Combines backtest metrics into single score for comparing parameter combinations |
+| **RobustnessAnalyzer** | Detects if optimized parameters are in stable plateau or fragile peak |
+| **SensitivityAnalyzer** | Identifies which parameters have most impact on performance |
+
+### What Works
+- Data loading (CSV configuration-driven)
+- Transaction cost model
+- Money management
+- Risk management (ATR-based)
+- Trade history
+- Backtest orchestrator
+- Optimization coordinator
+
+### Future Priority: Volatility Edge
+**Hypothesis:** Predict realized volatility vs implied volatility for options trading
+
+**Status:** Deferred until directional strategy testing complete
+
+---
+
+## Backtesting Checklist
+
+### Before Trusting Any Results
+
+- [ ] **Out-of-sample validation configured**
+  - Optimizer uses data period A (e.g., 2020-2023)
+  - Final validation uses data period B (e.g., 2024)
+  - Period B never seen during optimization
+
+- [ ] **Verify backtest orchestrator supports train/test split**
+  - Check: walk_forward configuration
+  - Check: data period separation
+
+- [ ] **Interpret results correctly**
+  - If results collapse on out-of-sample → overfitting detected
+  - Backtest results are fundamentally unreliable
+  - Real validation = real money track record over 5-10 years
+
+---
+
+## Open TODOs
+
+- [ ] SensitivityAnalyzer needs tests (BDD scenarios)
+- [ ] Performance surface visualization (nice to have)
+- [ ] Options product implementation (future)
+- [ ] Volatility edge testing (future)
+
+---
+
+## User Preferences
+
+- Direct communication, no excessive praise
+- Results over motivation
+- Precision over approximation
+- Ask before creating code
+- Human maintains control of all changes

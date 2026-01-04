@@ -1,0 +1,1401 @@
+{
+  "trades": [
+    {
+      "uuid": "trade-001",
+      "timestamp": "2024-01-02T09:30:00Z",
+      "entry_date": "2024-01-02T09:30:00Z",
+      "exit_date": "2024-01-02T15:45:00Z",
+      "entry_price": 105.5,
+      "exit_price": 112.3,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.266,
+        "exit": 1.3476,
+        "holding": 0.0,
+        "total": 2.6136,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.7424,
+          "spread": 0.8712,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 54.39999999999998,
+      "net_pnl": 51.78639999999998
+    },
+    {
+      "uuid": "trade-002",
+      "timestamp": "2024-01-03T10:15:00Z",
+      "entry_date": "2024-01-03T10:15:00Z",
+      "exit_date": "2024-01-03T14:20:00Z",
+      "entry_price": 103.2,
+      "exit_price": 98.75,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.9288000000000001,
+        "exit": 0.88875,
+        "holding": 0.0,
+        "total": 1.8175500000000002,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.2117,
+          "spread": 0.60585,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -26.700000000000017,
+      "net_pnl": -28.517550000000018
+    },
+    {
+      "uuid": "trade-003",
+      "timestamp": "2024-01-05T11:00:00Z",
+      "entry_date": "2024-01-05T11:00:00Z",
+      "exit_date": "2024-01-05T16:30:00Z",
+      "entry_price": 108.9,
+      "exit_price": 115.4,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.81675,
+        "exit": 0.8654999999999999,
+        "holding": 0.0,
+        "total": 1.6822499999999998,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.1215,
+          "spread": 0.56075,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 32.5,
+      "net_pnl": 30.81775
+    },
+    {
+      "uuid": "trade-004",
+      "timestamp": "2024-01-08T09:45:00Z",
+      "entry_date": "2024-01-08T09:45:00Z",
+      "exit_date": "2024-01-08T15:00:00Z",
+      "entry_price": 110.25,
+      "exit_price": 107.8,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.65375,
+        "exit": 1.617,
+        "holding": 0.0,
+        "total": 3.27075,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.1805000000000003,
+          "spread": 1.0902500000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -24.50000000000003,
+      "net_pnl": -27.770750000000028
+    },
+    {
+      "uuid": "trade-005",
+      "timestamp": "2024-01-09T10:30:00Z",
+      "entry_date": "2024-01-09T10:30:00Z",
+      "exit_date": "2024-01-09T16:15:00Z",
+      "entry_price": 106.75,
+      "exit_price": 111.2,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.1208749999999998,
+        "exit": 1.1676,
+        "holding": 0.0,
+        "total": 2.288475,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.52565,
+          "spread": 0.762825,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 31.15000000000002,
+      "net_pnl": 28.86152500000002
+    },
+    {
+      "uuid": "trade-006",
+      "timestamp": "2024-01-10T11:20:00Z",
+      "entry_date": "2024-01-10T11:20:00Z",
+      "exit_date": "2024-01-10T14:45:00Z",
+      "entry_price": 109.4,
+      "exit_price": 113.9,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.4769,
+        "exit": 1.5376500000000002,
+        "holding": 0.0,
+        "total": 3.0145500000000003,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.0097,
+          "spread": 1.00485,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 40.5,
+      "net_pnl": 37.48545
+    },
+    {
+      "uuid": "trade-007",
+      "timestamp": "2024-01-11T09:00:00Z",
+      "entry_date": "2024-01-11T09:00:00Z",
+      "exit_date": "2024-01-11T15:30:00Z",
+      "entry_price": 112.6,
+      "exit_price": 108.3,
+      "quantity": 4,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.6756,
+        "exit": 0.6497999999999999,
+        "holding": 0.0,
+        "total": 1.3254,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 0.8835999999999999,
+          "spread": 0.44179999999999997,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -17.19999999999999,
+      "net_pnl": -18.525399999999987
+    },
+    {
+      "uuid": "trade-008",
+      "timestamp": "2024-01-12T10:45:00Z",
+      "entry_date": "2024-01-12T10:45:00Z",
+      "exit_date": "2024-01-12T16:00:00Z",
+      "entry_price": 107.85,
+      "exit_price": 114.25,
+      "quantity": 11,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.779525,
+        "exit": 1.885125,
+        "holding": 0.0,
+        "total": 3.66465,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.4431000000000003,
+          "spread": 1.2215500000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 70.40000000000006,
+      "net_pnl": 66.73535000000007
+    },
+    {
+      "uuid": "trade-009",
+      "timestamp": "2024-01-15T09:30:00Z",
+      "entry_date": "2024-01-15T09:30:00Z",
+      "exit_date": "2024-01-15T14:00:00Z",
+      "entry_price": 113.2,
+      "exit_price": 117.8,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.0188000000000001,
+        "exit": 1.0602,
+        "holding": 0.0,
+        "total": 2.079,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.3860000000000001,
+          "spread": 0.6930000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 27.599999999999966,
+      "net_pnl": 25.520999999999965
+    },
+    {
+      "uuid": "trade-010",
+      "timestamp": "2024-01-16T11:00:00Z",
+      "entry_date": "2024-01-16T11:00:00Z",
+      "exit_date": "2024-01-16T15:45:00Z",
+      "entry_price": 116.5,
+      "exit_price": 112.9,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.3980000000000001,
+        "exit": 1.3548000000000002,
+        "holding": 0.0,
+        "total": 2.7528000000000006,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.8352000000000002,
+          "spread": 0.9176000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -28.799999999999955,
+      "net_pnl": -31.552799999999955
+    },
+    {
+      "uuid": "trade-011",
+      "timestamp": "2024-01-17T10:15:00Z",
+      "entry_date": "2024-01-17T10:15:00Z",
+      "exit_date": "2024-01-17T16:30:00Z",
+      "entry_price": 111.75,
+      "exit_price": 118.4,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.838125,
+        "exit": 0.8879999999999999,
+        "holding": 0.0,
+        "total": 1.726125,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.15075,
+          "spread": 0.575375,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 33.25000000000003,
+      "net_pnl": 31.52387500000003
+    },
+    {
+      "uuid": "trade-012",
+      "timestamp": "2024-01-18T09:45:00Z",
+      "entry_date": "2024-01-18T09:45:00Z",
+      "exit_date": "2024-01-18T14:30:00Z",
+      "entry_price": 117.3,
+      "exit_price": 113.6,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.5835500000000002,
+        "exit": 1.5335999999999999,
+        "holding": 0.0,
+        "total": 3.11715,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.0781,
+          "spread": 1.03905,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -33.300000000000026,
+      "net_pnl": -36.41715000000003
+    },
+    {
+      "uuid": "trade-013",
+      "timestamp": "2024-01-19T11:30:00Z",
+      "entry_date": "2024-01-19T11:30:00Z",
+      "exit_date": "2024-01-19T15:00:00Z",
+      "entry_price": 112.9,
+      "exit_price": 119.7,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.1854500000000001,
+        "exit": 1.25685,
+        "holding": 0.0,
+        "total": 2.4423000000000004,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.6282,
+          "spread": 0.8141,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 47.59999999999998,
+      "net_pnl": 45.15769999999998
+    },
+    {
+      "uuid": "trade-014",
+      "timestamp": "2024-01-22T09:00:00Z",
+      "entry_date": "2024-01-22T09:00:00Z",
+      "exit_date": "2024-01-22T16:15:00Z",
+      "entry_price": 118.6,
+      "exit_price": 114.2,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.779,
+        "exit": 1.713,
+        "holding": 0.0,
+        "total": 3.492,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.3280000000000003,
+          "spread": 1.1640000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -43.999999999999915,
+      "net_pnl": -47.49199999999991
+    },
+    {
+      "uuid": "trade-015",
+      "timestamp": "2024-01-23T10:30:00Z",
+      "entry_date": "2024-01-23T10:30:00Z",
+      "exit_date": "2024-01-23T14:45:00Z",
+      "entry_price": 113.45,
+      "exit_price": 120.3,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.0210500000000002,
+        "exit": 1.0827,
+        "holding": 0.0,
+        "total": 2.1037500000000002,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.4025,
+          "spread": 0.70125,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 41.099999999999966,
+      "net_pnl": 38.99624999999997
+    },
+    {
+      "uuid": "trade-016",
+      "timestamp": "2024-01-24T11:15:00Z",
+      "entry_date": "2024-01-24T11:15:00Z",
+      "exit_date": "2024-01-24T15:30:00Z",
+      "entry_price": 119.8,
+      "exit_price": 115.5,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.4376,
+        "exit": 1.3860000000000001,
+        "holding": 0.0,
+        "total": 2.8236,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.8824,
+          "spread": 0.9412,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -34.39999999999998,
+      "net_pnl": -37.223599999999976
+    },
+    {
+      "uuid": "trade-017",
+      "timestamp": "2024-01-25T09:30:00Z",
+      "entry_date": "2024-01-25T09:30:00Z",
+      "exit_date": "2024-01-25T16:00:00Z",
+      "entry_price": 114.7,
+      "exit_price": 121.9,
+      "quantity": 11,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.89255,
+        "exit": 2.01135,
+        "holding": 0.0,
+        "total": 3.9039,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.6026000000000002,
+          "spread": 1.3013000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 79.20000000000003,
+      "net_pnl": 75.29610000000002
+    },
+    {
+      "uuid": "trade-018",
+      "timestamp": "2024-01-26T10:00:00Z",
+      "entry_date": "2024-01-26T10:00:00Z",
+      "exit_date": "2024-01-26T14:15:00Z",
+      "entry_price": 121.2,
+      "exit_price": 116.8,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.909,
+        "exit": 0.8759999999999999,
+        "holding": 0.0,
+        "total": 1.785,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.19,
+          "spread": 0.595,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -22.00000000000003,
+      "net_pnl": -23.78500000000003
+    },
+    {
+      "uuid": "trade-019",
+      "timestamp": "2024-01-29T11:45:00Z",
+      "entry_date": "2024-01-29T11:45:00Z",
+      "exit_date": "2024-01-29T15:45:00Z",
+      "entry_price": 115.95,
+      "exit_price": 123.4,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.565325,
+        "exit": 1.6659000000000004,
+        "holding": 0.0,
+        "total": 3.2312250000000002,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.1541500000000005,
+          "spread": 1.0770750000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 67.05000000000003,
+      "net_pnl": 63.818775000000024
+    },
+    {
+      "uuid": "trade-020",
+      "timestamp": "2024-01-30T09:15:00Z",
+      "entry_date": "2024-01-30T09:15:00Z",
+      "exit_date": "2024-01-30T16:30:00Z",
+      "entry_price": 122.5,
+      "exit_price": 117.3,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.2862500000000001,
+        "exit": 1.2316500000000001,
+        "holding": 0.0,
+        "total": 2.5179,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.6786,
+          "spread": 0.8393,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -36.40000000000002,
+      "net_pnl": -38.91790000000002
+    },
+    {
+      "uuid": "trade-021",
+      "timestamp": "2024-01-31T10:45:00Z",
+      "entry_date": "2024-01-31T10:45:00Z",
+      "exit_date": "2024-01-31T14:00:00Z",
+      "entry_price": 116.4,
+      "exit_price": 124.8,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.0476,
+        "exit": 1.1232,
+        "holding": 0.0,
+        "total": 2.1708,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.4472,
+          "spread": 0.7236,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 50.39999999999995,
+      "net_pnl": 48.22919999999995
+    },
+    {
+      "uuid": "trade-022",
+      "timestamp": "2024-02-01T09:30:00Z",
+      "entry_date": "2024-02-01T09:30:00Z",
+      "exit_date": "2024-02-01T15:15:00Z",
+      "entry_price": 123.9,
+      "exit_price": 118.6,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.8585000000000003,
+        "exit": 1.779,
+        "holding": 0.0,
+        "total": 3.6375,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.425,
+          "spread": 1.2125,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -53.000000000000114,
+      "net_pnl": -56.63750000000012
+    },
+    {
+      "uuid": "trade-023",
+      "timestamp": "2024-02-02T11:00:00Z",
+      "entry_date": "2024-02-02T11:00:00Z",
+      "exit_date": "2024-02-02T16:00:00Z",
+      "entry_price": 117.75,
+      "exit_price": 126.3,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.413,
+        "exit": 1.5156,
+        "holding": 0.0,
+        "total": 2.9286000000000003,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.9524,
+          "spread": 0.9762,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 68.39999999999998,
+      "net_pnl": 65.47139999999997
+    },
+    {
+      "uuid": "trade-024",
+      "timestamp": "2024-02-05T10:15:00Z",
+      "entry_date": "2024-02-05T10:15:00Z",
+      "exit_date": "2024-02-05T14:45:00Z",
+      "entry_price": 125.4,
+      "exit_price": 119.9,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.9405,
+        "exit": 0.8992500000000001,
+        "holding": 0.0,
+        "total": 1.83975,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.2265000000000001,
+          "spread": 0.6132500000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -27.5,
+      "net_pnl": -29.33975
+    },
+    {
+      "uuid": "trade-025",
+      "timestamp": "2024-02-06T09:45:00Z",
+      "entry_date": "2024-02-06T09:45:00Z",
+      "exit_date": "2024-02-06T15:30:00Z",
+      "entry_price": 119.2,
+      "exit_price": 127.9,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.6092,
+        "exit": 1.7266500000000002,
+        "holding": 0.0,
+        "total": 3.33585,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.2239000000000004,
+          "spread": 1.1119500000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 78.30000000000003,
+      "net_pnl": 74.96415000000003
+    },
+    {
+      "uuid": "trade-026",
+      "timestamp": "2024-02-07T11:30:00Z",
+      "entry_date": "2024-02-07T11:30:00Z",
+      "exit_date": "2024-02-07T16:15:00Z",
+      "entry_price": 126.8,
+      "exit_price": 121.4,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.3314000000000001,
+        "exit": 1.2747000000000002,
+        "holding": 0.0,
+        "total": 2.6061000000000005,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.7374,
+          "spread": 0.8687,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -37.79999999999994,
+      "net_pnl": -40.40609999999994
+    },
+    {
+      "uuid": "trade-027",
+      "timestamp": "2024-02-08T09:00:00Z",
+      "entry_date": "2024-02-08T09:00:00Z",
+      "exit_date": "2024-02-08T14:30:00Z",
+      "entry_price": 120.55,
+      "exit_price": 129.4,
+      "quantity": 11,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.989075,
+        "exit": 2.1351000000000004,
+        "holding": 0.0,
+        "total": 4.124175,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.7494500000000004,
+          "spread": 1.3747250000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 97.3500000000001,
+      "net_pnl": 93.2258250000001
+    },
+    {
+      "uuid": "trade-028",
+      "timestamp": "2024-02-09T10:30:00Z",
+      "entry_date": "2024-02-09T10:30:00Z",
+      "exit_date": "2024-02-09T15:00:00Z",
+      "entry_price": 128.3,
+      "exit_price": 122.7,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.1547,
+        "exit": 1.1043,
+        "holding": 0.0,
+        "total": 2.2590000000000003,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.5060000000000002,
+          "spread": 0.7530000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -33.60000000000005,
+      "net_pnl": -35.85900000000005
+    },
+    {
+      "uuid": "trade-029",
+      "timestamp": "2024-02-12T11:15:00Z",
+      "entry_date": "2024-02-12T11:15:00Z",
+      "exit_date": "2024-02-12T16:30:00Z",
+      "entry_price": 121.9,
+      "exit_price": 130.8,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.4628,
+        "exit": 1.5696000000000003,
+        "holding": 0.0,
+        "total": 3.0324000000000004,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.0216000000000003,
+          "spread": 1.0108000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 71.20000000000005,
+      "net_pnl": 68.16760000000005
+    },
+    {
+      "uuid": "trade-030",
+      "timestamp": "2024-02-13T09:30:00Z",
+      "entry_date": "2024-02-13T09:30:00Z",
+      "exit_date": "2024-02-13T14:15:00Z",
+      "entry_price": 129.7,
+      "exit_price": 124.1,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.9455,
+        "exit": 1.8615000000000002,
+        "holding": 0.0,
+        "total": 3.8070000000000004,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.5380000000000003,
+          "spread": 1.2690000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -55.99999999999994,
+      "net_pnl": -59.806999999999945
+    },
+    {
+      "uuid": "trade-031",
+      "timestamp": "2024-02-14T10:00:00Z",
+      "entry_date": "2024-02-14T10:00:00Z",
+      "exit_date": "2024-02-14T15:45:00Z",
+      "entry_price": 123.25,
+      "exit_price": 132.3,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.924375,
+        "exit": 0.99225,
+        "holding": 0.0,
+        "total": 1.9166249999999998,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.27775,
+          "spread": 0.638875,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 45.25000000000006,
+      "net_pnl": 43.33337500000006
+    },
+    {
+      "uuid": "trade-032",
+      "timestamp": "2024-02-15T11:45:00Z",
+      "entry_date": "2024-02-15T11:45:00Z",
+      "exit_date": "2024-02-15T16:00:00Z",
+      "entry_price": 131.1,
+      "exit_price": 125.5,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.76985,
+        "exit": 1.6942499999999998,
+        "holding": 0.0,
+        "total": 3.4640999999999997,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.3094,
+          "spread": 1.1547,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -50.39999999999995,
+      "net_pnl": -53.86409999999995
+    },
+    {
+      "uuid": "trade-033",
+      "timestamp": "2024-02-16T09:15:00Z",
+      "entry_date": "2024-02-16T09:15:00Z",
+      "exit_date": "2024-02-16T14:45:00Z",
+      "entry_price": 124.6,
+      "exit_price": 133.9,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.3083,
+        "exit": 1.4059500000000003,
+        "holding": 0.0,
+        "total": 2.7142500000000003,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.8095,
+          "spread": 0.90475,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 65.10000000000008,
+      "net_pnl": 62.38575000000008
+    },
+    {
+      "uuid": "trade-034",
+      "timestamp": "2024-02-19T10:45:00Z",
+      "entry_date": "2024-02-19T10:45:00Z",
+      "exit_date": "2024-02-19T15:30:00Z",
+      "entry_price": 132.5,
+      "exit_price": 126.9,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.1925000000000001,
+        "exit": 1.1421000000000001,
+        "holding": 0.0,
+        "total": 2.3346,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.5564,
+          "spread": 0.7782,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -33.599999999999966,
+      "net_pnl": -35.93459999999997
+    },
+    {
+      "uuid": "trade-035",
+      "timestamp": "2024-02-20T09:30:00Z",
+      "entry_date": "2024-02-20T09:30:00Z",
+      "exit_date": "2024-02-20T16:15:00Z",
+      "entry_price": 125.95,
+      "exit_price": 135.4,
+      "quantity": 11,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 2.078175,
+        "exit": 2.2341,
+        "holding": 0.0,
+        "total": 4.312275,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.8748500000000003,
+          "spread": 1.4374250000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 103.95000000000003,
+      "net_pnl": 99.63772500000003
+    },
+    {
+      "uuid": "trade-036",
+      "timestamp": "2024-02-21T11:00:00Z",
+      "entry_date": "2024-02-21T11:00:00Z",
+      "exit_date": "2024-02-21T14:00:00Z",
+      "entry_price": 134.3,
+      "exit_price": 128.2,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.6116000000000001,
+        "exit": 1.5383999999999998,
+        "holding": 0.0,
+        "total": 3.15,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.0999999999999996,
+          "spread": 1.0499999999999998,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -48.80000000000018,
+      "net_pnl": -51.95000000000018
+    },
+    {
+      "uuid": "trade-037",
+      "timestamp": "2024-02-22T10:15:00Z",
+      "entry_date": "2024-02-22T10:15:00Z",
+      "exit_date": "2024-02-22T15:00:00Z",
+      "entry_price": 127.3,
+      "exit_price": 136.8,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 0.9547500000000001,
+        "exit": 1.026,
+        "holding": 0.0,
+        "total": 1.98075,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.3205,
+          "spread": 0.66025,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 47.50000000000007,
+      "net_pnl": 45.51925000000007
+    },
+    {
+      "uuid": "trade-038",
+      "timestamp": "2024-02-23T09:45:00Z",
+      "entry_date": "2024-02-23T09:45:00Z",
+      "exit_date": "2024-02-23T14:30:00Z",
+      "entry_price": 135.7,
+      "exit_price": 129.6,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.83195,
+        "exit": 1.7495999999999998,
+        "holding": 0.0,
+        "total": 3.58155,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.3876999999999997,
+          "spread": 1.1938499999999999,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -54.89999999999995,
+      "net_pnl": -58.48154999999995
+    },
+    {
+      "uuid": "trade-039",
+      "timestamp": "2024-02-26T11:30:00Z",
+      "entry_date": "2024-02-26T11:30:00Z",
+      "exit_date": "2024-02-26T16:45:00Z",
+      "entry_price": 128.65,
+      "exit_price": 138.3,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.9297499999999999,
+        "exit": 2.0745,
+        "holding": 0.0,
+        "total": 4.00425,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.6695,
+          "spread": 1.33475,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 96.50000000000006,
+      "net_pnl": 92.49575000000006
+    },
+    {
+      "uuid": "trade-040",
+      "timestamp": "2024-02-27T09:00:00Z",
+      "entry_date": "2024-02-27T09:00:00Z",
+      "exit_date": "2024-02-27T15:15:00Z",
+      "entry_price": 137.1,
+      "exit_price": 131.0,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.43955,
+        "exit": 1.3755000000000002,
+        "holding": 0.0,
+        "total": 2.8150500000000003,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.8767,
+          "spread": 0.93835,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -42.69999999999996,
+      "net_pnl": -45.51504999999996
+    },
+    {
+      "uuid": "trade-041",
+      "timestamp": "2024-02-28T10:30:00Z",
+      "entry_date": "2024-02-28T10:30:00Z",
+      "exit_date": "2024-02-28T14:45:00Z",
+      "entry_price": 130.0,
+      "exit_price": 139.7,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.17,
+        "exit": 1.2572999999999999,
+        "holding": 0.0,
+        "total": 2.4273,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.6181999999999999,
+          "spread": 0.8090999999999999,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 58.19999999999993,
+      "net_pnl": 55.77269999999993
+    },
+    {
+      "uuid": "trade-042",
+      "timestamp": "2024-02-29T11:15:00Z",
+      "entry_date": "2024-02-29T11:15:00Z",
+      "exit_date": "2024-02-29T16:30:00Z",
+      "entry_price": 138.5,
+      "exit_price": 132.4,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.6620000000000001,
+        "exit": 1.5888000000000002,
+        "holding": 0.0,
+        "total": 3.2508000000000004,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.1672000000000002,
+          "spread": 1.0836000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -48.799999999999955,
+      "net_pnl": -52.05079999999995
+    },
+    {
+      "uuid": "trade-043",
+      "timestamp": "2024-03-01T09:30:00Z",
+      "entry_date": "2024-03-01T09:30:00Z",
+      "exit_date": "2024-03-01T15:00:00Z",
+      "entry_price": 131.35,
+      "exit_price": 141.2,
+      "quantity": 11,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 2.167275,
+        "exit": 2.3297999999999996,
+        "holding": 0.0,
+        "total": 4.497075,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.99805,
+          "spread": 1.499025,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 108.34999999999994,
+      "net_pnl": 103.85292499999994
+    },
+    {
+      "uuid": "trade-044",
+      "timestamp": "2024-03-04T10:00:00Z",
+      "entry_date": "2024-03-04T10:00:00Z",
+      "exit_date": "2024-03-04T14:15:00Z",
+      "entry_price": 140.0,
+      "exit_price": 133.7,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.05,
+        "exit": 1.00275,
+        "holding": 0.0,
+        "total": 2.05275,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.3685,
+          "spread": 0.68425,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -31.500000000000057,
+      "net_pnl": -33.55275000000006
+    },
+    {
+      "uuid": "trade-045",
+      "timestamp": "2024-03-05T11:45:00Z",
+      "entry_date": "2024-03-05T11:45:00Z",
+      "exit_date": "2024-03-05T16:00:00Z",
+      "entry_price": 132.7,
+      "exit_price": 142.6,
+      "quantity": 9,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.7914499999999998,
+        "exit": 1.9250999999999998,
+        "holding": 0.0,
+        "total": 3.71655,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.4776999999999996,
+          "spread": 1.2388499999999998,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 89.10000000000005,
+      "net_pnl": 85.38345000000005
+    },
+    {
+      "uuid": "trade-046",
+      "timestamp": "2024-03-06T09:15:00Z",
+      "entry_date": "2024-03-06T09:15:00Z",
+      "exit_date": "2024-03-06T14:45:00Z",
+      "entry_price": 141.4,
+      "exit_price": 135.1,
+      "quantity": 7,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.4847000000000001,
+        "exit": 1.41855,
+        "holding": 0.0,
+        "total": 2.90325,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.9355000000000002,
+          "spread": 0.9677500000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -44.10000000000008,
+      "net_pnl": -47.00325000000008
+    },
+    {
+      "uuid": "trade-047",
+      "timestamp": "2024-03-07T10:45:00Z",
+      "entry_date": "2024-03-07T10:45:00Z",
+      "exit_date": "2024-03-07T15:30:00Z",
+      "entry_price": 134.05,
+      "exit_price": 144.1,
+      "quantity": 10,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 2.01075,
+        "exit": 2.1615,
+        "holding": 0.0,
+        "total": 4.17225,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.7815000000000003,
+          "spread": 1.3907500000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 100.49999999999983,
+      "net_pnl": 96.32774999999982
+    },
+    {
+      "uuid": "trade-048",
+      "timestamp": "2024-03-08T09:30:00Z",
+      "entry_date": "2024-03-08T09:30:00Z",
+      "exit_date": "2024-03-08T16:15:00Z",
+      "entry_price": 142.9,
+      "exit_price": 136.5,
+      "quantity": 6,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.2861000000000002,
+        "exit": 1.2285000000000001,
+        "holding": 0.0,
+        "total": 2.5146000000000006,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 1.6764000000000001,
+          "spread": 0.8382000000000001,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": -38.400000000000034,
+      "net_pnl": -40.914600000000036
+    },
+    {
+      "uuid": "trade-049",
+      "timestamp": "2024-03-11T11:00:00Z",
+      "entry_date": "2024-03-11T11:00:00Z",
+      "exit_date": "2024-03-11T14:00:00Z",
+      "entry_price": 135.4,
+      "exit_price": 145.5,
+      "quantity": 8,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "closed",
+      "costs": {
+        "entry": 1.6248000000000002,
+        "exit": 1.746,
+        "holding": 0.0,
+        "total": 3.3708,
+        "breakdown": {
+          "commission": 0.0,
+          "slippage": 2.2472000000000003,
+          "spread": 1.1236000000000002,
+          "borrow": 0.0
+        }
+      },
+      "gross_pnl": 80.79999999999995,
+      "net_pnl": 77.42919999999995
+    },
+    {
+      "uuid": "trade-050",
+      "timestamp": "2024-03-12T10:15:00Z",
+      "entry_date": "2024-03-12T10:15:00Z",
+      "exit_date": null,
+      "entry_price": 144.3,
+      "exit_price": null,
+      "quantity": 5,
+      "direction": "LONG",
+      "symbol": "MOCK",
+      "type": "stock",
+      "currency": "USD",
+      "status": "open",
+      "entry_costs": {
+        "commission": 0.0,
+        "slippage": 0.7215,
+        "spread": 0.36075,
+        "total": 1.0822500000000002
+      }
+    }
+  ],
+  "metadata": {
+    "base_currency": "USD",
+    "total_trades": 50,
+    "export_timestamp": "2026-01-02T13:26:40.829982Z"
+  }
+}

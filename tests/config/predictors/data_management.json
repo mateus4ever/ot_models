@@ -1,15 +1,15 @@
 {
   "data_loading": {
     "loader_type": "directory_scan",
-    "directory_path": "data/stock",
+    "directory_path": "/data/eurusd",
     "file_pattern": "*.csv",
     "recursive": true,
     "csv_format": {
-      "delimiter": ",",
-      "has_header": true,
-      "column_names": ["timestamp", "open", "high", "low", "close", "volume", "dividends", "stock_splits", "adj_close"],
+      "delimiter": ";",
+      "has_header": false,
+      "column_names": ["timestamp", "open", "high", "low", "close", "volume"],
       "timestamp_column": "timestamp",
-      "timestamp_format": "ISO8601"
+      "timestamp_format": "%Y%m%d %H%M%S"
     }
   },
   "trade_history": {

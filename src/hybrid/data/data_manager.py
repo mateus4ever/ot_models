@@ -235,14 +235,10 @@ class DataManager:
         """
         logger.info(f"Loading data with temporal setup, training window: {training_window}")
 
-        # Load and consolidate markets
         all_loaded = self.load_market_data(source)
 
         if all_loaded and self._active_market and self._active_market in self._cached_data:
-            # Initialize temporal boundaries using active market data
-            active_data = self._cached_data[self._active_market]
-            self.initialize_temporal_pointer(active_data, training_window)
-
+            self.initialize_temporal_pointer(training_window)
             logger.info(f"Temporal setup complete for {self._active_market}")
             return True
         else:
@@ -285,31 +281,36 @@ class DataManager:
     # TEMPORAL BOUNDARY METHODS
     # =============================================================================
 
-    def initialize_temporal_pointer(self, market_data: pd.DataFrame, training_window: int) -> int:
-        """Initialize timestamp-based temporal pointer for walk-forward analysis
+    def initialize_temporal_pointer(self, training_window: int = 0) -> int:
+        """Initialize temporal pointer for walk-forward analysis
 
         Args:
-            market_data: DataFrame with market data
-            training_window: Number of records for initial training window
+            training_window: Number of records for initial training window (default: 0 = start)
 
         Returns:
             Position of temporal pointer (1-based)
         """
-        if not (len(market_data) >= training_window):
-            raise ValueError(f"Market data has {len(market_data)} records, need at least {training_window + 1}")
+        if self._active_market_data is None:
+            raise ValueError("No market data loaded. Call load_market_data() first.")
+
+        if training_window > len(self._active_market_data):
+            raise ValueError(
+                f"Market data has {len(self._active_market_data)} records, need at least {training_window}")
 
         self.training_window_size = training_window
-        self.total_records = len(market_data)
+        self.total_records = len(self._active_market_data)
 
-        # Set temporal pointer to timestamp at training window position
-        self.temporal_timestamp = market_data.index[training_window - 1]  # Get actual timestamp
-        self._active_market_index = training_window  # Cache index position for performance
+        if training_window == 0:
+            self.temporal_timestamp = self._active_market_data.index[0]
+            self._active_market_index = 0
+        else:
+            self.temporal_timestamp = self._active_market_data.index[training_window - 1]
+            self._active_market_index = training_window
 
-        logger.info(f"Temporal pointer initialized for {self._active_market}: training window={training_window}")
-        logger.info(f"Temporal timestamp set to: {self.temporal_timestamp} (record {training_window + 1}, 1-based)")
-        logger.debug(f"Total records: {self.total_records}, cached index: {self._active_market_index}")
+        logger.info(f"Temporal pointer initialized: position={self._active_market_index}")
 
-        return training_window + 1  # Return 1-based position
+        return self._active_market_index + 1
+
 
     def get_current_pointer(self) -> int:
         """Get current temporal pointer position (1-based)
@@ -326,38 +327,16 @@ class DataManager:
         return self._active_market_index + 1  # Return 1-based
 
     def set_pointer(self, position: int):
-        """Set temporal pointer to absolute position (1-based)
-
-        Args:
-            position: Target position (1-based)
-
-        Raises:
-            ValueError: If position is invalid or temporal pointer not initialized
-        """
+        """Set temporal pointer to absolute position (1-based)"""
         if self.temporal_timestamp is None:
             raise ValueError("Temporal pointer not initialized. Call initialize_temporal_pointer() first.")
-
-        if self._active_market_data is None:
-            raise ValueError("No active market data available")
 
         if position < 1 or position > self.total_records:
             raise ValueError(f"Position {position} out of range [1, {self.total_records}]")
 
-        if position <= self.training_window_size:
-            logger.warning(f"Setting pointer to {position}, within training window (1-{self.training_window_size})")
-
-        old_position = self._active_market_index + 1
-
-        # Convert to 0-based index and get timestamp
         new_index = position - 1
-        new_timestamp = self._active_market_data.index[new_index]
-
-        # Update both timestamp and cached index
-        self.temporal_timestamp = new_timestamp
+        self.temporal_timestamp = self._active_market_data.index[new_index]
         self._active_market_index = new_index
-
-        logger.info(f"Temporal pointer moved from position {old_position} to {position}")
-        logger.debug(f"New timestamp: {new_timestamp}, cached index: {new_index}")
 
     def next(self, steps: int = 1) -> bool:
         """Advance temporal pointer by specified steps"""
@@ -500,7 +479,7 @@ class DataManager:
             self._active_market: future_data
         }
 
-        logger.warning(
+        logger.info(
             f"Future data preview accessed for {self._active_market}: {len(future_data)} records after {self.temporal_timestamp}. USE FOR VALIDATION ONLY!")
         return future_result
 

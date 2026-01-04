@@ -189,13 +189,10 @@ def train_signal(test_context):
     period = test_context['data_points']
 
     try:
-        data_manager.initialize_temporal_pointer(
-            data_manager._active_market_data,
-            int(period)
-        )
+        data_manager.initialize_temporal_pointer(int(period))
         past_data = data_manager.get_past_data()
-        market_id = data_manager._active_market  # Get active market name
-        market_data = past_data[market_id]  # Extract single DataFrame
+        market_id = data_manager._active_market
+        market_data = past_data[market_id]
 
         signal.train(market_data)
         test_context['training_error'] = None

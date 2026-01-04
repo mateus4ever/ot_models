@@ -143,15 +143,10 @@ def prepare_market_data_condition(test_context, data_condition):
     if 'periods' in data_condition:
         periods = int(data_condition.split()[0])
 
-        # DataManager already has data loaded, now set temporal pointer
         market_id = test_context['market_id']
         data_manager.set_active_market(market_id)
 
-        # Use the internal active market data to initialize pointer
-        data_manager.initialize_temporal_pointer(
-            data_manager._active_market_data,
-            periods
-        )
+        data_manager.initialize_temporal_pointer(periods)
 
         past_data = data_manager.get_past_data()
         test_context['market_data'] = past_data[market_id]
