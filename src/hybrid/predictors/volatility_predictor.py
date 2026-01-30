@@ -14,17 +14,20 @@ CORRECTED: File path to match actual project structure
 """
 
 import logging
-from typing import Tuple, Dict
+from typing import Dict
 
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 
+from src.hybrid.predictors.model_validator import ModelValidator
+from src.hybrid.predictors.predictor_interface import PredictorInterface
+
 logger = logging.getLogger(__name__)
 
 
-class VolatilityPredictor:
+class VolatilityPredictor (PredictorInterface):
     """
     ML component for predicting volatility regimes - OPTIMIZED VERSION
     Uses proven incremental caching pattern from TrendDurationPredictor
@@ -63,7 +66,7 @@ class VolatilityPredictor:
 
         self.model = RandomForestClassifier(**model_params)
         self.scaler = StandardScaler()
-        self.is_trained = False
+        self._is_trained = False
         self.feature_names = None
 
         # Feature caching system
@@ -112,6 +115,8 @@ class VolatilityPredictor:
         self.use_time_features = feature_config.get('use_time_features')
         self.use_efficiency_ratio = feature_config.get('use_efficiency_ratio')
         self.efficiency_ratio_periods = feature_config.get('efficiency_ratio_periods')
+
+        self.axis_parameter = feature_config.get('sort_by_index', 1)
 
         # Add session overlap
         self.use_session_overlap = feature_config.get('use_session_overlap')
@@ -249,13 +254,18 @@ class VolatilityPredictor:
             self._add_efficiency_ratio_features(features, df)
 
         if self.use_session_overlap:
-            self._add_session_features(features, df)  # ← Swap the order
+            self._add_session_features(features, df)
 
         # Store feature names AFTER all features added
         self.feature_names = features.columns.tolist()
 
-        # Clean and finalize
-        return self._finalize_features(features)
+        # Clean and finalize FIRST
+        features_clean = self._finalize_features(features)
+
+        # NOW validate AFTER cleaning
+        ModelValidator.validate_dataframe(features_clean, "Volatility features")
+
+        return features_clean
 
     def _add_volatility_features(self, features: pd.DataFrame, returns: pd.Series):
         """Historical volatility and ratios"""
@@ -359,24 +369,36 @@ class VolatilityPredictor:
     def _finalize_features(self, features: pd.DataFrame) -> pd.DataFrame:
         """Clean NaN values and skip initial rows"""
         features_clean = features.ffill().bfill().fillna(0)
-        return features_clean.iloc[self.skip_initial_rows:]
 
-    def predict_volatility(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+        # Safety: don't skip more rows than we have (leave at least 10 rows)
+        rows_to_skip = min(self.skip_initial_rows, max(0, len(features_clean) - 10))
+
+        return features_clean.iloc[rows_to_skip:]
+
+    def predict(self, df: pd.DataFrame) -> Dict:
         """
         Predict volatility regime using incremental feature computation.
 
         Returns:
-            Tuple of (predictions, confidences)
-            predictions: 0 = LOW_VOL, 1 = HIGH_VOL
-            confidences: probability of predicted class
+            Dict with predictions and confidences
         """
-        if not self.is_trained:
-            return np.zeros(len(df)), np.zeros(len(df))
+        if not self._is_trained:
+            return {
+                'predictions': np.zeros(len(df)),
+                'confidences': np.zeros(len(df)),
+                'success': False,
+                'reason': 'Model not trained'
+            }
 
         features_df = self._get_incremental_features(df)
 
         if len(features_df) == 0:
-            return np.zeros(len(df)), np.zeros(len(df))
+            return {
+                'predictions': np.zeros(len(df)),
+                'confidences': np.zeros(len(df)),
+                'success': False,
+                'reason': 'No features generated'
+            }
 
         X_scaled = self.scaler.transform(features_df)
         predictions = self.model.predict(X_scaled)
@@ -390,7 +412,14 @@ class VolatilityPredictor:
         full_predictions[start_idx:] = predictions
         full_confidences[start_idx:] = confidences
 
-        return full_predictions, full_confidences
+        ModelValidator.validate_predictions(predictions, "Volatility predictions")
+        ModelValidator.validate_binary(predictions, "Volatility binary output")
+
+        return {
+            'predictions': full_predictions,
+            'confidences': full_confidences,
+            'success': True
+        }
 
     def create_volatility_labels(self, df: pd.DataFrame) -> np.ndarray:
         """
@@ -446,7 +475,7 @@ class VolatilityPredictor:
         X_scaled = self.scaler.fit_transform(features_df)
         self.model.fit(X_scaled, labels)
 
-        self.is_trained = True
+        self._is_trained = True
         self.clear_cache()
 
         return {
@@ -457,61 +486,15 @@ class VolatilityPredictor:
 
     def get_feature_importance(self) -> Dict[str, float]:
         """Get feature importance with configurable sorting"""
-        if not self.is_trained or self.feature_names is None:
+        if not self._is_trained or self.feature_names is None:
             return {}
 
         importance_dict = dict(zip(self.feature_names, self.model.feature_importances_))
         return dict(
             sorted(importance_dict.items(), key=lambda x: x[self.axis_parameter], reverse=self.reverse_sort_flag))
 
-    def save_model(self, filepath: str):
-        """Save the trained model"""
-        import joblib
+    @property
+    def is_trained(self) -> bool:
+        """Whether predictor is ready to predict"""
+        return self._is_trained
 
-        if self.is_trained:
-            joblib.dump(self, filepath)
-            logger.info(f"VolatilityPredictor saved to {filepath}")
-        else:
-            logger.warning("Cannot save untrained model")
-
-    @classmethod
-    def load_model(cls, filepath: str) -> 'VolatilityPredictor':
-        """Load a trained model"""
-        import joblib
-
-        model = joblib.load(filepath)
-        logger.info(f"VolatilityPredictor loaded from {filepath}")
-        return model
-
-    def analyze_volatility_patterns(self, df: pd.DataFrame) -> Dict[str, float]:
-        """Analyze patterns with ALL thresholds configurable"""
-        if not self.is_trained:
-            return {}
-
-        features_df = self._get_incremental_features(df)
-        predictions, confidences = self.predict_volatility(df)
-
-        returns = df['close'].pct_change()
-        actual_vol = returns.rolling(self.forward_window).std()
-
-        # Calculate metrics using configurable values only
-        high_vol_periods = np.sum(predictions)
-        total_periods = len(predictions[predictions >= self.zero_threshold])
-
-        if total_periods > self.zero_threshold:
-            high_vol_frequency = high_vol_periods / total_periods
-            high_vol_mask = predictions == self.default_consecutive_value
-            avg_confidence = np.mean(confidences[high_vol_mask]) if np.any(high_vol_mask) else self.zero_threshold
-        else:
-            high_vol_frequency = self.zero_threshold
-            avg_confidence = self.zero_threshold
-
-        current_regime = predictions[-self.last_element_index] if len(
-            predictions) > self.zero_threshold else self.zero_threshold
-
-        return {
-            'high_vol_frequency': high_vol_frequency,
-            'avg_confidence_high_vol': avg_confidence,
-            'total_predictions': total_periods,
-            'current_vol_regime': current_regime
-        }

@@ -11,8 +11,10 @@ from src.hybrid.positions.types import PortfolioState, TradingSignal, PositionDi
 # Import strategy implementations
 from .position_sizers.fixed_fractional_sizer import FixedFractionalSizer
 from .position_sizers.kelly_criterion_sizer import KellyCriterionSizer
+from .position_sizers.margin_based_sizer import MarginBasedSizer
 from .position_sizers.volatility_based_sizer import VolatilityBasedSizer
 from .risk_managers.atr_based_risk_manager import ATRBasedRiskManager
+from .risk_managers.vasicek_risk_manager import VasicekRiskManager
 from .risk_managers.volatility_based_risk_manager import VolatilityBasedRiskManager
 from .risk_managers.portfolio_heat_risk_manager import PortfolioHeatRiskManager
 from ..costs.transaction_costs import SimpleTransactionCostModel
@@ -82,7 +84,8 @@ class MoneyManager:
         position_sizer = {
             'fixed_fractional': FixedFractionalSizer,
             'kelly_criterion': KellyCriterionSizer,
-            'volatility_based': VolatilityBasedSizer
+            'volatility_based': VolatilityBasedSizer,
+            'margin_based': MarginBasedSizer
         }
 
         if sizing_type not in position_sizer:
@@ -99,7 +102,8 @@ class MoneyManager:
         risk_managers = {
             'atr_based': ATRBasedRiskManager,
             'volatility_based': VolatilityBasedRiskManager,
-            'portfolio_heat': PortfolioHeatRiskManager
+            'portfolio_heat': PortfolioHeatRiskManager,
+            'vasicek': VasicekRiskManager
         }
 
         if risk_type not in risk_managers:
@@ -308,3 +312,9 @@ class MoneyManager:
         except Exception as e:
             logger.error(f"Error calculating equity from portfolio state: {e}")
             return self.position_orchestrator.position_manager.total_capital
+
+    def get_lot_size(self) -> float:
+        """Get lot size for triangular arbitrage (convenience method)"""
+        portfolio_state = self.position_orchestrator.get_portfolio_state()
+        micro_lots = self.position_sizer.calculate_size(None, portfolio_state, None)
+        return micro_lots / 100

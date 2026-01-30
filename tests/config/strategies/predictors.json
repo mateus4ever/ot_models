@@ -1,0 +1,271 @@
+{
+  "triangular_arbitrage": {
+    "setting": "standard",
+    "standard": {
+      "parameters": {
+        "target_market": "EUR/USD",
+        "leg1_market": "EUR/GBP",
+        "leg2_market": "GBP/USD",
+        "lookback_window": 200,
+        "entry_threshold": 2.0,
+        "exit_threshold": 0.5,
+        "pip_multiplier": 10000.0,
+        "pip_value_per_lot": 10.0,
+        "confidence_divisor": 3.0
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 50,
+          "max": 500,
+          "step": 50,
+          "default": 200,
+          "description": "Historical window for spread calibration"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 1.5,
+          "max": 3.0,
+          "step": 0.1,
+          "default": 2.0,
+          "description": "Z-score threshold for entering spread position"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.1,
+          "max": 1.5,
+          "step": 0.1,
+          "default": 0.5,
+          "description": "Z-score threshold for exiting spread position"
+        }
+      }
+    },
+    "aggressive": {
+      "parameters": {
+        "target_market": "EUR/USD",
+        "leg1_market": "EUR/GBP",
+        "leg2_market": "GBP/USD",
+        "lookback_window": 100,
+        "entry_threshold": 1.5,
+        "exit_threshold": 0.3,
+        "pip_multiplier": 10000.0,
+        "pip_value_per_lot": 10.0
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 50,
+          "max": 200,
+          "step": 25,
+          "default": 100,
+          "description": "Shorter window for aggressive trading"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 1.0,
+          "max": 2.0,
+          "step": 0.1,
+          "default": 1.5,
+          "description": "Lower threshold for more frequent entries"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.1,
+          "max": 1.0,
+          "step": 0.1,
+          "default": 0.3,
+          "description": "Tighter exit for quicker profits"
+        }
+      }
+    },
+    "conservative": {
+      "parameters": {
+        "target_market": "EUR/USD",
+        "leg1_market": "EUR/GBP",
+        "leg2_market": "GBP/USD",
+        "lookback_window": 300,
+        "entry_threshold": 2.5,
+        "exit_threshold": 0.8,
+        "pip_multiplier": 10000.0,
+        "pip_value_per_lot": 10.0
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 200,
+          "max": 500,
+          "step": 50,
+          "default": 300,
+          "description": "Longer window for stable calibration"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 2.0,
+          "max": 3.5,
+          "step": 0.1,
+          "default": 2.5,
+          "description": "Higher threshold for selective entries"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.5,
+          "max": 1.5,
+          "step": 0.1,
+          "default": 0.8,
+          "description": "Wait for stronger normalization"
+        }
+      }
+    }
+  },
+  "vasicek_prediction": {
+    "setting": "standard",
+    "standard": {
+      "parameters": {
+        "lookback_window": 200,
+        "entry_threshold": 2.0,
+        "exit_threshold": 0.5,
+        "pip_multiplier": 10000.0,
+        "validation": {
+          "significance_level": 0.05,
+          "max_half_life": 200,
+          "min_kappa": 0.01,
+          "max_kappa": 2.0,
+          "min_observations": 100
+        },
+        "parameter_bounds": {
+          "theta_max": 0.01,
+          "sigma_max": 0.01,
+          "kappa_reasonable_max": 2.0
+        },
+        "reversion_categories": {
+          "very_fast": 1.0,
+          "fast": 5.0,
+          "moderate": 15.0,
+          "slow": 50.0
+        },
+        "category_warnings": {
+          "very_fast": "Possible overfitting, verify with out-of-sample",
+          "very_slow": "Hold time too long, capital efficiency poor"
+        }
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 50,
+          "max": 500,
+          "step": 50,
+          "default": 200,
+          "description": "Historical window for Vasicek calibration"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 1.5,
+          "max": 3.0,
+          "step": 0.1,
+          "default": 2.0,
+          "description": "Z-score threshold for entering spread position"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.1,
+          "max": 1.5,
+          "step": 0.1,
+          "default": 0.5,
+          "description": "Z-score threshold for exiting spread position"
+        }
+      }
+    },
+    "aggressive": {
+      "parameters": {
+        "lookback_window": 100,
+        "entry_threshold": 1.5,
+        "exit_threshold": 0.3,
+        "pip_multiplier": 10000.0,
+        "validation": {
+          "significance_level": 0.05,
+          "max_half_life": 200,
+          "min_kappa": 0.01,
+          "max_kappa": 2.0,
+          "min_observations": 50
+        },
+        "parameter_bounds": {
+          "theta_max": 0.01,
+          "sigma_max": 0.01,
+          "kappa_reasonable_max": 2.0
+        }
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 50,
+          "max": 200,
+          "step": 25,
+          "default": 100,
+          "description": "Shorter window for aggressive trading"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 1.0,
+          "max": 2.0,
+          "step": 0.1,
+          "default": 1.5,
+          "description": "Lower threshold for more frequent entries"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.1,
+          "max": 1.0,
+          "step": 0.1,
+          "default": 0.3,
+          "description": "Tighter exit for quicker profits"
+        }
+      }
+    },
+    "conservative": {
+      "parameters": {
+        "lookback_window": 300,
+        "entry_threshold": 2.5,
+        "exit_threshold": 0.8,
+        "pip_multiplier": 10000.0,
+        "validation": {
+          "significance_level": 0.01,
+          "max_half_life": 100,
+          "min_kappa": 0.05,
+          "max_kappa": 2.0,
+          "min_observations": 200
+        },
+        "parameter_bounds": {
+          "theta_max": 0.01,
+          "sigma_max": 0.01,
+          "kappa_reasonable_max": 2.0
+        }
+      },
+      "optimizable_parameters": {
+        "lookback_window": {
+          "type": "integer",
+          "min": 200,
+          "max": 500,
+          "step": 50,
+          "default": 300,
+          "description": "Longer window for stable calibration"
+        },
+        "entry_threshold": {
+          "type": "continuous",
+          "min": 2.0,
+          "max": 3.5,
+          "step": 0.1,
+          "default": 2.5,
+          "description": "Higher threshold for selective entries"
+        },
+        "exit_threshold": {
+          "type": "continuous",
+          "min": 0.5,
+          "max": 1.5,
+          "step": 0.1,
+          "default": 0.8,
+          "description": "Wait for stronger normalization"
+        }
+      }
+    }
+  }
+}

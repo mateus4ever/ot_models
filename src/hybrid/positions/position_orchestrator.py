@@ -12,8 +12,9 @@ import logging
 from datetime import datetime
 
 from src.hybrid.positions.centralized_position_manager import CentralizedPositionManager
+from src.hybrid.positions.leg_trade_history import LegTradeHistory
 from src.hybrid.positions.position_tracker import PositionTracker
-from src.hybrid.positions.trade_history import TradeHistory
+# from src.hybrid.positions.trade_history import TradeHistory
 from src.hybrid.positions.types import PortfolioState
 from src.hybrid.products.product_types import PositionDirection
 
@@ -29,7 +30,7 @@ class PositionOrchestrator:
         # Initialize trinity
         self.position_manager = CentralizedPositionManager(config)
         self.position_tracker = PositionTracker(config)
-        self.trade_history = TradeHistory(config)
+        self.trade_history = LegTradeHistory(config)
 
         logger.info("PositionOrchestrator initialized")
 
@@ -55,8 +56,11 @@ class PositionOrchestrator:
                 unrealized_pnl += (position.entry_price - position.current_price) * position.size
 
         # Get realized P&L from trade history
-        stats = self.trade_history.get_trade_statistics()
-        realized_pnl = stats.total_pnl if stats else 0.0
+        if self.trade_history.get_closed_positions_count() > 0:
+            stats = self.trade_history.get_trade_statistics()
+            realized_pnl = stats.total_pnl
+        else:
+            realized_pnl = 0.0
 
         # Total P&L
         total_pnl = realized_pnl + unrealized_pnl

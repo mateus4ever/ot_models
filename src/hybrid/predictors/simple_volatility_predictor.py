@@ -37,17 +37,19 @@ class SimpleVolatilityPredictor(PredictorInterface):
             'training_required': False
         }
 
-    def predict(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, df: pd.DataFrame) -> Dict:
         """
         Predict volatility regime for each bar.
 
         Returns:
-            Tuple of (predictions, confidence)
-            predictions: 0 = LOW_VOL, 1 = HIGH_VOL
-            confidence: Always 1.0 (rule-based, no uncertainty)
+            Dict with predictions and confidence
         """
         if len(df) < self.lookback_period:
-            return np.zeros(len(df)), np.ones(len(df))
+            return {
+                'predictions': np.zeros(len(df)),
+                'confidences': np.ones(len(df)),
+                'success': True
+            }
 
         returns = df['close'].pct_change()
 
@@ -62,9 +64,13 @@ class SimpleVolatilityPredictor(PredictorInterface):
         predictions = predictions.fillna(0).values
 
         # Confidence is always 1.0 for rule-based
-        confidence = np.ones(len(df))
+        confidences = np.ones(len(df))
 
-        return predictions, confidence
+        return {
+            'predictions': predictions,
+            'confidences': confidences,
+            'success': True
+        }
 
     @property
     def is_trained(self) -> bool:

@@ -4,22 +4,19 @@ pytest-bdd test runner for StrategyInterface protocol compliance
 Tests interface signature compliance - no implementation execution
 """
 
+import logging
 from pathlib import Path
 
-# Add project root to Python path
-
 import pytest
-import logging
 from pytest_bdd import scenarios, given, when, then, parsers
-import inspect
-from typing import get_type_hints, get_origin, get_args
 
 from src.hybrid.config.unified_config import UnifiedConfig
 from src.hybrid.data import DataManager
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.strategies import StrategyFactory
-from src.hybrid.strategies.strategy_interface import StrategyInterface
+
+# Add project root to Python path
 
 # Load scenarios from the strategy_interface.feature
 scenarios('strategy_interface.feature')

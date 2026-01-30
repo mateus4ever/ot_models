@@ -1,0 +1,396 @@
+ {
+  "fixtures": {
+    "mean_reverting_500": {
+      "path": "tests/fixtures/vasicek/mean_reverting_500.csv",
+      "description": "Synthetic mean-reverting series with known parameters",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.30,
+        "sigma": 0.0003,
+        "periods": 500,
+        "seed": 42
+      },
+      "expected": {
+        "theta": 0.0020,
+        "theta_tolerance": 0.0005,
+        "kappa": 0.30,
+        "kappa_tolerance": 0.10,
+        "sigma": 0.0003,
+        "sigma_tolerance": 0.0001,
+        "half_life": 2.31,
+        "half_life_tolerance": 0.5,
+        "is_mean_reverting": true,
+        "min_r_squared": 0.10,
+        "max_p_value": 0.05
+      }
+    },
+    "fast_reversion_300": {
+      "path": "tests/fixtures/vasicek/fast_reversion_300.csv",
+      "description": "Fast mean reversion (high kappa)",
+      "generation_params": {
+        "theta": 0.0018,
+        "kappa": 0.70,
+        "sigma": 0.0002,
+        "periods": 300,
+        "seed": 43
+      },
+      "expected": {
+        "kappa": 0.70,
+        "kappa_tolerance": 0.15,
+        "half_life": 0.99,
+        "half_life_tolerance": 0.3,
+        "is_mean_reverting": true,
+        "reversion_category": "very_fast"
+      }
+    },
+    "slow_reversion_800": {
+      "path": "tests/fixtures/vasicek/slow_reversion_800.csv",
+      "description": "Slow mean reversion (low kappa)",
+      "generation_params": {
+        "theta": 0.0022,
+        "kappa": 0.03,
+        "sigma": 0.0004,
+        "periods": 800,
+        "seed": 44
+      },
+      "expected": {
+        "kappa": 0.03,
+        "kappa_tolerance": 0.02,
+        "half_life": 23.10,
+        "half_life_tolerance": 5.0,
+        "is_mean_reverting": true,
+        "reversion_category": "slow"
+      }
+    },
+    "high_volatility_500": {
+      "path": "tests/fixtures/vasicek/high_volatility_500.csv",
+      "description": "Mean reversion with high volatility",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.25,
+        "sigma": 0.0008,
+        "periods": 500,
+        "seed": 45
+      },
+      "expected": {
+        "sigma": 0.0008,
+        "sigma_tolerance": 0.0002,
+        "is_mean_reverting": true
+      }
+    },
+    "eurusd_spread_1000": {
+      "path": "tests/fixtures/vasicek/eurusd_spread_1000.csv",
+      "description": "EUR/USD triangular arbitrage spread",
+      "source": "EUR/USD vs (EUR/GBP × GBP/USD)",
+      "date_range": "2020-01-01 to 2023-12-31",
+      "expected": {
+        "is_mean_reverting": true,
+        "min_kappa": 0.05,
+        "max_kappa": 1.0,
+        "min_r_squared": 0.10,
+        "max_p_value": 0.05,
+        "max_half_life": 50
+      }
+    },
+    "gbpjpy_spread_800": {
+      "path": "tests/fixtures/vasicek/gbpjpy_spread_800.csv",
+      "description": "GBP/JPY triangular arbitrage spread",
+      "source": "GBP/JPY vs (GBP/USD × USD/JPY)",
+      "expected": {
+        "is_mean_reverting": true,
+        "min_kappa": 0.05
+      }
+    },
+    "eurchf_spread_500": {
+      "path": "tests/fixtures/vasicek/eurchf_spread_500.csv",
+      "description": "EUR/CHF triangular arbitrage spread",
+      "source": "EUR/CHF vs (EUR/USD × USD/CHF)",
+      "expected": {
+        "is_mean_reverting": true
+      }
+    },
+    "trending_500": {
+      "path": "tests/fixtures/vasicek/trending_500.csv",
+      "description": "Positive linear trend (non-stationary)",
+      "generation_params": {
+        "drift": 0.0001,
+        "noise": 0.0002,
+        "periods": 500,
+        "seed": 46
+      },
+      "expected": {
+        "is_mean_reverting": false,
+        "kappa_max": 0.05,
+        "min_p_value": 0.05,
+        "rejection_reason": "trending"
+      }
+    },
+    "random_walk_500": {
+      "path": "tests/fixtures/vasicek/random_walk_500.csv",
+      "description": "Random walk process",
+      "generation_params": {
+        "step_std": 0.0003,
+        "periods": 500,
+        "seed": 47
+      },
+      "expected": {
+        "is_mean_reverting": false,
+        "kappa_near_zero": true,
+        "kappa_max": 0.05,
+        "rejection_reason": "random_walk"
+      }
+    },
+    "explosive_400": {
+      "path": "tests/fixtures/vasicek/explosive_400.csv",
+      "description": "Explosive trending (negative kappa)",
+      "generation_params": {
+        "negative_kappa": -0.10,
+        "periods": 400,
+        "seed": 48
+      },
+      "expected": {
+        "is_mean_reverting": false,
+        "kappa_negative": true,
+        "rejection_reason": "explosive"
+      }
+    },
+    "small_sample_10": {
+      "path": "tests/fixtures/vasicek/small_sample_10.csv",
+      "description": "Very small sample size",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.30,
+        "sigma": 0.0003,
+        "periods": 10,
+        "seed": 49
+      },
+      "expected": {
+        "warning": "small sample size",
+        "unreliable_results": true,
+        "min_observations_warning": true
+      }
+    },
+    "series_with_nan": {
+      "path": "tests/fixtures/vasicek/series_with_nan.csv",
+      "description": "Series containing NaN values",
+      "nan_positions": [50, 100, 150, 200],
+      "expected": {
+        "nan_handling": "drop_or_error",
+        "warning": "NaN values detected"
+      }
+    },
+    "constant_series": {
+      "path": "tests/fixtures/vasicek/constant_series.csv",
+      "description": "Constant value series (no variance)",
+      "generation_params": {
+        "constant_value": 0.0020,
+        "periods": 100
+      },
+      "expected": {
+        "theta": 0.0020,
+        "sigma": 0.0,
+        "sigma_near_zero": true,
+        "warning": "no variance"
+      }
+    },
+    "high_noise_500": {
+      "path": "tests/fixtures/vasicek/high_noise_500.csv",
+      "description": "Mean reversion with very high noise",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.20,
+        "sigma": 0.0015,
+        "periods": 500,
+        "seed": 50
+      },
+      "expected": {
+        "high_uncertainty": true,
+        "low_r_squared": true,
+        "warning": "high residual variance"
+      }
+    },
+    "strong_mean_reversion": {
+      "path": "tests/fixtures/vasicek/strong_mean_reversion.csv",
+      "description": "Strong statistically significant mean reversion",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.40,
+        "sigma": 0.0002,
+        "periods": 500,
+        "seed": 51
+      },
+      "expected": {
+        "is_mean_reverting": true,
+        "p_value": 0.001,
+        "max_p_value": 0.01,
+        "half_life": 1.73,
+        "validation_reason": "strong_reversion"
+      }
+    },
+    "weak_mean_reversion": {
+      "path": "tests/fixtures/vasicek/weak_mean_reversion.csv",
+      "description": "Weak mean reversion (high p-value)",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.05,
+        "sigma": 0.0005,
+        "periods": 200,
+        "seed": 52
+      },
+      "expected": {
+        "is_mean_reverting": false,
+        "p_value": 0.150,
+        "min_p_value": 0.10,
+        "rejection_reason": "high_p_value"
+      }
+    },
+    "very_slow_reversion": {
+      "path": "tests/fixtures/vasicek/very_slow_reversion.csv",
+      "description": "Mean reversion too slow for trading",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.003,
+        "sigma": 0.0003,
+        "periods": 1000,
+        "seed": 53
+      },
+      "expected": {
+        "is_mean_reverting": false,
+        "half_life": 231.05,
+        "max_half_life": 200,
+        "rejection_reason": "half_life_too_long"
+      }
+    },
+    "moderate_reversion": {
+      "path": "tests/fixtures/vasicek/moderate_reversion.csv",
+      "description": "Moderate mean reversion (acceptable for trading)",
+      "generation_params": {
+        "theta": 0.0020,
+        "kappa": 0.15,
+        "sigma": 0.0003,
+        "periods": 500,
+        "seed": 54
+      },
+      "expected": {
+        "is_mean_reverting": true,
+        "half_life": 4.62,
+        "reversion_category": "moderate"
+      }
+    },
+    "typical_fx_spread": {
+      "path": "tests/fixtures/vasicek/typical_fx_spread.csv",
+      "description": "Typical FX triangular arbitrage spread",
+      "expected": {
+        "theta_range": [-0.01, 0.01],
+        "kappa_range": [0.01, 2.0],
+        "sigma_range": [0.0, 0.01],
+        "validation": "pass"
+      }
+    },
+    "unrealistic_params": {
+      "path": "tests/fixtures/vasicek/unrealistic_params.csv",
+      "description": "Unrealistic parameter estimates",
+      "generation_params": {
+        "theta": 0.50,
+        "kappa": 50.0,
+        "sigma": 1.00,
+        "periods": 100,
+        "seed": 55
+      },
+      "expected": {
+        "theta_unrealistic": true,
+        "kappa_unrealistic": true,
+        "sigma_unrealistic": true,
+        "validation": "fail",
+        "warnings": ["extreme_theta", "extreme_kappa", "extreme_sigma"]
+      }
+    }
+  },
+  "z_score_tests": [
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0020,
+      "expected_z": 0.0,
+      "description": "At equilibrium"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0026,
+      "expected_z": 2.0,
+      "description": "2 sigma above mean"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0014,
+      "expected_z": -2.0,
+      "description": "2 sigma below mean"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0023,
+      "expected_z": 1.0,
+      "description": "1 sigma above mean"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0017,
+      "expected_z": -1.0,
+      "description": "1 sigma below mean"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0029,
+      "expected_z": 3.0,
+      "description": "3 sigma above mean (extreme)"
+    }
+  ],
+  "prediction_tests": [
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0026,
+      "time_step": 1.0,
+      "expected_direction": "towards_mean",
+      "expected_sign": "negative",
+      "description": "Above mean, should revert down"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0014,
+      "time_step": 1.0,
+      "expected_direction": "towards_mean",
+      "expected_sign": "positive",
+      "description": "Below mean, should revert up"
+    },
+    {
+      "fixture": "mean_reverting_500",
+      "current_value": 0.0020,
+      "time_step": 1.0,
+      "expected_direction": "stay_at_mean",
+      "expected_sign": "zero",
+      "description": "At equilibrium, no movement"
+    },
+    {
+      "fixture": "fast_reversion_300",
+      "current_value": 0.0026,
+      "time_step": 5.0,
+      "expected_direction": "near_mean",
+      "description": "Fast reversion over 5 periods"
+    }
+  ],
+  "validation": {
+    "significance_level": 0.05,
+    "min_kappa_for_trading": 0.01,
+    "max_kappa_reasonable": 2.0,
+    "max_half_life": 200,
+    "min_observations": 10,
+    "min_r_squared": 0.05,
+    "fx_spreads": {
+      "max_theta": 0.01,
+      "max_sigma": 0.01,
+      "typical_half_life_range": [1, 50]
+    }
+  },
+  "testing": {
+    "initial_capital":100000
+  }
+}

@@ -37,7 +37,6 @@ def test_context(request):
         ctx["scenario_name"] = request.node.name
     return ctx
 
-
 # =============================================================================
 # GIVEN steps - Setup and preconditions
 # =============================================================================
@@ -48,11 +47,8 @@ def load_configuration_file(test_context, config_directory):
 
     root_path = Path(__file__).parent.parent.parent.parent
     config_path = root_path / config_directory
-
     assert config_path.exists(), f"Configuration file not found: {config_path}"
-
     config = UnifiedConfig(config_path=str(config_path), environment="test")
-
     test_context['config'] = config
 
 @given('a PositionOrchestrator is initialized from configuration')
@@ -104,10 +100,10 @@ def register_position_tracker_as_listener(test_context):
     test_context['listener_registered'] = True
 
 
-@given(parsers.parse('a position is opened for "{symbol}" '
-                     'with entry price {entry_price}'))
-def open_test_position(test_context, symbol, entry_price):
+@given(parsers.parse('a position is opened for "{symbol}" with quantity {quantity} at entry price {entry_price}'))
+def open_test_position(test_context, symbol, quantity, entry_price):
     """Open test position in PositionTracker"""
+    quantity = int(quantity)
     entry_price = float(entry_price)
     orchestrator = test_context['orchestrator']
 
@@ -115,7 +111,7 @@ def open_test_position(test_context, symbol, entry_price):
         trade_id="test_trade_001",
         symbol=symbol,
         direction=PositionDirection.LONG,
-        quantity=1000,
+        quantity=quantity,
         entry_price=entry_price
     )
 
@@ -130,10 +126,10 @@ def set_orchestrator_capital(test_context, capital):
     orchestrator = test_context['orchestrator']
     orchestrator.set_initial_capital(capital)
 
-
-@given(parsers.parse('a position "{trade_id}" is open for {symbol} at {entry_price}'))
-def setup_open_position(test_context, trade_id, symbol, entry_price):
+@given(parsers.parse('a position "{trade_id}" is open for {symbol} with quantity {quantity} at {entry_price}'))
+def setup_open_position(test_context, trade_id, symbol, quantity, entry_price):
     """Setup an open position for testing"""
+    quantity = int(quantity)
     entry_price = float(entry_price)
     orchestrator = test_context['orchestrator']
 
@@ -141,14 +137,13 @@ def setup_open_position(test_context, trade_id, symbol, entry_price):
         trade_id=trade_id,
         symbol=symbol,
         direction=PositionDirection.LONG,
-        quantity=1000,
+        quantity=quantity,
         entry_price=entry_price,
-        capital_required=entry_price * 1000
+        capital_required=entry_price * quantity
     )
 
     assert success, f"Failed to open test position {trade_id}"
     test_context['last_trade_id'] = trade_id
-
 
 @given(parsers.parse('position "{trade_id}" is open: {quantity} {symbol} at {entry_price}, current {current_price}'))
 def setup_open_position_with_price(test_context, trade_id,
@@ -277,12 +272,9 @@ def close_position_via_orchestrator(test_context, trade_id, exit_price):
 def request_portfolio_state(test_context):
     """Request portfolio state from orchestrator"""
     orchestrator = test_context['orchestrator']
-
-    stats = orchestrator.trade_history.get_trade_statistics()
-    # Call without parameters - prices already updated via listener
+    # Removed: stats = orchestrator.trade_history.get_trade_statistics()
     portfolio_state = orchestrator.get_portfolio_state()
     test_context['portfolio_state'] = portfolio_state
-
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
@@ -427,9 +419,11 @@ def check_total_pnl_combined(test_context):
     portfolio_state = test_context['portfolio_state']
     orchestrator = test_context['orchestrator']
 
-    # Get realized P&L from trade history
-    stats = orchestrator.trade_history.get_trade_statistics()
-    realized = stats.total_pnl
+    if orchestrator.trade_history.get_closed_positions_count() > 0:
+        stats = orchestrator.trade_history.get_trade_statistics()
+        realized = stats.total_pnl
+    else:
+        realized = 0.0
 
     # Calculate unrealized from positions
     unrealized = 0.0
@@ -487,8 +481,12 @@ def check_daily_pnl_calculated(test_context):
     positions = orchestrator.position_tracker.get_all_positions()
 
     if len(positions) > 0:
-        # Daily P&L currently equals unrealized P&L in implementation
-        expected_daily = portfolio_state.total_pnl - orchestrator.trade_history.get_trade_statistics().total_pnl
+        # Get realized P&L safely
+        if orchestrator.trade_history.get_closed_positions_count() > 0:
+            realized_pnl = orchestrator.trade_history.get_trade_statistics().total_pnl
+        else:
+            realized_pnl = 0.0
+        expected_daily = portfolio_state.total_pnl - realized_pnl
         assert abs(portfolio_state.daily_pnl - expected_daily) < 0.01, \
             f"Daily P&L {portfolio_state.daily_pnl} doesn't match expected {expected_daily}"
 @then('drawdown should be calculated from peak equity')

@@ -9,11 +9,12 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from src.hybrid.config.unified_config import UnifiedConfig
+from src.hybrid.predictors.predictor_interface import PredictorInterface
 
 logger = logging.getLogger(__name__)
 
 
-class TrendDurationPredictor:
+class TrendDurationPredictor(PredictorInterface):
     """
     Trend Duration Predictor - ML model for predicting how long trends will last.
 
@@ -59,7 +60,7 @@ class TrendDurationPredictor:
         self.model = RandomForestClassifier(**model_params)
         self.scaler = StandardScaler()
 
-        self.is_trained = False
+        self._is_trained = False
         self.feature_names = None
 
         # Feature caching
@@ -220,15 +221,23 @@ class TrendDurationPredictor:
         logger.debug(f'Trend duration features: {features_final.shape}')
         return features_final
 
-    def predict_duration(self, df: pd.DataFrame) -> np.ndarray:
+    def predict(self, df: pd.DataFrame) -> Dict:
         """Predict trend duration using incremental feature computation."""
-        if not self.is_trained:
-            return np.zeros(len(df))
+        if not self._is_trained:
+            return {
+                'predictions': np.zeros(len(df)),
+                'success': False,
+                'reason': 'Model not trained'
+            }
 
         features_df = self._get_incremental_features(df)
 
         if len(features_df) == 0:
-            return np.zeros(len(df))
+            return {
+                'predictions': np.zeros(len(df)),
+                'success': False,
+                'reason': 'No features generated'
+            }
 
         X_scaled = self.scaler.transform(features_df.values)
         predictions = self.model.predict(X_scaled)
@@ -237,7 +246,10 @@ class TrendDurationPredictor:
         start_idx = len(df) - len(predictions)
         full_predictions[start_idx:] = predictions
 
-        return full_predictions
+        return {
+            'predictions': full_predictions,
+            'success': True
+        }
 
     def clear_cache(self):
         """Clear feature cache."""
@@ -496,7 +508,7 @@ class TrendDurationPredictor:
         accuracy = accuracy_score(y_test, y_pred)
 
         self.feature_names = features_df.columns.tolist()
-        self.is_trained = True
+        self._is_trained = True
         self.clear_cache()
 
         # Log results
@@ -539,7 +551,7 @@ class TrendDurationPredictor:
 
     def get_feature_importance(self) -> Dict[str, float]:
         """Get feature importance from trained model, sorted by importance."""
-        if not self.is_trained or self.feature_names is None:
+        if not self._is_trained or self.feature_names is None:
             return {}
 
         importance_dict = dict(zip(self.feature_names, self.model.feature_importances_))
@@ -549,7 +561,7 @@ class TrendDurationPredictor:
         """Save trained model to disk."""
         import joblib
 
-        if not self.is_trained:
+        if not self._is_trained:
             logger.warning('Cannot save untrained model')
             return
 
@@ -579,7 +591,12 @@ class TrendDurationPredictor:
         predictor.scaler = model_data['scaler']
         predictor.feature_names = model_data['feature_names']
         predictor.duration_categories = model_data['duration_categories']
-        predictor.is_trained = True
+        predictor._is_trained = True
 
         logger.info(f'TrendDurationPredictor loaded from {filepath}')
         return predictor
+
+    @property
+    def is_trained(self) -> bool:
+        """Whether predictor is ready to predict"""
+        return self._is_trained

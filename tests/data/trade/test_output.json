@@ -1396,6 +1396,7 @@
   "metadata": {
     "base_currency": "USD",
     "total_trades": 50,
-    "export_timestamp": "2026-01-02T13:26:40.829982Z"
+    "trade_type": "LegTradeHistory",
+    "export_timestamp": "2026-01-30T20:06:49.774945Z"
   }
 }

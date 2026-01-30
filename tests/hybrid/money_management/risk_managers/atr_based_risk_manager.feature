@@ -4,7 +4,7 @@ Feature: ATR-Based Risk Manager
   So that position risk is based on market volatility
 
   Background:
-    Given config files are available in tests/config/atr_based_risk_manager
+    Given config files are available in tests/config/money_management/risk_managers/atr_based_risk_manager
 
   # ============================================================================
   # CORE FUNCTIONALITY - Stop Loss Calculation

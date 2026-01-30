@@ -12,7 +12,7 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 from src.hybrid.backtesting.performance_metrics import PerformanceMetrics
-from src.hybrid.positions.trade_history import TradeHistory
+from src.hybrid.positions.base_trade_history import BaseTradeHistory
 
 logger = logging.getLogger(__name__)
 
@@ -37,23 +37,23 @@ class MetricsCalculator:
 
     def _cache_config_values(self):
         """Cache configuration values for calculations"""
-        backtest_config = self.config.config.get('backtesting', {})
+        backtest_config = self.config.config.get('backtesting')
 
         # Risk-free rate for Sharpe calculation
-        self.risk_free_rate = backtest_config.get('risk_free_rate', 0.02)
+        self.risk_free_rate = backtest_config.get('risk_free_rate')
 
         # Days per year for annualization
-        self.days_per_year = backtest_config.get('days_per_year', 252)
+        self.days_per_year = backtest_config.get('days_per_year')
 
         # Minimum samples for statistical calculations
-        calc_config = backtest_config.get('calculations', {})
-        self.min_samples = calc_config.get('min_performance_samples', 30)
+        calc_config = backtest_config.get('calculations')
+        self.min_samples = calc_config.get('min_performance_samples')
 
     def calculate_metrics(
             self,
-            trade_history: TradeHistory,
-            equity_curve: Optional[List[float]] = None,
-            initial_capital: float = 10000.0
+            trade_history: BaseTradeHistory,
+            equity_curve: Optional[List[float]] ,
+            initial_capital: float
     ) -> PerformanceMetrics:
         """
         Calculate comprehensive performance metrics
@@ -314,7 +314,7 @@ class MetricsCalculator:
 
         return max_win_streak, max_loss_streak, current_streak, current_type
 
-    def _calculate_holding_periods(self, trade_history: TradeHistory) -> List[int]:
+    def _calculate_holding_periods(self, trade_history: BaseTradeHistory) -> List[int]:
         """
         Calculate holding periods for all trades
 

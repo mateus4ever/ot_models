@@ -1,0 +1,16 @@
+{
+  "data_loading": {
+    "loader_type": "directory_scan",
+    "directory_path": "/data/eurusd",
+    "file_pattern": "*.csv",
+    "recursive": true,
+    "skip_initial_rows": 0
+  },
+  "trade_history": {
+    "default_lookback_periods": 0,
+    "save_backup_on_load": false,
+    "validate_on_load": true,
+    "break_even_tolerance": 0.0001,
+    "data_file_path": "/results/trade/base_trade.json"
+  }
+}

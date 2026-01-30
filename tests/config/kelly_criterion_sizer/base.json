@@ -4,6 +4,13 @@
     "debug_mode": false,
     "enable_validation_checks": true
   },
+  "base_currency": "USD",
+  "trade_history": {
+    "default_lookback_periods": 50,
+    "save_backup_on_load": false,
+    "validate_on_load": true,
+    "break_even_tolerance": 0.01
+  },
   "file_operations": {
     "results_dir": "results",
     "timestamp_format": "%Y%m%d_%H%M%S"
@@ -15,26 +22,6 @@
   },
   "backtesting": {
       "initial_capital": 100000
-  },
-  "trend_duration_prediction": {
-    "enabled": false,
-    "confidence_window": 5,
-    "default_duration_category": 1,
-    "model_params": {
-      "n_estimators": 10,
-      "max_depth": 3,
-      "random_state": 42
-    }
-  },
-  "volatility_prediction": {
-    "use_volatility_ml": false,
-    "forward_window": 10,
-    "feature_periods": [5, 10],
-    "model_params": {
-      "n_estimators": 10,
-      "max_depth": 3,
-      "random_state": 42
-    }
   },
   "system_configuration": {
     "windows_compatibility": {

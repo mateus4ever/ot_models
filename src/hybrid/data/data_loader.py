@@ -11,6 +11,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+#TODO: there are yellow marked points.
 
 class DataLoader(ABC):
     """Abstract base class for data loading strategies
@@ -141,29 +142,22 @@ class DataLoader(ABC):
             raise
 
     def _get_csv_format_config(self) -> dict:
-        """Get and validate CSV format configuration
-
-        Returns:
-            CSV format configuration dictionary
-
-        Raises:
-            ValueError: If required configuration is missing
-        """
+        """Get and validate CSV format configuration"""
         csv_format = self.config.get('csv_format')
         if not csv_format:
             raise ValueError("Missing 'csv_format' section in configuration")
 
-        # Validate required fields
         delimiter = csv_format.get('delimiter')
         has_header = csv_format.get('has_header')
         timestamp_column = csv_format.get('timestamp_column')
+        timestamp_columns = csv_format.get('timestamp_columns')
 
         if delimiter is None:
             raise ValueError("Missing 'delimiter' in csv_format configuration")
         if has_header is None:
             raise ValueError("Missing 'has_header' in csv_format configuration")
-        if timestamp_column is None:
-            raise ValueError("Missing 'timestamp_column' in csv_format configuration")
+        if timestamp_column is None and timestamp_columns is None:
+            raise ValueError("Missing 'timestamp_column' or 'timestamp_columns' in csv_format configuration")
 
         return csv_format
 
@@ -223,7 +217,11 @@ class DataLoader(ABC):
         return df
 
     def _set_timestamp_index(self, df: pd.DataFrame, csv_format: dict) -> pd.DataFrame:
-        """Convert timestamp column to datetime and set as index
+        """Convert timestamp column(s) to datetime and set as index
+
+        Supports:
+        - Single column: timestamp_column = "timestamp"
+        - Multiple columns: timestamp_columns = ["date", "time"]
 
         Args:
             df: Dataframe with normalized columns
@@ -232,14 +230,46 @@ class DataLoader(ABC):
         Returns:
             Dataframe with datetime index
         """
-        timestamp_column = csv_format.get('timestamp_column').lower()
         timestamp_format = csv_format.get('timestamp_format')
 
-        if timestamp_column not in df.columns:
-            raise ValueError(
-                f"Timestamp column '{timestamp_column}' not found. "
-                f"Available columns: {list(df.columns)}"
-            )
+        # Check for multiple timestamp columns first
+        timestamp_columns = csv_format.get('timestamp_columns')
+
+        if timestamp_columns:
+            # Multiple columns - combine them
+            timestamp_columns = [col.lower() for col in timestamp_columns]
+
+            for col in timestamp_columns:
+                if col not in df.columns:
+                    raise ValueError(
+                        f"Timestamp column '{col}' not found. "
+                        f"Available columns: {list(df.columns)}"
+                    )
+
+            logger.debug(f"Combining timestamp columns: {timestamp_columns}")
+
+            # Combine columns with space separator
+            combined = df[timestamp_columns[0]].astype(str)
+            for col in timestamp_columns[1:]:
+                combined = combined + ' ' + df[col].astype(str)
+
+            df['_timestamp'] = combined
+            timestamp_column = '_timestamp'
+
+            # Drop original timestamp columns
+            df.drop(columns=timestamp_columns, inplace=True)
+        else:
+            # Single column
+            timestamp_column = csv_format.get('timestamp_column')
+            if not timestamp_column:
+                raise ValueError("Missing 'timestamp_column' or 'timestamp_columns' in csv_format configuration")
+            timestamp_column = timestamp_column.lower()
+
+            if timestamp_column not in df.columns:
+                raise ValueError(
+                    f"Timestamp column '{timestamp_column}' not found. "
+                    f"Available columns: {list(df.columns)}"
+                )
 
         logger.debug(f"Converting '{timestamp_column}' to datetime index")
 

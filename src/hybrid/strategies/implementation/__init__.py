@@ -3,6 +3,7 @@
 
 from .base_strategy import BaseStrategy
 from .chained_strategy import  ChainedStrategy
+from .triangular_strategy import  TriangularStrategy
 
 
-__all__ = ['BaseStrategy', 'ChainedStrategy']
+__all__ = ['BaseStrategy', 'ChainedStrategy','TriangularStrategy']

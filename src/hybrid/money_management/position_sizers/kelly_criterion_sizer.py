@@ -1,8 +1,9 @@
 # position_sizers/kelly_criterion_sizer.py
 import logging
 from typing import TYPE_CHECKING
-from .sizer_interface import PositionSizingStrategy
-from src.hybrid.positions.trade_history import PositionOutcome
+
+from src.hybrid.money_management.position_sizers import PositionSizingStrategy
+from src.hybrid.positions.base_trade_history import PositionOutcome
 
 if TYPE_CHECKING:
     from src.hybrid.positions.types import TradingSignal, PortfolioState
@@ -168,11 +169,8 @@ class KellyCriterionSizer(PositionSizingStrategy):
         observed_avg_loss = abs(sum(o.net_pnl for o in losses) / len(losses)) if losses else 0
 
         # DEBUG
-        print(f"\nDEBUG n_outcomes: {n_outcomes}")
-        print(f"DEBUG wins: {len(wins)}, losses: {len(losses)}")
-        print(f"DEBUG observed_win_rate: {observed_win_rate}")
-        print(f"DEBUG prior_weight: {prior_weight}, data_weight: {data_weight}")
-        print(f"DEBUG bootstrap win_rate: {self.kelly_win_rate}")
+        logger.debug(f"n_outcomes: {n_outcomes}, wins: {len(wins)}, losses: {len(losses)}")
+        logger.debug(f"observed_win_rate: {observed_win_rate}, prior_weight: {prior_weight}")
 
         # Weighted combination
         win_rate = prior_weight * self.kelly_win_rate + data_weight * observed_win_rate

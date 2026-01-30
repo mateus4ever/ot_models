@@ -9,7 +9,7 @@ from src.hybrid.data import DataManager
 from src.hybrid.predictors.trend_duration_predictor import TrendDurationPredictor
 
 logger = logging.getLogger(__name__)
-scenarios('trend_duration_prediction.feature')
+scenarios('trend_duration_predictor.feature')
 
 # ==============================================================================
 # FIXTURES AND SETUP
@@ -96,8 +96,8 @@ def step_predict_duration(test_context, count):
     market_id = data_manager._active_market
     future_data = future_data_dict[market_id]
 
-    predictions = predictor.predict_duration(future_data)
-    test_context['predictions'] = predictions
+    result = predictor.predict(future_data)
+    test_context['predictions'] = result['predictions']
 
 @when(parsers.parse('I run duration chunked validation with {training_window} training window and {chunk_size:d} per chunk'))
 def step_duration_chunked_validation(test_context, training_window, chunk_size):
@@ -144,7 +144,7 @@ def step_duration_chunked_validation(test_context, training_window, chunk_size):
             break
 
         # Predict on future data
-        predictions = predictor.predict_duration(future_data)
+        predictions = predictor.predict(future_data)
 
         # Calculate actuals (duration labels for future data)
         actuals = predictor.create_duration_labels(future_data)
@@ -215,7 +215,7 @@ def then_predictions_length(test_context, count):
 @then('predictor should not be marked as trained')
 def then_predictor_not_trained(test_context):
     predictor = test_context['predictor']
-    assert not predictor.is_trained, "Predictor should not be trained with insufficient data"
+    assert not predictor._is_trained, "Predictor should not be trained with insufficient data"
 @then(parsers.parse('features should include {feature_name}'))
 def then_features_include(test_context, feature_name):
     predictor = test_context['predictor']

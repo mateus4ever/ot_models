@@ -14,7 +14,6 @@ from typing import Dict, List, Optional, Union
 import pandas as pd
 
 from .data_loader import FilePathLoader, FileDiscoveryLoader, DirectoryScanner
-from src.hybrid.positions.trade_history import TradeHistory
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +55,6 @@ class DataManager:
             'directory_scan': DirectoryScanner(data_config)
         }
 
-        self.trade_history = TradeHistory(config)
 
         logger.info("Initializing DataManager as data controller with Strategy pattern support")
         self._log_initialization_info()
@@ -450,6 +448,55 @@ class DataManager:
         logger.debug(f"Retrieved current data for {self._active_market} at timestamp {self.temporal_timestamp}")
         return current_data
 
+    def get_markets_past_data(self, market_ids: List[str]) -> Dict[str, pd.DataFrame]:
+        """Get past data for multiple specified markets
+
+        Args:
+            market_ids: List of market identifiers to retrieve
+
+        Returns:
+            Dictionary mapping market_id to past data DataFrame
+
+        Raises:
+            ValueError: If temporal pointer not initialized or market not loaded
+        """
+        if self.temporal_timestamp is None:
+            raise ValueError("Temporal pointer not initialized. Call initialize_temporal_pointer() first.")
+
+        result = {}
+        for market_id in market_ids:
+            if market_id not in self._cached_data:
+                raise ValueError(f"Market {market_id} not loaded. Available: {list(self._cached_data.keys())}")
+
+            df = self._cached_data[market_id]
+            result[market_id] = df.loc[:self.temporal_timestamp].copy()
+
+        logger.debug(f"Retrieved past data for {len(market_ids)} markets before {self.temporal_timestamp}")
+        return result
+
+    def get_markets_current_data(self, market_ids: List[str]) -> Dict[str, pd.Series]:
+        """Get current data for multiple specified markets
+
+        Args:
+            market_ids: List of market identifiers to retrieve
+
+        Returns:
+            Dictionary mapping market_id to current record Series
+        """
+        if self.temporal_timestamp is None:
+            raise ValueError("Temporal pointer not initialized. Call initialize_temporal_pointer() first.")
+
+        result = {}
+        for market_id in market_ids:
+            if market_id not in self._cached_data:
+                raise ValueError(f"Market {market_id} not loaded. Available: {list(self._cached_data.keys())}")
+
+            df = self._cached_data[market_id]
+            result[market_id] = df.loc[self.temporal_timestamp].copy()
+
+        logger.debug(f"Retrieved current data for {len(market_ids)} markets at {self.temporal_timestamp}")
+        return result
+
     def get_future_data_preview(self, lookahead_records: int = None) -> Dict[str, pd.DataFrame]:
         """Get future data for prediction validation (NOT for training)
 
@@ -559,32 +606,32 @@ class DataManager:
         logger.info(
             f"Data cache cleared: {cached_count} market data entries, {training_cached_count} training data entries")
 
-    def prepare_training_data(self, training_window: int) -> bool:
-        """Prepare training data for strategies - no DataFrame exposure
+    def align_market_data(self, market_ids: List[str]):
+        """Keep only timestamps that exist in ALL markets (inner join)"""
+        if not market_ids:
+            return
 
-        Args:
-            training_window: Size of training window
+        common_index = None
+        for market_id in market_ids:
+            if market_id not in self._cached_data:
+                raise ValueError(f"Market {market_id} not loaded")
+            df = self._cached_data[market_id]
+            if common_index is None:
+                common_index = df.index
+            else:
+                common_index = common_index.intersection(df.index)
 
-        Returns:
-            Success status
-        """
-        logger.info(f"Preparing training data with window size: {training_window}")
+        original_counts = {m: len(self._cached_data[m]) for m in market_ids}
 
-        if self._active_market is None or self._active_market not in self._cached_data:
-            logger.error("No active market data loaded for training preparation")
-            return False
+        for market_id in market_ids:
+            self._cached_data[market_id] = self._cached_data[market_id].loc[common_index]
 
-        active_df = self._cached_data[self._active_market]
-
-        if len(active_df) < training_window:
-            logger.warning(f"Active market has only {len(active_df)} periods, less than required {training_window}")
-            self.training_window_size = len(active_df)
-        else:
-            self.training_window_size = training_window
-
-        logger.info(
-            f"Training data prepared for {self._active_market} with effective window: {self.training_window_size}")
-        return True
+        new_count = len(common_index)
+        logger.info(f"Aligned {len(market_ids)} markets to {new_count} common timestamps")
+        for market_id in market_ids:
+            dropped = original_counts[market_id] - new_count
+            if dropped > 0:
+                logger.debug(f"  {market_id}: dropped {dropped} rows")
 
     def _log_initialization_info(self):
         """Log initialization information for debugging"""

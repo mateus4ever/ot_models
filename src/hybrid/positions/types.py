@@ -1,5 +1,5 @@
 # types.py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Optional
 
@@ -16,7 +16,7 @@ class TradingSignal:
     signal_strength: float  # Signal strength 0.0 to 1.0
     entry_price: float
     timestamp: pd.Timestamp
-
+    metadata: dict = field(default_factory=dict)
 
 @dataclass
 class Position:

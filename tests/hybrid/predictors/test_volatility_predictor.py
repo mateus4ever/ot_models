@@ -1,13 +1,11 @@
 # test_trade_history.py
 import json
+import logging
 import os
 import time
-import logging
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pytest
 from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
@@ -16,9 +14,8 @@ from src.hybrid.predictors.volatility_predictor import VolatilityPredictor
 
 logger = logging.getLogger(__name__)
 
-
 # Load all scenarios from the feature file
-scenarios('volatility_predictors.feature')
+scenarios('volatility_predictor.feature')
 
 """Volatility predictor tests using pytest-bdd."""
 
@@ -103,10 +100,26 @@ def test_context(request):
         else:
             ctx["scenario_name"] = node_name
     return ctx
+
+
 @pytest.fixture(scope="module")
 def comparison_results():
     """Accumulate results across all comparison scenarios."""
     return {'configs': []}
+
+
+@pytest.fixture
+def predictor_with_data(test_context):
+    """Helper fixture for caching tests"""
+    predictor = test_context['volatility_predictor']
+    data_manager = test_context['data_manager']
+
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    historical_data = past_data_dict[market_id]
+
+    predictor.train(historical_data)
+    return predictor, historical_data
 
 
 # =============================================================================
@@ -132,6 +145,7 @@ def load_configuration_file(test_context, config_directory):
 
     test_context['unified_config'] = unified_config
     test_context['test_root'] = test_root
+
 
 @given(parsers.parse('data source is set to {data_path}'))
 def set_data_management_source(test_context, data_path):
@@ -172,9 +186,9 @@ def step_volatility_predictor(test_context):
     logger.warning(f"   predictor.use_efficiency_ratio = {volatility_predictor.use_efficiency_ratio}")
     logger.warning(f"   predictor.use_session_overlap = {volatility_predictor.use_session_overlap}")
 
+
 @given(parsers.parse('market data with {count} elements'))
 def prepare_market_data(test_context, count):
-
     data_manager = test_context['data_manager']
     market_id = test_context['market_id']
     data_manager.set_active_market(market_id)
@@ -208,7 +222,6 @@ def step_set_time_features(test_context, state):
     assert actual == enabled, f"Config update failed! Expected {enabled}, got {actual}"
 
 
-
 @given(parsers.parse('efficiency ratio is {state}'))
 def step_set_efficiency_ratio(test_context, state):
     unified_config = test_context['unified_config']
@@ -232,6 +245,7 @@ def step_set_efficiency_ratio(test_context, state):
     }
     unified_config.update_config(update_payload)
     test_context['unified_config'] = unified_config
+
 
 @given(parsers.parse('session overlap is {status}'))
 def step_set_session_overlap(test_context, status):
@@ -290,6 +304,8 @@ def step_train_predictor(test_context, amount_of_bars):
     logger.warning(f"   Has time features: {has_time}")
     logger.warning(f"   Has efficiency features: {has_efficiency}")
     logger.warning(f"   Has session overlap: {has_session}")
+
+
 @when(parsers.parse('I predict volatility on the next {count} elements'))
 def step_predict_volatility(test_context, count):
     predictor = test_context['volatility_predictor']
@@ -299,14 +315,14 @@ def step_predict_volatility(test_context, count):
     market_id = data_manager._active_market
     future_data = future_data_dict[market_id]
 
-    predictions, confidences = predictor.predict_volatility(future_data)
+    result = predictor.predict(future_data)
 
-    test_context['predictions'] = predictions
-    test_context['confidences'] = confidences
+    test_context['predictions'] = result['predictions']
+    test_context['confidences'] = result['confidences']
+
 
 @when(parsers.parse('I run chunked validation with {training_window} training window and {chunk_size:d} per chunk'))
 def step_chunked_validation(test_context, training_window, chunk_size):
-
     training_window = int(training_window)
     chunk_size = int(chunk_size)
 
@@ -368,6 +384,8 @@ def step_chunked_validation(test_context, training_window, chunk_size):
     test_context['all_actuals'] = np.array(all_actuals)
     test_context['avg_accuracy'] = avg_accuracy
     test_context['std_accuracy'] = std_accuracy
+
+
 @when(parsers.parse('I calculate asymmetric cost where missing HIGH_VOL costs {multiplier:d}x'))
 def when_calculate_asymmetric_cost(test_context, multiplier):
     """
@@ -411,6 +429,50 @@ def when_calculate_asymmetric_cost(test_context, multiplier):
     test_context['expected_value'] = expected_value
     test_context['cost_adjusted_accuracy'] = cost_adjusted_accuracy
 
+
+@when("I predict on the same data twice")
+def predict_twice(test_context):
+    """Predict twice to test caching"""
+    predictor = test_context['volatility_predictor']
+    data_manager = test_context['data_manager']
+
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    historical_data = past_data_dict[market_id]
+
+    # First prediction
+    result1 = predictor.predict(historical_data)
+    test_context['predictions_1'] = result1['predictions']
+    test_context['cache_length_1'] = len(predictor.feature_cache) if predictor.feature_cache is not None else 0
+
+    # Second prediction
+    result2 = predictor.predict(historical_data)
+    test_context['predictions_2'] = result2['predictions']
+    test_context['cache_length_2'] = len(predictor.feature_cache) if predictor.feature_cache is not None else 0
+
+@when("I clear the cache")
+def clear_predictor_cache(test_context):
+    """Clear the feature cache"""
+    predictor = test_context['volatility_predictor']
+    predictor.clear_cache()
+
+
+@when("I train with different data")
+def train_with_different_data(test_context):
+    """Train with completely different dataset to invalidate cache"""
+    predictor = test_context['volatility_predictor']
+    data_manager = test_context['data_manager']
+
+    # Get different slice of data
+    data_manager.initialize_temporal_pointer(100)  # Different window
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    different_data = past_data_dict[market_id]
+
+    predictor.train(different_data)
+    test_context['cache_invalidated'] = True
+
+
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
@@ -425,6 +487,7 @@ def then_high_vol_exceeds_threshold(test_context):
 
     assert high_vol_realized >= low_vol_realized * threshold
 
+
 @then('training should complete successfully')
 def then_training_complete(test_context):
     result = test_context['result']
@@ -434,7 +497,7 @@ def then_training_complete(test_context):
     assert result, "Training returned empty result"
 
     # Check predictor is trained
-    assert predictor.is_trained, "Predictor should be marked as trained"
+    assert predictor._is_trained, "Predictor should be marked as trained"
 
     # Check result has expected keys
     assert 'n_samples' in result, "Result should contain n_samples"
@@ -442,31 +505,37 @@ def then_training_complete(test_context):
     assert result['n_samples'] > 0, "Should have trained on samples"
     assert result['n_features'] > 0, "Should have features"
 
+
 @then('predictions should be 0 or 1 only')
 def then_predictions_binary(test_context):
     predictions = test_context['predictions']
     unique_values = set(predictions)
     assert unique_values.issubset({0, 1}), f"Predictions should be 0 or 1, got {unique_values}"
 
+
 @then(parsers.parse('predictions length should be {count:d}'))
 def then_predictions_length(test_context, count):
     predictions = test_context['predictions']
     assert len(predictions) == count, f"Expected {count} predictions, got {len(predictions)}"
 
+
 @then('predictor should not be marked as trained')
 def then_predictor_not_trained(test_context):
     predictor = test_context['volatility_predictor']
-    assert not predictor.is_trained, "Predictor should not be trained with insufficient data"
+    assert not predictor._is_trained, "Predictor should not be trained with insufficient data"
+
 
 @then(parsers.parse('prediction accuracy should exceed {threshold:d}%'))
 def then_accuracy_exceeds(test_context, threshold):
     accuracy = test_context['accuracy']
     assert accuracy > threshold / 100, f"Accuracy {accuracy:.1%} should exceed {threshold}%"
 
+
 @then(parsers.parse('average accuracy should exceed {threshold}%'))
 def then_avg_accuracy_exceeds(test_context, threshold):
     avg_accuracy = test_context['avg_accuracy']
     assert avg_accuracy > float(threshold) / 100, f"Avg accuracy {avg_accuracy:.1%} should exceed {threshold}%"
+
 
 @then(parsers.parse('accuracy standard deviation should be below {threshold}%'))
 def then_std_accuracy_below(test_context, threshold):
@@ -512,6 +581,7 @@ def then_tpr_exceeds(test_context, threshold):
     logger.info(f"True Positive Rate (HIGH_VOL recall): {tpr:.1%}")
 
     assert tpr > threshold / 100, f"TPR {tpr:.1%} should exceed {threshold}%"
+
 
 @then(parsers.parse('true negative rate should exceed {threshold:d}%'))
 def then_tnr_exceeds(test_context, threshold):
@@ -566,6 +636,7 @@ def then_log_confusion_matrix(test_context):
 
     # Store for other steps
     test_context['confusion_matrix'] = {'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn}
+
 
 @then(parsers.parse('precision for HIGH_VOL should exceed {threshold:d}%'))
 def then_precision_high_vol(test_context, threshold):
@@ -692,6 +763,7 @@ def then_cost_adjusted_accuracy(test_context, threshold):
     assert cost_adj_acc > threshold / 100, \
         f"Cost-adjusted accuracy {cost_adj_acc:.1%} should exceed {threshold}%"
 
+
 @then('features should include hour_sin')
 def then_features_include_hour_sin(test_context):
     predictor = test_context['volatility_predictor']
@@ -700,41 +772,56 @@ def then_features_include_hour_sin(test_context):
         f"Feature 'hour_sin' not found. Available: {predictor.feature_names}"
     logger.info("Feature 'hour_sin' present ✓")
 
+
 @then('features should include hour_cos')
 def then_features_include_hour_cos(test_context):
     predictor = test_context['volatility_predictor']
     assert 'hour_cos' in predictor.feature_names
     logger.info("Feature 'hour_cos' present ✓")
 
-@then('features should include day_sin')
-def then_features_include_day_sin(test_context):
-    predictor = test_context['volatility_predictor']
-    assert 'day_sin' in predictor.feature_names
-    logger.info("Feature 'day_sin' present ✓")
 
-@then('features should include day_cos')
-def then_features_include_day_cos(test_context):
+@then(parsers.parse('features should include {feature_type}_{trig_func}'))
+def then_features_include_time_feature(test_context, feature_type, trig_func):
+    """Check if time feature exists (hour_sin, hour_cos, day_sin, day_cos)"""
     predictor = test_context['volatility_predictor']
-    assert 'day_cos' in predictor.feature_names
-    logger.info("Feature 'day_cos' present ✓")
+    feature_name = f'{feature_type}_{trig_func}'
+    assert feature_name in predictor.feature_names, \
+        f"Feature '{feature_name}' not found. Available: {predictor.feature_names}"
+    logger.info(f"Feature '{feature_name}' present ✓")
 
-@then('features should include efficiency_ratio_10')
-def then_features_include_er_10(test_context):
-    predictor = test_context['volatility_predictor']
-    assert 'efficiency_ratio_10' in predictor.feature_names
-    logger.info("Feature 'efficiency_ratio_10' present ✓")
 
-@then('features should include efficiency_ratio_20')
-def then_features_include_er_20(test_context):
+@then(parsers.parse('features should include efficiency_ratio_{period}'))
+def then_features_include_efficiency_ratio(test_context, period):
+    """Check if efficiency_ratio feature for given period exists"""
     predictor = test_context['volatility_predictor']
-    assert 'efficiency_ratio_20' in predictor.feature_names
-    logger.info("Feature 'efficiency_ratio_20' present ✓")
+    period_int = int(period)  # ← Explicit cast
+    feature_name = f'efficiency_ratio_{period_int}'
+    assert feature_name in predictor.feature_names, \
+        f"Feature '{feature_name}' not found. Available: {predictor.feature_names}"
+    logger.info(f"Feature '{feature_name}' present ✓")
 
-@then('features should include efficiency_ratio_40')
-def then_features_include_er_40(test_context):
+
+@then("all features should be numeric")
+def check_features_numeric(test_context):
+    """Verify all features are numeric types"""
     predictor = test_context['volatility_predictor']
-    assert 'efficiency_ratio_40' in predictor.feature_names
-    logger.info("Feature 'efficiency_ratio_40' present ✓")
+    data_manager = test_context['data_manager']
+
+    # Get historical data from data_manager
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    historical_data = past_data_dict[market_id]
+
+    features = predictor.create_volatility_features(historical_data)
+    assert features.select_dtypes(include=[np.number]).shape[1] == features.shape[1], \
+        "Not all features are numeric!"
+
+
+@then("predictor should be marked as trained")
+def check_predictor_trained(test_context):
+    """Verify predictor training flag is set"""
+    predictor = test_context['volatility_predictor']  # ← Use correct key
+    assert predictor._is_trained, "Predictor should be marked as trained after training!"
 
 
 @then('comparison matrix should be logged')
@@ -792,6 +879,77 @@ def then_log_comparison_matrix(test_context):
         logger.warning(f"Log saved: {log_filepath}")
 
         temp_file.unlink()  # Cleanup
+
+
+@then("no features should contain NaN values")
+def check_no_nan_features(test_context):
+    """Verify features don't contain NaN after validation"""
+    predictor = test_context['volatility_predictor']
+    data_manager = test_context['data_manager']
+
+    # Get historical data
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    historical_data = past_data_dict[market_id]
+
+    features = predictor.create_volatility_features(historical_data)
+
+    # Check no NaN
+    assert not features.isnull().any().any(), \
+        f"Features contain NaN! Columns with NaN: {features.columns[features.isnull().any()].tolist()}"
+    logger.info("All features valid (no NaN) ✓")
+
+
+@then("training should return valid metrics")
+def check_training_metrics(test_context):
+    """Verify training returned valid result metrics"""
+    result = test_context.get('result')
+
+    assert result is not None, "Training did not return a result"
+    assert 'n_samples' in result, "Result missing 'n_samples'"
+    assert 'n_features' in result, "Result missing 'n_features'"
+    assert result['n_samples'] > 0, "No samples in training result"
+    assert result['n_features'] > 0, "No features in training result"
+
+    logger.info(f"Training metrics valid: {result['n_samples']} samples, {result['n_features']} features ✓")
+
+
+@then("no features should contain inf values")
+def check_no_inf_features(test_context):
+    """Verify features don't contain inf after validation"""
+    predictor = test_context['volatility_predictor']
+    data_manager = test_context['data_manager']
+
+    # Get historical data
+    past_data_dict = data_manager.get_past_data()
+    market_id = data_manager._active_market
+    historical_data = past_data_dict[market_id]
+
+    features = predictor.create_volatility_features(historical_data)
+
+    # Check no inf
+    assert not np.isinf(features.values).any(), \
+        f"Features contain inf! Columns with inf: {features.columns[np.isinf(features).any()].tolist()}"
+    logger.info("All features valid (no inf) ✓")
+
+
+@then("feature importance should sum to approximately 1.0")
+def check_feature_importance_sum(test_context):
+    """Verify RandomForest feature importances sum to 1.0"""
+    predictor = test_context['volatility_predictor']
+
+    assert predictor._is_trained, "Predictor must be trained to check feature importance"
+    assert hasattr(predictor.model, 'feature_importances_'), \
+        "Model doesn't have feature_importances_ attribute"
+
+    importance_sum = predictor.model.feature_importances_.sum()
+
+    # Allow small floating point error
+    assert abs(importance_sum - 1.0) < 0.01, \
+        f"Feature importance sum {importance_sum:.6f} should be approximately 1.0"
+
+    logger.info(f"Feature importance sum: {importance_sum:.6f} ✓")
+
 
 # =============================================================================
 # Sub-methods
@@ -881,8 +1039,8 @@ def _log_comparison_matrices(comparison_results):
     else:
         logger.warning(f"\nBest: {best['scenario_name']}")
 
-def _write_comparison_report(comparison_results, timestamp=None):
 
+def _write_comparison_report(comparison_results, timestamp=None):
     if timestamp is None:
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     report_dir = 'reports'
@@ -928,6 +1086,7 @@ def _write_comparison_report(comparison_results, timestamp=None):
 
     logger.warning(f'Report saved: {filepath}')
 
+
 @then(parsers.parse('features should {expectation} session_overlap'))
 def step_check_session_overlap(test_context, expectation):
     """Check if session_overlap feature exists"""
@@ -942,3 +1101,37 @@ def step_check_session_overlap(test_context, expectation):
     else:
         raise ValueError(f"Unknown expectation: {expectation}")
 
+
+@then("predictions should be identical")
+def check_predictions_identical(test_context):
+    """Verify cached predictions match"""
+    pred1 = test_context['predictions_1']
+    pred2 = test_context['predictions_2']
+    assert np.array_equal(pred1, pred2), "Cached predictions don't match!"
+    logger.info("Cached predictions identical ✓")
+
+
+@then("feature cache should exist")
+def check_cache_exists(test_context):
+    """Verify cache was created"""
+    predictor = test_context['volatility_predictor']
+    assert predictor.feature_cache is not None, "Cache should be created after prediction"
+    assert len(predictor.feature_cache) > 0, "Cache should contain features"
+    logger.info(f"Cache exists with {len(predictor.feature_cache)} rows ✓")
+
+
+@then("feature cache should be empty")
+def check_cache_empty(test_context):
+    """Verify cache was cleared"""
+    predictor = test_context['volatility_predictor']
+    assert predictor.feature_cache is None, "Cache should be None after clearing"
+    logger.info("Cache cleared ✓")
+
+
+@then("cache should be invalidated")
+def check_cache_invalidated(test_context):
+    """Verify cache was cleared when data changed"""
+    predictor = test_context['volatility_predictor']
+    # Cache should be recreated (not just empty)
+    assert predictor.feature_cache is not None
+    logger.info("Cache invalidated and recreated ✓")

@@ -71,6 +71,18 @@ Scenario: Training should succeed and produce valid model
   And training should return valid metrics
   And feature importance should sum to approximately 1.0
 
+@unit
+Scenario: Incremental feature caching should reuse computed features
+  Given config files are available in tests/config/predictors
+  And data source is set to data/small
+  And create a VolatilityPredictor and DataManager
+  When I train the predictor with 200 historical elements
+  And I predict on the same data twice
+  Then predictions should be identical
+  And feature cache should exist
+  When I clear the cache
+  Then feature cache should be empty
+
 # ==============================================================================
 # COMPARISON - A/B testing different configurations
 # ==============================================================================

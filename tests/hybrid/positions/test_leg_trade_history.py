@@ -6,10 +6,10 @@ from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
 # Import the classes we're testing
-from src.hybrid.positions.trade_history import TradeHistory, TradeStatistics
+from src.hybrid.positions.leg_trade_history import LegTradeHistory
 
 # Load all scenarios from the feature file
-scenarios('trade_history.feature')
+scenarios('leg_trade_history.feature')
 
 
 # ==============================================================================
@@ -52,18 +52,15 @@ def load_configuration_file(test_context, config_file, config_directory):
     test_context['root_path'] = root_path
     test_context['config_path'] = full_config_path
 
-
-@given('I have a TradeHistory instance with base_currency "USD"')
+@given('I have a LegTradeHistory instance with base_currency "USD"')
 def trade_history_instance_with_usd(test_context):
-    """Create TradeHistory instance with USD currency"""
-    config = test_context['dm_config']  # Load real config files
-    pytest.trade_history = TradeHistory(config)
-
+    """Create LegTradeHistory instance with USD currency"""
+    config = test_context['dm_config']
+    test_context['leg_trade_history'] = LegTradeHistory(config)
 
 @given(parsers.parse('I have loaded trade data from "{file_path}"'))
 def loaded_trade_data(test_context, file_path):
-    """Ensure trade data is loaded"""
-    success = pytest.trade_history.load_from_json(file_path)
+    success = test_context['leg_trade_history'].load_from_json(file_path)
     test_context['load_success'] = success
 
 
@@ -92,20 +89,17 @@ def create_test_position_with_cost_model(test_context, entry_price, exit_price, 
 
 @given('I have loaded trade history data for persistence testing')
 def prepare_trade_history_for_persistence_test(test_context):
-    """Capture original state for save/load comparison"""
-    # The trade history is already loaded from Background
-    original_stats = pytest.trade_history.get_trade_statistics(lookback_periods=0)
-    original_count = pytest.trade_history.get_trade_count()
+    leg_trade_history = test_context['leg_trade_history']
+    original_stats = leg_trade_history.get_trade_statistics(lookback_periods=0)
+    original_count = leg_trade_history.get_trade_count()
     test_context['original_stats'] = original_stats
     test_context['original_count'] = original_count
-    test_context['original_trades'] = list(pytest.trade_history.trades.values()).copy()
+    test_context['original_trades'] = list(leg_trade_history.trades.values()).copy()
 
 @given(parsers.parse('I have a new trade with timestamp "{timestamp}"'))
 def create_new_trade_with_timestamp(test_context, timestamp):
-    """Create new trade with specified timestamp"""
     test_context['new_trade_timestamp'] = timestamp
-    test_context['original_count'] = pytest.trade_history.get_trade_count()
-
+    test_context['original_count'] = test_context['leg_trade_history'].get_trade_count()
 
 @given(parsers.parse(
     'the trade has position with symbol {symbol}, type {position_type}, entry_price {entry_price}, quantity {quantity}'))
@@ -131,11 +125,11 @@ def add_position_to_new_trade(test_context, symbol, position_type, entry_price, 
         'status': 'open'
     }
 
-@given(parsers.parse('I have a TradeHistory with trade pattern from "{file_path}"'))
+@given(parsers.parse('I have a LegTradeHistory with trade pattern from "{file_path}"'))
 def create_trade_history_with_pattern(test_context, file_path):
-    """Load TradeHistory with specific trade pattern from configurable file path"""
+    """Load LegTradeHistory with specific trade pattern from configurable file path"""
     config = test_context['dm_config']  # Load real config files
-    test_trade_history = TradeHistory(config)
+    test_trade_history = LegTradeHistory(config)
 
     success = test_trade_history.load_from_json(file_path)
 
@@ -147,164 +141,125 @@ def create_trade_history_with_pattern(test_context, file_path):
 # WHEN steps - Actions
 # =============================================================================
 
-@when('I access positions from the loaded trades')
-def access_positions():
-    """Access position data from trades"""
-    pytest.positions = pytest.trade_history.all_positions
-
 
 @when('I calculate the position outcome')
 def calculate_position_outcome(test_context):
-    """Calculate outcome for test position"""
     position = test_context['test_position']
+    leg_trade_history = test_context['leg_trade_history']
 
-    # Add trade to history (triggers cost calculation)
-    success = pytest.trade_history.add_trade(position)
+    success = leg_trade_history.add_trade(position)
     assert success, "Failed to add test position to trade history"
 
-    # Now get the stored trade with calculated costs
-    timestamp = pytest.trade_history._parse_timestamp(position['timestamp'])
-    stored_trade = pytest.trade_history.trades[timestamp]
-
-    # Calculate outcome from stored trade (now has costs)
-    outcome = pytest.trade_history._calculate_position_outcome(stored_trade)
+    timestamp = leg_trade_history._parse_timestamp(position['timestamp'])
+    stored_trade = leg_trade_history.trades[timestamp]
+    outcome = leg_trade_history._calculate_position_outcome(stored_trade)
     test_context['calculated_outcome'] = outcome
-
 
 @when('I calculate trade statistics from all positions')
 def calculate_trade_statistics_all_positions(test_context):
-    """Calculate trade statistics from all loaded positions"""
-    # Use the global pytest.trade_history instead
-    statistics = pytest.trade_history.get_trade_statistics(lookback_periods=0)
-
-    # Store in context for verification steps
+    statistics = test_context['leg_trade_history'].get_trade_statistics(lookback_periods=0)
     test_context['calculated_statistics'] = statistics
 
 @when(parsers.parse('I save the trade history to "{file_path}"'))
 def save_trade_history_to_file(test_context, file_path):
-    """Save trade history to specified file"""
-    success = pytest.trade_history.save_to_json(file_path)
+    success = test_context['leg_trade_history'].save_to_json(file_path)
     test_context['save_success'] = success
     test_context['save_file_path'] = file_path
 
-@when('I create a new TradeHistory instance')
+@when('I create a new LegTradeHistory instance')
 def create_new_trade_history_instance(test_context):
-    """Create fresh TradeHistory instance"""
-
     dm_config = test_context['dm_config']
-    pytest.new_trade_history = TradeHistory(dm_config)
+    test_context['new_leg_trade_history'] = LegTradeHistory(dm_config)
 
 @when(parsers.parse('I load trade data from "{file_path}"'))
-def load_trade_data_from_file(file_path):
-    """Load data into new TradeHistory instance"""
-    success = pytest.new_trade_history.load_from_json(file_path)
-    pytest.load_success = success
+def load_trade_data_from_file(test_context, file_path):
+    success = test_context['new_leg_trade_history'].load_from_json(file_path)
+    test_context['load_success'] = success
 
 @when(parsers.parse('I calculate trade statistics with lookback {lookback_periods}'))
 def calculate_trade_statistics_with_lookback(test_context, lookback_periods):
-    """Calculate trade statistics with specified lookback window"""
     lookback = int(lookback_periods)
-    statistics = pytest.trade_history.get_trade_statistics(lookback_periods=lookback)
+    statistics = test_context['leg_trade_history'].get_trade_statistics(lookback_periods=lookback)
     test_context['calculated_statistics'] = statistics
     test_context['lookback_used'] = lookback
 
-
-@when('I identify open and closed positions')
-def identify_open_and_closed_positions(test_context):
-    """Identify and categorize positions by status"""
-    all_positions = pytest.trade_history.all_positions
-
-    open_positions = [p for p in all_positions if p.get('status') == 'open']
-    closed_positions = [p for p in all_positions if p.get('status') == 'closed']
-
-    test_context['open_positions'] = open_positions
-    test_context['closed_positions'] = closed_positions
-
 @when('I add the trade to history')
 def add_trade_to_history(test_context):
-    """Add the new trade to trade history"""
-    success = pytest.trade_history.add_trade(test_context['new_trade_data'])
+    success = test_context['leg_trade_history'].add_trade(test_context['new_trade_data'])
     test_context['add_success'] = success
 
 @when('I calculate trade statistics')
 def calculate_edge_case_statistics(test_context):
-    """Calculate statistics for edge case scenario"""
+    """For edge case tests - may throw ValueError"""
     trade_history = test_context['test_trade_history']
-    statistics = trade_history.get_trade_statistics(lookback_periods=0)
-    test_context['calculated_statistics'] = statistics
-
-
-@when(parsers.parse('I encounter {error_condition} during operation'))
-def encounter_error_condition(test_context, error_condition):
-    """Trigger specific error conditions"""
-    dm_config = test_context['dm_config']
-    test_trade_history = TradeHistory(dm_config)
-
-    if error_condition == 'missing_json_file':
-        result = test_trade_history.load_from_json('tests/data/trade/nonexistent_file.json')
-        test_context['operation_result'] = result
-        test_context['expected_result'] = False
-
-    elif error_condition.endswith('invalid_timestamp_trade.json'):
-        result = test_trade_history.load_from_json(error_condition)
-        test_context['operation_result'] = result
-        test_context['expected_result'] = True  # Load succeeds, but trades skipped
-        test_context['trade_count'] = test_trade_history.get_trade_count()
-        test_context['expected_trade_count'] = 0
-
-    elif error_condition.endswith('.json'):
-        result = test_trade_history.load_from_json(error_condition)
-        test_context['operation_result'] = result
-        test_context['expected_result'] = False
-
+    try:
+        statistics = trade_history.get_trade_statistics(lookback_periods=0)
+        test_context['calculated_statistics'] = statistics
+        test_context['statistics_exception'] = None
+    except ValueError as e:
+        test_context['calculated_statistics'] = None
+        test_context['statistics_exception'] = e
 
 @when('I identify open and closed trades')
 def identify_open_closed_trades(test_context):
-    """Identify and store open and closed trades"""
     test_context['open_trades'] = []
     test_context['closed_trades'] = []
-
-    for trade_data in pytest.trade_history.trades.values():
+    for trade_data in test_context['leg_trade_history'].trades.values():
         if trade_data.get('status') == 'open':
             test_context['open_trades'].append(trade_data)
         elif trade_data.get('status') == 'closed':
             test_context['closed_trades'].append(trade_data)
+
+@when(parsers.parse('I load from nonexistent file "{file_path}"'))
+def load_nonexistent_file(test_context, file_path):
+    """Attempt to load from nonexistent file"""
+    config = test_context['dm_config']
+    trade_history = LegTradeHistory(config)
+    result = trade_history.load_from_json(file_path)
+    test_context['load_result'] = result
+
+@when(parsers.parse('I load from malformed file "{file_path}"'))
+def load_malformed_file(test_context, file_path):
+    """Attempt to load from malformed JSON file"""
+    config = test_context['dm_config']
+    trade_history = LegTradeHistory(config)
+    result = trade_history.load_from_json(file_path)
+    test_context['load_result'] = result
+
+@when(parsers.parse('I load from file with invalid timestamp "{file_path}"'))
+def load_invalid_timestamp_file(test_context, file_path):
+    """Attempt to load from file with invalid timestamps"""
+    config = test_context['dm_config']
+    trade_history = LegTradeHistory(config)
+    result = trade_history.load_from_json(file_path)
+    test_context['load_result'] = result
+
 
 # =============================================================================
 # THEN steps - Assertions
 # =============================================================================
 @then('each trade should have required fields')
 def verify_trade_has_required_fields(test_context):
-    """Verify each trade has required fields for new format"""
     required_fields = ['timestamp', 'entry_price', 'exit_price', 'quantity',
                        'direction', 'entry_date', 'exit_date', 'symbol']
-
-    for trade_data in pytest.trade_history.trades.values():
+    for trade_data in test_context['leg_trade_history'].trades.values():
         for field in required_fields:
-            assert field in trade_data, f"Trade missing required field: {field}"
-
+            assert field in trade_data
 @then(parsers.parse('each trade should have symbol "{expected_symbol}"'))
-def verify_trade_symbol(expected_symbol):
-    """Verify all trades have expected symbol"""
-    for trade_data in pytest.trade_history.trades.values():
-        assert trade_data.get('symbol') == expected_symbol, \
-            f"Trade has wrong symbol: {trade_data.get('symbol')}, expected: {expected_symbol}"
-
+def verify_trade_symbol(test_context, expected_symbol):
+    for trade_data in test_context['leg_trade_history'].trades.values():
+        assert trade_data.get('symbol') == expected_symbol
 
 @then(parsers.parse('each trade should have {field1}, {field2}, {field3}, and {field4}'))
-def verify_trade_has_fields(field1, field2, field3, field4):
-    """Verify trades have specified fields"""
+def verify_trade_has_fields(test_context, field1, field2, field3, field4):
     required_fields = [field1, field2, field3, field4]
-
-    for trade_data in pytest.trade_history.trades.values():
+    for trade_data in test_context['leg_trade_history'].trades.values():
         for field in required_fields:
-            assert field in trade_data, f"Trade missing field: {field}"
-
+            assert field in trade_data
 
 @then(parsers.parse('closed trades should have {field1} and {field2}'))
-def verify_closed_trades_have_fields(field1, field2):
-    """Verify closed trades have specified fields"""
-    for trade_data in pytest.trade_history.trades.values():
+def verify_closed_trades_have_fields(test_context, field1, field2):
+    for trade_data in test_context['leg_trade_history'].trades.values():
         if trade_data.get('status') == 'closed':
             assert field1 in trade_data, f"Closed trade missing {field1}"
             assert field2 in trade_data, f"Closed trade missing {field2}"
@@ -314,44 +269,9 @@ def verify_closed_trades_have_fields(field1, field2):
 
 @then(parsers.parse('{expected_count:d} trades should be loaded successfully'))
 def verify_trades_loaded_successfully(test_context, expected_count):
-    """Verify expected number of trades loaded"""
-    assert test_context['load_success'] == True  # Now assert here
-    actual_count = pytest.trade_history.get_trade_count()
+    assert test_context['load_success'] == True
+    actual_count = test_context['leg_trade_history'].get_trade_count()
     assert actual_count == expected_count
-
-
-@then('each trade should have at least one position')
-def each_trade_has_position():
-    """Verify all trades have positions"""
-    assert len(pytest.positions) > 0
-
-
-@then(parsers.parse('each position should have name_of_position "{symbol}"'))
-def positions_have_symbol(symbol):
-    """Verify positions have correct symbol"""
-    for pos in pytest.positions:
-        assert pos.get('name_of_position') == symbol
-
-
-@then('each position should have entry_value, currency, entry_fees, and exit_fees')
-def positions_have_required_fields():
-    """Verify positions have required fields"""
-    for pos in pytest.positions:
-        assert 'entry_value' in pos
-        assert 'currency' in pos
-        assert 'entry_fees' in pos
-        # exit_fees can be null for open positions, so check if key exists
-        assert 'exit_fees' in pos
-
-
-@then('closed positions should have exit_value and exit_timestamp')
-def closed_positions_have_exit_data():
-    """Verify closed positions have exit information"""
-    closed_positions = [p for p in pytest.positions if p.get('status') == 'closed']
-    for pos in closed_positions:
-        assert pos.get('exit_value') is not None
-        assert pos.get('exit_timestamp') is not None
-
 
 @then(parsers.parse('the outcome should be {expected_outcome}'))
 def verify_position_outcome(test_context, expected_outcome):
@@ -396,56 +316,6 @@ def verify_fees_subtracted(test_context):
     if quantity > 0 and entry_price > 0:
         assert outcome.fees > 0, "Fees should be calculated for real trades"
 
-@then('the statistics should include total_positions count')
-def verify_total_positions_count(test_context):
-    """Verify total positions count is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'total_positions')
-    assert stats.total_positions >= 0
-
-@then('the statistics should include winning_positions count')
-def verify_winning_positions_count(test_context):
-    """Verify winning positions count is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'winning_positions')
-    assert stats.winning_positions >= 0
-
-@then('the statistics should include losing_positions count')
-def verify_losing_positions_count(test_context):
-    """Verify losing positions count is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'losing_positions')
-    assert stats.losing_positions >= 0
-
-@then('the statistics should include break_even_positions count')
-def verify_break_even_positions_count(test_context):
-    """Verify break even positions count is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'break_even_positions')
-    assert stats.break_even_positions >= 0
-
-@then('the statistics should include total_pnl amount')
-def verify_total_pnl_amount(test_context):
-    """Verify total P&L amount is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'total_pnl')
-    assert isinstance(stats.total_pnl, (int, float))
-
-@then('the statistics should include total_fees amount')
-def verify_total_fees_amount(test_context):
-    """Verify total fees amount is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'total_fees')
-    assert isinstance(stats.total_fees, (int, float))
-
-@then('the statistics should include position outcomes list')
-def verify_position_outcomes_list(test_context):
-    """Verify position outcomes list is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'outcomes')
-    assert isinstance(stats.outcomes, list)
-
-
 # For integer counts - "should contain"
 @then(parsers.parse('the statistics should contain {count} {stat_type}'))
 def verify_statistics_count(test_context, count, stat_type):
@@ -477,31 +347,20 @@ def verify_statistics_amount(test_context, stat_name, value):
 
 
 # For list verification
-@then('the statistics should include position outcomes list')
-def verify_position_outcomes_list(test_context):
-    """Verify position outcomes list is present"""
-    stats = test_context['calculated_statistics']
-    assert hasattr(stats, 'outcomes')
-    assert isinstance(stats.outcomes, list)
-    assert len(stats.outcomes) > 0
-
 
 @then('all original trade data should be preserved')
 def verify_trade_data_preserved(test_context):
-    """Verify trade count matches original"""
     assert test_context['save_success'] == True
-    assert pytest.load_success == True
-
+    assert test_context['load_success'] == True
     original_count = test_context['original_count']
-    new_count = pytest.new_trade_history.get_trade_count()
+    new_count = test_context['new_leg_trade_history'].get_trade_count()
     assert new_count == original_count
 
 
 @then('all position data should be preserved')
-def verify_trade_data_preserved(test_context):
-    """Verify all trades are preserved"""
+def verify_position_data_preserved(test_context):
     original_trades = test_context['original_trades']
-    new_trades = list(pytest.new_trade_history.trades.values())
+    new_trades = list(test_context['new_leg_trade_history'].trades.values())
 
     assert len(new_trades) == len(original_trades)
 
@@ -514,9 +373,8 @@ def verify_trade_data_preserved(test_context):
 
 
 @then('timestamp ordering should be maintained')
-def verify_timestamp_ordering():
-    """Verify trades are still in timestamp order"""
-    trades = list(pytest.new_trade_history.trades.values())
+def verify_timestamp_ordering(test_context):
+    trades = list(test_context['new_leg_trade_history'].trades.values())
     timestamps = [trade['timestamp'] for trade in trades]
 
     # Verify chronological order
@@ -526,9 +384,8 @@ def verify_timestamp_ordering():
 
 @then('trade statistics should be identical to original')
 def verify_statistics_identical(test_context):
-    """Verify statistics match original exactly"""
     original_stats = test_context['original_stats']
-    new_stats = pytest.new_trade_history.get_trade_statistics(lookback_periods=0)
+    new_stats = test_context['new_leg_trade_history'].get_trade_statistics(lookback_periods=0)
 
     assert new_stats.total_positions == original_stats.total_positions
     assert new_stats.winning_positions == original_stats.winning_positions
@@ -547,12 +404,9 @@ def verify_positions_count_with_lookback(test_context, expected_positions):
 
 @then('the statistics should reflect the limited dataset')
 def verify_statistics_reflect_limited_dataset(test_context):
-    """Verify statistics are calculated only from limited positions"""
     stats = test_context['calculated_statistics']
     lookback = test_context['lookback_used']
-
-    # Get position outcomes to verify they match the lookback window
-    outcomes = pytest.trade_history.get_position_outcomes(lookback_periods=lookback)
+    outcomes = test_context['leg_trade_history'].get_position_outcomes(lookback_periods=lookback)
 
     # Verify statistics match the limited outcome set
     wins = [o for o in outcomes if o.outcome == 'win']
@@ -570,19 +424,13 @@ def verify_statistics_reflect_limited_dataset(test_context):
     assert round(stats.total_pnl, 2) == round(expected_pnl, 2)
     assert round(stats.total_fees, 2) == round(expected_fees, 2)
 
-
 @then('older positions should be excluded from the calculation')
 def verify_older_positions_excluded(test_context):
-    """Verify older positions beyond lookback window are excluded"""
     lookback = test_context['lookback_used']
-
     if lookback == 0:
-        # Special case: 0 means all positions, so nothing excluded
         return
-
-    # Get all closed positions
-    all_outcomes = pytest.trade_history.get_position_outcomes(lookback_periods=0)
-    limited_outcomes = pytest.trade_history.get_position_outcomes(lookback_periods=lookback)
+    all_outcomes = test_context['leg_trade_history'].get_position_outcomes(lookback_periods=0)
+    limited_outcomes = test_context['leg_trade_history'].get_position_outcomes(lookback_periods=lookback)
 
     # Verify we have fewer positions with lookback than without
     assert len(limited_outcomes) <= len(all_outcomes)
@@ -592,142 +440,41 @@ def verify_older_positions_excluded(test_context):
     if len(all_outcomes) > lookback:
         assert len(limited_outcomes) < len(all_outcomes)
 
-
-@then(parsers.parse('trade "{trade_id}" should have an open position'))
-def verify_trade_has_open_position(test_context, trade_id):
-    """Verify specific trade contains an open position"""
-    # Find the trade by UUID
-    trade_found = False
-    for timestamp, trade_data in pytest.trade_history.trades.items():
-        if trade_data.get('uuid') == trade_id:
-            trade_found = True
-            positions = trade_data.get('positions', [])
-            open_positions = [p for p in positions if p.get('status') == 'open']
-            assert len(open_positions) > 0, f"Trade {trade_id} should have at least one open position"
-            test_context['target_open_position'] = open_positions[0]
-            break
-
-    assert trade_found, f"Trade {trade_id} not found in loaded data"
-
-@then('the open position should have exit_value as null')
-def verify_open_position_exit_value_null(test_context):
-    """Verify open position has null exit_value"""
-    position = test_context['target_open_position']
-    assert position.get('exit_value') is None
-
-@then('the open position should have exit_timestamp as null')
-def verify_open_position_exit_timestamp_null(test_context):
-    """Verify open position has null exit_timestamp"""
-    position = test_context['target_open_position']
-    assert position.get('exit_timestamp') is None
-
-
 @then('the trade count should increase by 1')
 def verify_trade_count_increased(test_context):
     """Verify trade count increased by exactly 1"""
     assert test_context['add_success'] == True
-    new_count = pytest.trade_history.get_trade_count()
+    new_count = test_context['leg_trade_history'].get_trade_count()
     original_count = test_context['original_count']
     assert new_count == original_count + 1
 
 
 @then('the new trade should be stored in chronological order')
 def verify_chronological_order(test_context):
-    """Verify trades remain in chronological order"""
-    trades = list(pytest.trade_history.trades.values())
+    trades = list(test_context['leg_trade_history'].trades.values())
     timestamps = [trade['timestamp'] for trade in trades]
 
     # Verify ordering is maintained
     for i in range(1, len(timestamps)):
         assert timestamps[i] >= timestamps[i - 1]
 
-
 @then('the trade should be accessible by timestamp')
 def verify_trade_accessible_by_timestamp(test_context):
-    """Verify new trade can be retrieved by timestamp"""
     timestamp_str = test_context['new_trade_timestamp']
-    timestamp = pytest.trade_history._parse_timestamp(timestamp_str)
-
-    assert timestamp in pytest.trade_history.trades
-    retrieved_trade = pytest.trade_history.trades[timestamp]
+    leg_trade_history = test_context['leg_trade_history']
+    timestamp = leg_trade_history._parse_timestamp(timestamp_str)
+    assert timestamp in leg_trade_history.trades
+    retrieved_trade = leg_trade_history.trades[timestamp]
     assert retrieved_trade['uuid'] == test_context['new_trade_data']['uuid']
-
-
-@then('the calculation should handle the edge case appropriately')
-def verify_edge_case_handled(test_context):
-    """Verify calculation completes without errors"""
-    stats = test_context['calculated_statistics']
-    assert stats is not None
-    assert isinstance(stats, TradeStatistics)
-
-
-@then('no mathematical errors should occur')
-def verify_no_mathematical_errors(test_context):
-    """Verify no division by zero or other math errors"""
-    stats = test_context['calculated_statistics']
-    import math
-    assert not math.isnan(stats.total_pnl)
-    assert not math.isnan(stats.total_fees)
-    assert not math.isinf(stats.total_pnl)
-    assert not math.isinf(stats.total_fees)
-
-
-@then(parsers.parse('the result should show {expected_behavior}'))
-def verify_expected_behavior(test_context, expected_behavior):
-    """Verify specific expected behavior for each edge case"""
-    stats = test_context['calculated_statistics']
-
-    if expected_behavior == 'zero_stats_no_errors':
-        assert stats.total_positions == 0
-        assert stats.winning_positions == 0
-        assert stats.losing_positions == 0
-        assert stats.total_pnl == 0.0
-        assert stats.total_fees == 0.0
-
-    elif expected_behavior == 'zero_avg_loss':
-        assert stats.losing_positions == 0
-        assert stats.winning_positions > 0
-        assert stats.total_pnl > 0
-
-    elif expected_behavior == 'zero_avg_win':
-        assert stats.winning_positions == 0
-        assert stats.losing_positions > 0
-        assert stats.total_pnl < 0
-
-    elif expected_behavior == 'zero_net_pnl':
-        assert abs(stats.total_pnl) < 0.01  # Close to zero allowing for floating point precision
-        assert stats.break_even_positions > 0
-
-
-@then('the system should handle it gracefully')
-def verify_graceful_handling(test_context):
-    """Verify system handles error appropriately"""
-    result = test_context['operation_result']
-    expected = test_context['expected_result']
-    assert result == expected
-
-    # For invalid timestamp case, verify trade was skipped
-    if 'expected_trade_count' in test_context:
-        actual_count = test_context['trade_count']
-        expected_count = test_context['expected_trade_count']
-        assert actual_count == expected_count
-
-@then('appropriate error messages should be logged')
-def verify_error_logging(test_context):
-    """Verify errors are logged appropriately"""
-    # Verify operation completed without unhandled exceptions
-    assert 'operation_result' in test_context
-
 
 @then(parsers.parse('trade "{trade_uuid}" should be open'))
 def verify_trade_is_open(test_context, trade_uuid):
-    """Verify specific trade is open"""
-    trade_found = False
-    for trade_data in pytest.trade_history.trades.values():
+    trade_found = False  # Fixed
+    for trade_data in test_context['leg_trade_history'].trades.values():
         if trade_data.get('uuid') == trade_uuid:
+            trade_found = True
             assert trade_data.get('status') == 'open', f"Trade {trade_uuid} is not open"
             test_context['current_trade'] = trade_data
-            trade_found = True
             break
 
     assert trade_found, f"Trade {trade_uuid} not found"
@@ -739,3 +486,43 @@ def verify_open_trade_field_is_null(test_context, field):
     trade_data = test_context.get('current_trade')
     assert trade_data is not None, "No current trade in context"
     assert trade_data.get(field) is None, f"Open trade has non-null {field}: {trade_data.get(field)}"
+
+@then(parsers.parse('ValueError should be raised with message "{message}"'))
+def verify_value_error_raised(test_context, message):
+    """Verify ValueError was raised with expected message"""
+    exception = test_context.get('statistics_exception')
+    assert exception is not None, "Expected ValueError but none was raised"
+    assert message in str(exception), f"Expected '{message}' in '{str(exception)}'"
+
+@then('average loss should be 0')
+def verify_average_loss_zero(test_context):
+    """Verify average loss is zero (all winning trades)"""
+    stats = test_context['calculated_statistics']
+    losses = [o for o in stats.outcomes if o.outcome == 'loss']
+    assert len(losses) == 0, f"Expected 0 losses, got {len(losses)}"
+
+@then('average win should be 0')
+def verify_average_win_zero(test_context):
+    """Verify average win is zero (all losing trades)"""
+    stats = test_context['calculated_statistics']
+    wins = [o for o in stats.outcomes if o.outcome == 'win']
+    assert len(wins) == 0, f"Expected 0 wins, got {len(wins)}"
+
+@then('total net P&L should be 0')
+def verify_total_net_pnl_zero(test_context):
+    """Verify total net P&L is zero (all break even)"""
+    stats = test_context['calculated_statistics']
+    assert abs(stats.total_pnl) < 0.01, f"Expected ~0 P&L, got {stats.total_pnl}"
+
+@then('load should return false')
+def verify_load_returns_false(test_context):
+    """Verify load operation returned false"""
+    assert test_context['load_result'] == False
+
+@then('the statistics should include position outcomes list')
+def verify_position_outcomes_list(test_context):
+    """Verify position outcomes list is present"""
+    stats = test_context['calculated_statistics']
+    assert hasattr(stats, 'outcomes')
+    assert isinstance(stats.outcomes, list)
+    assert len(stats.outcomes) > 0

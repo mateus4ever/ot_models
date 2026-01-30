@@ -17,7 +17,7 @@ Scenario: PositionOrchestrator initializes all components
 @orchestrator @listener
 Scenario: PositionTracker receives price updates from DataManager
   Given PositionTracker is registered as DataManager listener
-  And a position is opened for "EURUSD" with entry price 1.1000
+  And a position is opened for "EURUSD" with quantity 1000 at entry price 1.1000
   When DataManager advances to next bar
   Then position current price should be updated to 1.1
 
@@ -36,7 +36,7 @@ Scenario Outline: Open position coordinates all components
 
 @orchestrator @close_position
 Scenario: Close position coordinates all components
-  Given a position "trade_001" is open for EURUSD at 1.1000
+  Given a position "trade_001" is open for EURUSD with quantity 1000 at 1.1000
   When I close position "trade_001" at exit price 1.1050
   Then capital should be released in PositionManager
   And position should be removed from PositionTracker

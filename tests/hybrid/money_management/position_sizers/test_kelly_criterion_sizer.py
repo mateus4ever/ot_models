@@ -5,10 +5,12 @@ import pytest
 from pytest_bdd import scenarios, given, when, then, parsers
 
 from src.hybrid.config.unified_config import UnifiedConfig
-from src.hybrid.positions.trade_history import TradeHistory, PositionOutcome
+
 # Import the classes we're testing
 from src.hybrid.money_management import PortfolioState
 from src.hybrid.money_management.position_sizers import KellyCriterionSizer
+from src.hybrid.positions.base_trade_history import PositionOutcome
+from src.hybrid.positions.leg_trade_history import LegTradeHistory
 
 # Load all scenarios from the feature file
 scenarios('kelly_criterion_sizer.feature')
@@ -110,7 +112,7 @@ def load_position_outcomes(test_context, trade_data_file):
     sizer = test_context['kelly_sizer']
 
     # Create DataManager to load trade history
-    trade_history = TradeHistory(config)
+    trade_history = LegTradeHistory(config)
     success = trade_history.load_from_json(trade_data_file)
 
     if not success:

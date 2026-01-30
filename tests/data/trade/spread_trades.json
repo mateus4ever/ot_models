@@ -1,0 +1,74 @@
+{
+  "trades": [
+    {
+      "uuid": "spread-001",
+      "timestamp": "2024-04-25T10:00:00Z",
+      "entry_price": 0.0007,
+      "exit_price": 0.0001,
+      "quantity": 1.5,
+      "direction": "SHORT_SPREAD",
+      "leg_trades": ["EUR/USD_001", "EUR/GBP_001", "GBP/USD_001"],
+      "gross_pnl": 95.25,
+      "net_pnl": 95.25,
+      "status": "closed",
+      "entry_date": "2024-04-25T08:00:00Z",
+      "exit_date": "2024-04-25T10:00:00Z"
+    },
+    {
+      "uuid": "spread-002",
+      "timestamp": "2024-04-25T14:00:00Z",
+      "entry_price": 0.0003,
+      "exit_price": 0.0008,
+      "quantity": 2.0,
+      "direction": "LONG_SPREAD",
+      "leg_trades": ["EUR/USD_002", "EUR/GBP_002", "GBP/USD_002"],
+      "gross_pnl": -30.50,
+      "net_pnl": -30.50,
+      "status": "closed",
+      "entry_date": "2024-04-25T12:00:00Z",
+      "exit_date": "2024-04-25T14:00:00Z"
+    },
+    {
+      "uuid": "spread-003",
+      "timestamp": "2024-04-26T09:00:00Z",
+      "entry_price": 0.0009,
+      "exit_price": 0.0002,
+      "quantity": 1.0,
+      "direction": "SHORT_SPREAD",
+      "leg_trades": ["EUR/USD_003", "EUR/GBP_003", "GBP/USD_003"],
+      "gross_pnl": 120.00,
+      "net_pnl": 120.00,
+      "status": "closed",
+      "entry_date": "2024-04-26T07:00:00Z",
+      "exit_date": "2024-04-26T09:00:00Z"
+    },
+    {
+      "uuid": "spread-004",
+      "timestamp": "2024-04-26T15:00:00Z",
+      "entry_price": 0.0005,
+      "exit_price": 0.0005,
+      "quantity": 1.5,
+      "direction": "LONG_SPREAD",
+      "leg_trades": ["EUR/USD_004", "EUR/GBP_004", "GBP/USD_004"],
+      "gross_pnl": 0.00,
+      "net_pnl": 0.00,
+      "status": "closed",
+      "entry_date": "2024-04-26T13:00:00Z",
+      "exit_date": "2024-04-26T15:00:00Z"
+    },
+    {
+      "uuid": "spread-005",
+      "timestamp": "2024-04-27T11:00:00Z",
+      "entry_price": 0.0006,
+      "exit_price": 0.0001,
+      "quantity": 2.5,
+      "direction": "SHORT_SPREAD",
+      "leg_trades": ["EUR/USD_005", "EUR/GBP_005", "GBP/USD_005"],
+      "gross_pnl": 75.00,
+      "net_pnl": 75.00,
+      "status": "closed",
+      "entry_date": "2024-04-27T09:00:00Z",
+      "exit_date": "2024-04-27T11:00:00Z"
+    }
+  ]
+}

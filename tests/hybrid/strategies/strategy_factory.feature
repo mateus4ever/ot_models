@@ -24,6 +24,7 @@ Feature: StrategyFactory Creation and Error Handling
       | strategy_name |
       | base          |
       | chained       |
+      | triangular_arbitrage|
 
   @factory @creation @with_config
   Scenario Outline: Successfully create strategies with configuration
@@ -37,6 +38,7 @@ Feature: StrategyFactory Creation and Error Handling
       | strategy_name |
       | base          |
       | chained       |
+      | triangular_arbitrage|
 
   @factory @error @unknown_strategy
   Scenario: Throw error for unknown strategy
@@ -67,4 +69,5 @@ Feature: StrategyFactory Creation and Error Handling
     When I request the list of available strategies
     Then the list should contain "base"
     And the list should contain "chained"
-    And the list should have exactly 2 strategies
+    And the list should contain "triangular_arbitrage"
+    And the list should have exactly 3 strategies

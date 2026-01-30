@@ -2,7 +2,6 @@
 # Factory for creating trading strategy instances
 # ZERO HARDCODED VALUES - ALL PARAMETERS CONFIGURABLE
 
-# strategy_factory.py
 import logging
 from pathlib import Path
 from typing import Dict, Any
@@ -12,10 +11,11 @@ from src.hybrid.data import DataManager
 from src.hybrid.money_management import MoneyManager
 from src.hybrid.positions.position_orchestrator import PositionOrchestrator
 from src.hybrid.signals import SignalFactory
-from src.hybrid.strategies.strategy_interface import StrategyInterface  # Changed from relative
-from src.hybrid.strategies.implementation import BaseStrategy, ChainedStrategy
+from src.hybrid.strategies.strategy_interface import StrategyInterface
+from src.hybrid.strategies.implementation import BaseStrategy, ChainedStrategy,TriangularStrategy
 
 logger = logging.getLogger(__name__)
+
 
 class StrategyFactory:
     """Factory for creating trading strategy instances"""
@@ -26,9 +26,9 @@ class StrategyFactory:
 
     def _register_default_strategies(self):
         """Register default strategy types"""
-
         self._strategies['base'] = BaseStrategy
         self._strategies['chained'] = ChainedStrategy
+        self._strategies['triangular_arbitrage'] = TriangularStrategy
 
     def register_strategy(self, name: str, strategy_class: type):
         """Register a new strategy type"""
@@ -39,25 +39,43 @@ class StrategyFactory:
         """Get list of available strategy names"""
         return list(self._strategies.keys())
 
-    def _create_and_wire_signals(self, strategy: StrategyInterface, config: Any) -> None:
+    def _create_predictor(self, predictor_name: str, config: Any):
+        """Create predictor instance by name"""
+        if predictor_name == 'triangular_arbitrage':
+            from src.hybrid.predictors import TriangularArbitragePredictor
+            return TriangularArbitragePredictor(config)
+        else:
+            raise ValueError(f"Unknown predictor: {predictor_name}")
+
+    def _wire_strategy(self, strategy: StrategyInterface, config: Any) -> None:
         """
-        Create and wire signals to strategy
+        Wire signals and predictors to strategy based on config
 
         Args:
-            strategy: Strategy instance to wire signals to
-            config: Configuration containing signal definitions
+            strategy: Strategy instance to wire
+            config: Configuration containing signal/predictor definitions
         """
-        signal_factory = SignalFactory(config)
-        entry_signal_name = config.get_section('strategy', {}).get('entry_signal')
-        exit_signal_name = config.get_section('strategy', {}).get('exit_signal')
+        strategy_config = config.get_section('strategy', {})
+
+        # Wire signals if defined
+        entry_signal_name = strategy_config.get('entry_signal')
+        exit_signal_name = strategy_config.get('exit_signal')
 
         if entry_signal_name:
+            signal_factory = SignalFactory(config)
             entry_signal = signal_factory.create_signal(entry_signal_name, config)
             strategy.add_entry_signal(entry_signal)
 
         if exit_signal_name:
+            signal_factory = SignalFactory(config)
             exit_signal = signal_factory.create_signal(exit_signal_name, config)
             strategy.add_exit_signal(exit_signal)
+
+        # Wire predictors if defined
+        predictor_names = strategy_config.get('predictors', [])
+        for predictor_name in predictor_names:
+            predictor = self._create_predictor(predictor_name, config)
+            strategy.set_predictor(predictor)
 
     def create_strategy_isolated(self, strategy_name: str, config: Any,
                                  initial_capital: float,
@@ -82,7 +100,7 @@ class StrategyFactory:
         strategy_class = self._strategies[strategy_name]
         strategy = strategy_class(name=strategy_name, config=config)
 
-        self._create_and_wire_signals(strategy, config)
+        self._wire_strategy(strategy, config)
 
         strategy.set_data_manager(data_manager)
         strategy.set_money_manager(money_manager)
@@ -102,14 +120,11 @@ class StrategyFactory:
             available = list(self._strategies.keys())
             raise ValueError(f"Unknown strategy: {strategy_name}. Available: {available}")
 
-        # Create strategy
         strategy_class = self._strategies[strategy_name]
         strategy = strategy_class(name=strategy_name, config=config)
 
-        # Wire signals
-        self._create_and_wire_signals(strategy, config)
+        self._wire_strategy(strategy, config)
 
-        # Wire shared dependencies
         strategy.set_data_manager(data_manager)
         strategy.set_money_manager(money_manager)
         strategy.set_position_orchestrator(position_orchestrator)
@@ -118,13 +133,12 @@ class StrategyFactory:
         return strategy
 
     def create_strategy_with_params(self, strategy_name: str, base_config: Any, params: Dict,
-                                    initial_capital: float,project_root: Path) -> StrategyInterface:
+                                    initial_capital: float, project_root: Path) -> StrategyInterface:
         """Create strategy with optimization parameters applied"""
         config = UnifiedConfig(base_config.config_path)
         config.config = base_config.config.copy()
 
         if params:
-            # Map params to nested structure
             nested_params = self._map_params_to_config_structure(params, config)
             config.update_config(nested_params)
 
@@ -132,7 +146,7 @@ class StrategyFactory:
             strategy_name, config, initial_capital, project_root)
 
     @staticmethod
-    def find_param_location(param_name, section, path=[]):  # ← Keep original name
+    def find_param_location(param_name, section, path=[]):
         """Find ALL occurrences of a parameter in config tree"""
         locations = []
 
@@ -155,21 +169,17 @@ class StrategyFactory:
         updates = {}
 
         for param_name, param_value in params.items():
-            # Find ALL occurrences
             all_locations = StrategyFactory.find_param_location(param_name, config.config)
 
             if not all_locations:
                 print(f"WARNING: Parameter '{param_name}' not found in config!")
                 continue
 
-            # Update ALL occurrences
             for location, param_type in all_locations:
-                # Convert type if needed
                 converted_value = param_value
                 if param_type == 'integer':
                     converted_value = int(round(param_value))
 
-                # Build nested update dict
                 current = updates
                 for key in location[:-1]:
                     if key not in current:
@@ -179,9 +189,10 @@ class StrategyFactory:
 
         return updates
 
+
 class StrategyFactoryCallable:
     def __init__(self, base_config, strategy_name,
-                 initial_capital,project_root):
+                 initial_capital, project_root):
         self.base_config = base_config
         self.strategy_name = strategy_name
         self.initial_capital = initial_capital

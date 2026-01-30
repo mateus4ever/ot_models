@@ -4,14 +4,22 @@
     "debug_mode": false,
     "enable_validation_checks": true
   },
+  "base_currency": "USD",
+  "trade_history": {
+    "default_lookback_periods": 50,
+    "save_backup_on_load": false,
+    "validate_on_load": true,
+    "break_even_tolerance": 0.01
+  },
   "file_operations": {
     "results_dir": "results",
     "timestamp_format": "%Y%m%d_%H%M%S"
   },
   "strategy": {
-      "signals": ["trend_following.simplemovingaveragecrossover"],
-      "predictors": [],
-      "metrics": []
+    "entry_signal": "trend_following.simplemovingaveragecrossover",
+    "exit_signal": "momentum.rsi",
+    "predictors": [],
+    "metrics": []
   },
   "backtesting": {
       "initial_capital": 100000

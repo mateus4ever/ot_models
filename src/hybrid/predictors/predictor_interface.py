@@ -3,42 +3,39 @@ Predictor Interface - Common contract for all predictors
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Tuple
-import numpy as np
-import pandas as pd
+from typing import Any, Dict, List
 
 
 class PredictorInterface(ABC):
     """
     Base interface for all predictors.
 
-    Predictors forecast market state (volatility regime, trend duration, etc.)
-    Signals use predictions to decide BUY/SELL/HOLD.
+    Predictors forecast market state (volatility regime, trend duration, spread signals, etc.)
     """
 
     @abstractmethod
-    def train(self, df: pd.DataFrame) -> Dict:
+    def train(self, data: Any) -> Dict:
         """
         Train predictor on historical data.
 
         Args:
-            df: Historical market data
+            data: Historical market data (DataFrame or DataManager)
 
         Returns:
-            Training metrics (accuracy, samples, etc.)
+            Training metrics dict. Should include 'success': bool for validation.
         """
         pass
 
     @abstractmethod
-    def predict(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
+    def predict(self, data: Any) -> Dict:
         """
-        Generate predictions.
+        Generate prediction.
 
         Args:
-            df: Market data
+            data: Market data (DataFrame or DataManager)
 
         Returns:
-            Tuple of (predictions, confidence)
+            Prediction dict (structure varies by predictor type)
         """
         pass
 
@@ -47,3 +44,12 @@ class PredictorInterface(ABC):
     def is_trained(self) -> bool:
         """Whether predictor is ready to predict"""
         pass
+
+    def get_required_markets(self) -> List[str]:
+        """
+        Markets required by this predictor.
+
+        Override for multi-market predictors (e.g., triangular arbitrage).
+        Single-market predictors return empty list.
+        """
+        return []
